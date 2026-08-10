@@ -1,7 +1,7 @@
-# Host API v1alpha3
+# Host API v1beta1
 
-`forms.takoform.com/v1alpha3` is the current Host API lane
-([decision 0013](../decisions/0013-v1alpha3-lane-ships-in-provider-v2-1.md)).
+`forms.takoform.com/v1beta1` is the current Host API lane
+([decision 0035](../decisions/0035-beta-contracts-ship-in-stable-provider-v2-1.md)).
 It carries namespaced FormRef groups, UID/generation/revision resource
 identity, long-running Operations, content-addressed artifact upload, and
 Host Support Profiles. The retained v1alpha2 contract in
@@ -11,25 +11,25 @@ decoding, idempotency-key namespacing, replay fingerprinting, same-origin
 endpoint negotiation) apply to this lane unchanged.
 
 The wire schema is
-[`../schemas/host-api-wire-v1alpha3.schema.json`](../schemas/host-api-wire-v1alpha3.schema.json);
-the machine operation table is [`operations-v1alpha3.json`](operations-v1alpha3.json).
+[`../schemas/host-api-wire-v1beta1.schema.json`](../schemas/host-api-wire-v1beta1.schema.json);
+the machine operation table is [`operations-v1beta1.json`](operations-v1beta1.json).
 
 ## Discovery
 
-`GET /.well-known/takoform/v1alpha3` returns a document validating against
-[`../schemas/host-discovery-v1alpha3.schema.json`](../schemas/host-discovery-v1alpha3.schema.json):
-`api_versions` is exactly `["forms.takoform.com/v1alpha3"]`; the features
+`GET /.well-known/takoform/v1beta1` returns a document validating against
+[`../schemas/host-discovery-v1beta1.schema.json`](../schemas/host-discovery-v1beta1.schema.json):
+`api_versions` is exactly `["forms.takoform.com/v1beta1"]`; the features
 `service_forms`, `exact_form_ref`, `optimistic_concurrency`,
 `idempotent_lifecycle`, `operations`, `artifact_upload`, and
 `support_profiles` are all required and true; `endpoints.api` is same-origin
-with path `/apis/forms.takoform.com/v1alpha3`. Each lane has its own
+with path `/apis/forms.takoform.com/v1beta1`. Each lane has its own
 discovery path; a v1alpha2 client can never select this lane accidentally.
 
 Every advertised endpoint path is compared in its escaped form and MUST carry
 no percent-encoding at all. A client rejects the discovery document otherwise
 ([decision 0018](../decisions/0018-the-host-api-is-deployable-behind-ordinary-infrastructure.md)):
 an escaped path describes a shape this lane does not have, and comparing the
-decoded path instead would let `%2Fv1alpha3` pass as `/v1alpha3`.
+decoded path instead would let `%2Fv1beta1` pass as `/v1beta1`.
 
 A client negotiates each lane independently, under a deadline of its own that
 is short and separate from its resource-operation deadline. Nothing about one
@@ -47,15 +47,15 @@ name, then the group version — wherever a URL template names a group:
 {api}/support/forms/{formGroup}/{formVersion}/{kind}/{definitionVersion}
 ```
 
-So `edge.forms.takoform.com/v1alpha1` travels as
-`edge.forms.takoform.com/v1alpha1`. **No path segment ever percent-encodes a
+So `edge.forms.takoform.com/v1beta1` travels as
+`edge.forms.takoform.com/v1beta1`. **No path segment ever percent-encodes a
 slash.** Proxies, gateways, and web frameworks disagree about whether `%2F`
 inside a path segment is passed through, decoded, rejected, or normalized, so a
 lane that required it could not be placed behind ordinary infrastructure at all
 ([decision 0018](../decisions/0018-the-host-api-is-deployable-behind-ordinary-infrastructure.md)).
 A host rejoins the two segments into the exact apiVersion; the FormRef
 `apiVersion` string is unchanged everywhere else — request bodies, responses,
-and the `group` query key still carry `edge.forms.takoform.com/v1alpha1`
+and the `group` query key still carry `edge.forms.takoform.com/v1beta1`
 verbatim. This is the required conformance check
 `namespaced-group-travels-as-two-path-segments`.
 
@@ -434,7 +434,7 @@ obligations are proved by host-side tests in
 
 ## Lifecycle
 
-Endpoints under `/apis/forms.takoform.com/v1alpha3`, keyed by group and
+Endpoints under `/apis/forms.takoform.com/v1beta1`, keyed by group and
 kind so one kind name can exist in many groups. `{formGroup}/{formVersion}` is
 the two-segment group of [Path shape](#path-shape):
 
@@ -453,7 +453,7 @@ DELETE {api}/resources/{formGroup}/{formVersion}/{kind}/{name}
 `observe` is the lane's only fenced read-only re-observation. There is no
 `refresh` operation: v1alpha2 carried both under one contract, which meant two
 spellings of one behavior and therefore two ways for hosts to differ. A
-v1alpha3 Form never declares the `refresh` capability and a v1alpha3 host
+v1beta1 Form never declares the `refresh` capability and a v1beta1 host
 serves no `/refresh` route.
 
 `validate` reports diagnostics without mutating and without minting a
@@ -482,7 +482,7 @@ A **relation** is one reference from a resource's desired spec to another
 resource. Its wire shape is the closed three-member object
 
 ```json
-{ "apiVersion": "edge.forms.takoform.com/v1alpha1", "kind": "EdgeKVNamespace", "name": "cache" }
+{ "apiVersion": "edge.forms.takoform.com/v1beta1", "kind": "EdgeKVNamespace", "name": "cache" }
 ```
 
 where `apiVersion` and `kind` are `const` in the referring Form's
@@ -521,7 +521,7 @@ Definition schema already admits, exactly like `x-takoform-binding`
 
 ```json
 "x-takoform-target-formrefs": [
-  { "apiVersion": "edge.forms.takoform.com/v1alpha1", "kind": "WorkerBundle",
+  { "apiVersion": "edge.forms.takoform.com/v1beta1", "kind": "WorkerBundle",
     "definitionVersion": "0.1.0", "schemaDigest": "sha256:..." }
 ]
 ```
@@ -1179,7 +1179,7 @@ member is present it is one closed object with three required members:
 ```json
 {
   "bundle": {
-    "apiVersion": "edge.forms.takoform.com/v1alpha1",
+    "apiVersion": "edge.forms.takoform.com/v1beta1",
     "kind": "StaticAssetBundle",
     "name": "static-assets"
   },
