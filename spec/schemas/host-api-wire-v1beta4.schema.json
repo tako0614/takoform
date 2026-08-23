@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://forms.takoform.com/schemas/v1beta2/host-api-wire.schema.json",
+  "$id": "https://forms.takoform.com/schemas/v1beta4/host-api-wire.schema.json",
   "title": "Takoform portable host API wire envelopes v1beta2",
   "$ref": "#/$defs/resourceResponse",
   "$defs": {
@@ -56,7 +56,7 @@
       ],
       "properties": {
         "formRef": {
-          "$ref": "https://forms.takoform.com/schemas/v1beta1/form-ref.schema.json"
+          "$ref": "https://forms.takoform.com/schemas/v1beta2/form-ref.schema.json"
         },
         "packageDigest": {
           "$ref": "#/$defs/digest",
@@ -198,7 +198,7 @@
         "apiVersion": {
           "type": "string",
           "maxLength": 320,
-          "pattern": "^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+/v[0-9]+(?:(?:alpha|beta)[0-9]+)?$",
+          "pattern": "^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+(?:/v[0-9]+(?:(?:alpha|beta)[0-9]+)?)?$",
           "not": {
             "enum": [
               "forms.takoform.com/v1alpha1",

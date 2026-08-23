@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://forms.takoform.com/schemas/v1beta2/host-discovery.schema.json",
-  "title": "Takoform host discovery v1beta2",
+  "$id": "https://forms.takoform.com/schemas/v1beta4/host-discovery.schema.json",
+  "title": "Takoform host discovery v1beta4",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -12,7 +12,7 @@
   "properties": {
     "api_versions": {
       "const": [
-        "forms.takoform.com/v1beta2"
+        "forms.takoform.com/v1beta4"
       ]
     },
     "features": {
@@ -66,7 +66,7 @@
               "$ref": "#/$defs/httpEndpoint"
             },
             {
-              "pattern": "^https?://[^/?#]+/apis/forms\\.takoform\\.com/v1beta2$"
+              "pattern": "^https?://[^/?#]+/apis/forms\\.takoform\\.com/v1beta4$"
             }
           ]
         }

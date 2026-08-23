@@ -1,8 +1,8 @@
 {
-  "format": "takoform.host-api@v1beta2",
-  "apiGroup": "forms.takoform.com/v1beta2",
-  "discoveryPath": "/.well-known/takoform/v1beta2",
-  "wireSchema": "https://forms.takoform.com/schemas/v1beta2/host-api-wire.schema.json",
+  "format": "takoform.host-api@v1beta4",
+  "apiGroup": "forms.takoform.com/v1beta4",
+  "discoveryPath": "/.well-known/takoform/v1beta4",
+  "wireSchema": "https://forms.takoform.com/schemas/v1beta4/host-api-wire.schema.json",
   "requiredFeatures": [
     "service_forms",
     "exact_form_ref",
@@ -164,7 +164,7 @@
     {
       "name": "forms",
       "method": "GET",
-      "path": "/apis/forms.takoform.com/v1beta2/forms",
+      "path": "/apis/forms.takoform.com/v1beta4/forms",
       "exactFormQuery": true,
       "precondition": "none",
       "idempotencyKey": false,
@@ -172,7 +172,7 @@
       "successStatus": [
         200
       ],
-      "responseSchema": "https://forms.takoform.com/schemas/v1beta2/host-api-wire.schema.json#/$defs/formsResponse",
+      "responseSchema": "https://forms.takoform.com/schemas/v1beta4/host-api-wire.schema.json#/$defs/formsResponse",
       "queryParameters": [
         {
           "name": "group",
@@ -216,7 +216,7 @@
     {
       "name": "form-definition",
       "method": "GET",
-      "path": "/apis/forms.takoform.com/v1beta2/form-definitions/{formGroup}/{formVersion}/{kind}",
+      "path": "/apis/forms.takoform.com/v1beta4/form-definitions/{formGroup}/{formVersion}/{kind}",
       "exactFormQuery": true,
       "precondition": "none",
       "idempotencyKey": false,
@@ -224,7 +224,7 @@
       "successStatus": [
         200
       ],
-      "responseSchema": "https://forms.takoform.com/schemas/v1beta2/host-api-wire.schema.json#/$defs/formDefinitionResponse",
+      "responseSchema": "https://forms.takoform.com/schemas/v1beta4/host-api-wire.schema.json#/$defs/formDefinitionResponse",
       "queryParameters": [
         {
           "name": "space",
@@ -249,7 +249,7 @@
     {
       "name": "validate",
       "method": "POST",
-      "path": "/apis/forms.takoform.com/v1beta2/resources/validate",
+      "path": "/apis/forms.takoform.com/v1beta4/resources/validate",
       "exactFormQuery": false,
       "precondition": "none",
       "idempotencyKey": false,
@@ -257,13 +257,13 @@
       "successStatus": [
         200
       ],
-      "requestSchema": "https://forms.takoform.com/schemas/v1beta2/host-api-wire.schema.json#/$defs/resourceRequest",
-      "responseSchema": "https://forms.takoform.com/schemas/v1beta2/host-api-wire.schema.json#/$defs/validateResponse"
+      "requestSchema": "https://forms.takoform.com/schemas/v1beta4/host-api-wire.schema.json#/$defs/resourceRequest",
+      "responseSchema": "https://forms.takoform.com/schemas/v1beta4/host-api-wire.schema.json#/$defs/validateResponse"
     },
     {
       "name": "prepare",
       "method": "POST",
-      "path": "/apis/forms.takoform.com/v1beta2/resources/prepare",
+      "path": "/apis/forms.takoform.com/v1beta4/resources/prepare",
       "exactFormQuery": false,
       "precondition": "generation-fence-when-updating",
       "idempotencyKey": false,
@@ -271,13 +271,13 @@
       "successStatus": [
         200
       ],
-      "requestSchema": "https://forms.takoform.com/schemas/v1beta2/host-api-wire.schema.json#/$defs/resourceRequest",
-      "responseSchema": "https://forms.takoform.com/schemas/v1beta2/host-api-wire.schema.json#/$defs/prepareResponse"
+      "requestSchema": "https://forms.takoform.com/schemas/v1beta4/host-api-wire.schema.json#/$defs/resourceRequest",
+      "responseSchema": "https://forms.takoform.com/schemas/v1beta4/host-api-wire.schema.json#/$defs/prepareResponse"
     },
     {
       "name": "apply",
       "method": "PUT",
-      "path": "/apis/forms.takoform.com/v1beta2/resources/{formGroup}/{formVersion}/{kind}/{name}",
+      "path": "/apis/forms.takoform.com/v1beta4/resources/{formGroup}/{formVersion}/{kind}/{name}",
       "exactFormQuery": false,
       "precondition": "create:if-none-match-star update:generation-fence",
       "idempotencyKey": true,
@@ -287,8 +287,8 @@
         201,
         202
       ],
-      "requestSchema": "https://forms.takoform.com/schemas/v1beta2/host-api-wire.schema.json#/$defs/applyRequest",
-      "responseSchema": "https://forms.takoform.com/schemas/v1beta2/host-api-wire.schema.json#/$defs/mutationAccepted",
+      "requestSchema": "https://forms.takoform.com/schemas/v1beta4/host-api-wire.schema.json#/$defs/applyRequest",
+      "responseSchema": "https://forms.takoform.com/schemas/v1beta4/host-api-wire.schema.json#/$defs/mutationAccepted",
       "successStatusMeaning": {
         "200": "an existing resource updated",
         "201": "a resource created",
@@ -298,7 +298,7 @@
     {
       "name": "read",
       "method": "GET",
-      "path": "/apis/forms.takoform.com/v1beta2/resources/{formGroup}/{formVersion}/{kind}/{name}",
+      "path": "/apis/forms.takoform.com/v1beta4/resources/{formGroup}/{formVersion}/{kind}/{name}",
       "exactFormQuery": true,
       "precondition": "none",
       "idempotencyKey": false,
@@ -306,7 +306,7 @@
       "successStatus": [
         200
       ],
-      "responseSchema": "https://forms.takoform.com/schemas/v1beta2/host-api-wire.schema.json#/$defs/resourceResponse",
+      "responseSchema": "https://forms.takoform.com/schemas/v1beta4/host-api-wire.schema.json#/$defs/resourceResponse",
       "queryParameters": [
         {
           "name": "space",
@@ -331,7 +331,7 @@
     {
       "name": "import",
       "method": "POST",
-      "path": "/apis/forms.takoform.com/v1beta2/resources/{formGroup}/{formVersion}/{kind}/{name}/import",
+      "path": "/apis/forms.takoform.com/v1beta4/resources/{formGroup}/{formVersion}/{kind}/{name}/import",
       "exactFormQuery": false,
       "precondition": "new:if-none-match-star existing:generation-fence",
       "idempotencyKey": true,
@@ -341,8 +341,8 @@
         201,
         202
       ],
-      "requestSchema": "https://forms.takoform.com/schemas/v1beta2/host-api-wire.schema.json#/$defs/importRequest",
-      "responseSchema": "https://forms.takoform.com/schemas/v1beta2/host-api-wire.schema.json#/$defs/mutationAccepted",
+      "requestSchema": "https://forms.takoform.com/schemas/v1beta4/host-api-wire.schema.json#/$defs/importRequest",
+      "responseSchema": "https://forms.takoform.com/schemas/v1beta4/host-api-wire.schema.json#/$defs/mutationAccepted",
       "successStatusMeaning": {
         "200": "an existing resource adopted in place",
         "201": "a resource minted by adoption",
@@ -352,7 +352,7 @@
     {
       "name": "observe",
       "method": "POST",
-      "path": "/apis/forms.takoform.com/v1beta2/resources/{formGroup}/{formVersion}/{kind}/{name}/observe",
+      "path": "/apis/forms.takoform.com/v1beta4/resources/{formGroup}/{formVersion}/{kind}/{name}/observe",
       "exactFormQuery": true,
       "precondition": "generation-fence",
       "idempotencyKey": false,
@@ -361,7 +361,7 @@
         200
       ],
       "successGeneration": "equals-fence",
-      "responseSchema": "https://forms.takoform.com/schemas/v1beta2/host-api-wire.schema.json#/$defs/resourceEnvelope",
+      "responseSchema": "https://forms.takoform.com/schemas/v1beta4/host-api-wire.schema.json#/$defs/resourceEnvelope",
       "queryParameters": [
         {
           "name": "space",
@@ -387,7 +387,7 @@
     {
       "name": "delete",
       "method": "DELETE",
-      "path": "/apis/forms.takoform.com/v1beta2/resources/{formGroup}/{formVersion}/{kind}/{name}",
+      "path": "/apis/forms.takoform.com/v1beta4/resources/{formGroup}/{formVersion}/{kind}/{name}",
       "exactFormQuery": true,
       "precondition": "generation-fence",
       "optionalPrecondition": "revision-fence",
@@ -425,7 +425,7 @@
     {
       "name": "operation",
       "method": "GET",
-      "path": "/apis/forms.takoform.com/v1beta2/operations/{id}",
+      "path": "/apis/forms.takoform.com/v1beta4/operations/{id}",
       "exactFormQuery": false,
       "precondition": "none",
       "idempotencyKey": false,
@@ -438,7 +438,7 @@
     {
       "name": "operation-cancel",
       "method": "POST",
-      "path": "/apis/forms.takoform.com/v1beta2/operations/{id}/cancel",
+      "path": "/apis/forms.takoform.com/v1beta4/operations/{id}/cancel",
       "exactFormQuery": false,
       "precondition": "none",
       "idempotencyKey": true,
@@ -457,7 +457,7 @@
     {
       "name": "artifact-upload-start",
       "method": "POST",
-      "path": "/apis/forms.takoform.com/v1beta2/artifacts/uploads",
+      "path": "/apis/forms.takoform.com/v1beta4/artifacts/uploads",
       "exactFormQuery": false,
       "precondition": "none",
       "idempotencyKey": true,
@@ -466,8 +466,8 @@
         200,
         201
       ],
-      "requestSchema": "https://forms.takoform.com/schemas/v1beta2/host-api-wire.schema.json#/$defs/artifactUploadRequest",
-      "responseSchema": "https://forms.takoform.com/schemas/v1beta2/host-api-wire.schema.json#/$defs/artifactUploadStatus",
+      "requestSchema": "https://forms.takoform.com/schemas/v1beta4/host-api-wire.schema.json#/$defs/artifactUploadRequest",
+      "responseSchema": "https://forms.takoform.com/schemas/v1beta4/host-api-wire.schema.json#/$defs/artifactUploadStatus",
       "successStatusMeaning": {
         "200": "an existing session for these bytes answered again",
         "201": "a new upload session"
@@ -476,7 +476,7 @@
     {
       "name": "artifact-blob-upload",
       "method": "PUT",
-      "path": "/apis/forms.takoform.com/v1beta2/artifacts/uploads/{uploadId}/blobs/{sha256}",
+      "path": "/apis/forms.takoform.com/v1beta4/artifacts/uploads/{uploadId}/blobs/{sha256}",
       "exactFormQuery": false,
       "precondition": "none",
       "idempotencyKey": false,
@@ -494,7 +494,7 @@
     {
       "name": "artifact-commit",
       "method": "POST",
-      "path": "/apis/forms.takoform.com/v1beta2/artifacts/uploads/{uploadId}/commit",
+      "path": "/apis/forms.takoform.com/v1beta4/artifacts/uploads/{uploadId}/commit",
       "exactFormQuery": false,
       "precondition": "none",
       "idempotencyKey": true,
@@ -504,12 +504,12 @@
         201,
         202
       ],
-      "responseSchema": "https://forms.takoform.com/schemas/v1beta2/host-api-wire.schema.json#/$defs/artifactCommitResponse"
+      "responseSchema": "https://forms.takoform.com/schemas/v1beta4/host-api-wire.schema.json#/$defs/artifactCommitResponse"
     },
     {
       "name": "artifact-manifest-read",
       "method": "GET",
-      "path": "/apis/forms.takoform.com/v1beta2/artifacts/{manifestDigest}",
+      "path": "/apis/forms.takoform.com/v1beta4/artifacts/{manifestDigest}",
       "exactFormQuery": false,
       "precondition": "none",
       "idempotencyKey": false,
@@ -522,7 +522,7 @@
     {
       "name": "artifact-blob-head",
       "method": "HEAD",
-      "path": "/apis/forms.takoform.com/v1beta2/artifacts/blobs/{sha256}",
+      "path": "/apis/forms.takoform.com/v1beta4/artifacts/blobs/{sha256}",
       "exactFormQuery": false,
       "precondition": "none",
       "idempotencyKey": false,
@@ -535,7 +535,7 @@
     {
       "name": "artifact-upload-abandon",
       "method": "DELETE",
-      "path": "/apis/forms.takoform.com/v1beta2/artifacts/uploads/{uploadId}",
+      "path": "/apis/forms.takoform.com/v1beta4/artifacts/uploads/{uploadId}",
       "exactFormQuery": false,
       "precondition": "none",
       "idempotencyKey": true,
@@ -547,7 +547,7 @@
     {
       "name": "support-forms",
       "method": "GET",
-      "path": "/apis/forms.takoform.com/v1beta2/support/forms",
+      "path": "/apis/forms.takoform.com/v1beta4/support/forms",
       "exactFormQuery": false,
       "precondition": "none",
       "idempotencyKey": false,
@@ -555,12 +555,12 @@
       "successStatus": [
         200
       ],
-      "responseSchema": "https://forms.takoform.com/schemas/v1beta2/host-api-wire.schema.json#/$defs/supportProfilesResponse"
+      "responseSchema": "https://forms.takoform.com/schemas/v1beta4/host-api-wire.schema.json#/$defs/supportProfilesResponse"
     },
     {
       "name": "support-form",
       "method": "GET",
-      "path": "/apis/forms.takoform.com/v1beta2/support/forms/{formGroup}/{formVersion}/{kind}/{definitionVersion}",
+      "path": "/apis/forms.takoform.com/v1beta4/support/forms/{formGroup}/{formVersion}/{kind}/{definitionVersion}",
       "exactFormQuery": false,
       "precondition": "none",
       "idempotencyKey": false,
@@ -573,7 +573,7 @@
     {
       "name": "support-interface",
       "method": "GET",
-      "path": "/apis/forms.takoform.com/v1beta2/support/interfaces/{name}/{version}",
+      "path": "/apis/forms.takoform.com/v1beta4/support/interfaces/{name}/{version}",
       "exactFormQuery": false,
       "precondition": "none",
       "idempotencyKey": false,
@@ -586,7 +586,7 @@
     {
       "name": "support-binding",
       "method": "GET",
-      "path": "/apis/forms.takoform.com/v1beta2/support/bindings/{name}/{version}",
+      "path": "/apis/forms.takoform.com/v1beta4/support/bindings/{name}/{version}",
       "exactFormQuery": false,
       "precondition": "none",
       "idempotencyKey": false,
@@ -599,7 +599,7 @@
     {
       "name": "support-standard-service",
       "method": "GET",
-      "path": "/apis/forms.takoform.com/v1beta2/support/standard-services/{protocol}",
+      "path": "/apis/forms.takoform.com/v1beta4/support/standard-services/{protocol}",
       "exactFormQuery": false,
       "precondition": "none",
       "idempotencyKey": false,
@@ -611,7 +611,7 @@
     }
   ],
   "errorEnvelope": {
-    "schema": "https://forms.takoform.com/schemas/v1beta2/host-api-wire.schema.json#/$defs/errorEnvelope",
+    "schema": "https://forms.takoform.com/schemas/v1beta4/host-api-wire.schema.json#/$defs/errorEnvelope",
     "codes": [
       "invalid_argument",
       "unauthenticated",

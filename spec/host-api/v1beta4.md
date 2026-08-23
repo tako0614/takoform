@@ -1,15 +1,30 @@
-# Host API v1beta2
+# Host API v1beta4
 
-`forms.takoform.com/v1beta2` is the current Host API lane. It was minted for
+`forms.takoform.com/v1beta4` is the current Host API lane. It was minted for
 protocol reasons ([decision 0039](../decisions/0039-a-lane-is-minted-for-one-of-two-reasons.md)):
-the v1beta1 wire changed structurally under the Beta 2 hardening review
-([decision 0046](../decisions/0046-stable-arrives-through-a-stable-grade-beta-2.md)) —
-`/forms` became an enumeration surface, the fence transport was codified, the
-long-running Operation envelope closed its error vocabulary, the two dead
-error codes left the taxonomy, the apply review accepts its own echo, and the
-sourceless availability member was removed. The v1beta1 lane remains served
-history at its own discovery path; nothing here restates what its documents
-meant.
+a Form Family group may now omit its version segment
+([decision 0049](../decisions/0049-a-form-versions-alone.md)), which changes the
+FormRef grammar every request and every response carries, and with it the shape
+of every path that names a group.
+
+It also carries the property its immediate predecessor was minted for and never
+published: **this document states MECHANISMS and names no Form kind of any
+family** ([decision 0048](../decisions/0048-the-protocol-states-mechanisms-not-forms.md)).
+The lane before that named Edge Form kinds sixty-six times, in sections about
+one family's cardinality rules, its assigned address, and its migration ledger —
+which is why a family could not gain a Form without the protocol changing. Here
+a Definition declares which mechanism it instantiates and a host reads that,
+so a family adds a Form, or a rule of a shape this lane already knows, without
+this document moving. A rule of a NEW shape still needs a reviewed protocol
+change, because a new shape is a new thing every host must be able to enforce.
+
+The two lanes between this one and v1beta1 — `forms.takoform.com/v1beta2` and
+`forms.takoform.com/v1beta3` — were minted and then withdrawn before either was
+ever served, and everything they stated is stated here. Their identities are
+recorded as retired so neither name can be reused
+([decision 0051](../decisions/0051-an-unserved-lane-is-withdrawn-not-stacked.md)).
+The v1beta1 lane remains served history at its own discovery path; nothing here
+restates what its documents meant.
 
 The lane carries namespaced FormRef groups, UID/generation/revision resource
 identity, long-running Operations, content-addressed artifact upload, and
@@ -18,25 +33,25 @@ error code it may answer, every fence it may demand, and every query key it
 may read is defined here or in the machine tables it names.
 
 The wire schema is
-[`../schemas/host-api-wire-v1beta2.schema.json`](../schemas/host-api-wire-v1beta2.schema.json);
-the machine operation table is [`operations-v1beta2.json`](operations-v1beta2.json).
+[`../schemas/host-api-wire-v1beta4.schema.json`](../schemas/host-api-wire-v1beta4.schema.json);
+the machine operation table is [`operations-v1beta4.json`](operations-v1beta4.json).
 
 ## Discovery
 
-`GET /.well-known/takoform/v1beta2` returns a document validating against
-[`../schemas/host-discovery-v1beta2.schema.json`](../schemas/host-discovery-v1beta2.schema.json):
-`api_versions` is exactly `["forms.takoform.com/v1beta2"]`; the features
+`GET /.well-known/takoform/v1beta4` returns a document validating against
+[`../schemas/host-discovery-v1beta4.schema.json`](../schemas/host-discovery-v1beta4.schema.json):
+`api_versions` is exactly `["forms.takoform.com/v1beta4"]`; the features
 `service_forms`, `exact_form_ref`, `optimistic_concurrency`,
 `idempotent_lifecycle`, `operations`, `artifact_upload`, and
 `support_profiles` are all required and true; `endpoints.api` is same-origin
-with path `/apis/forms.takoform.com/v1beta2`. Each lane has its own
+with path `/apis/forms.takoform.com/v1beta4`. Each lane has its own
 discovery path; a v1alpha2 client can never select this lane accidentally.
 
 Every advertised endpoint path is compared in its escaped form and MUST carry
 no percent-encoding at all. A client rejects the discovery document otherwise
 ([decision 0018](../decisions/0018-the-host-api-is-deployable-behind-ordinary-infrastructure.md)):
 an escaped path describes a shape this lane does not have, and comparing the
-decoded path instead would let `%2Fv1beta2` pass as `/v1beta2`.
+decoded path instead would let `%2Fv1beta4` pass as `/v1beta4`.
 
 A client negotiates each lane independently, under a deadline of its own that
 is short and separate from its resource-operation deadline. Nothing about one
@@ -63,7 +78,7 @@ does not start or end with a Unicode `White_Space` code point or `U+FEFF`;
 contains no Unicode `Cc` control code point (which includes `U+007F`); and
 contains no `/`. The normative
 code-point sets are encoded explicitly in
-[`../schemas/host-api-wire-v1beta2.schema.json`](../schemas/host-api-wire-v1beta2.schema.json)
+[`../schemas/host-api-wire-v1beta4.schema.json`](../schemas/host-api-wire-v1beta4.schema.json)
 under `$defs.spaceId`. Embedded non-control whitespace is data and is valid.
 Every participant MUST preserve the exact decoded value: no trimming, Unicode
 normalization, or case folding. URL percent-encoding MAY represent that value
@@ -110,32 +125,42 @@ key simply executes as new.
 
 ## Path shape
 
-A namespaced Form group travels as **two ordinary path segments** — the group
-name, then the group version — wherever a URL template names a group:
+A namespaced Form group travels as **its own ordinary path segments** —
+the group written literally, slashes and all — wherever a URL template names a
+group:
 
 ```
-{api}/resources/{formGroup}/{formVersion}/{kind}/{name}
-{api}/form-definitions/{formGroup}/{formVersion}/{kind}
-{api}/support/forms/{formGroup}/{formVersion}/{kind}/{definitionVersion}
+{api}/resources/{formGroup}/{kind}/{name}
+{api}/form-definitions/{formGroup}/{kind}
+{api}/support/forms/{formGroup}/{kind}/{definitionVersion}
 ```
 
-So `edge.forms.takoform.com/v1beta2` travels as
-`edge.forms.takoform.com/v1beta2`. **No path segment ever percent-encodes a
-slash.** Proxies, gateways, and web frameworks disagree about whether `%2F`
-inside a path segment is passed through, decoded, rejected, or normalized, so a
-lane that required it could not be placed behind ordinary infrastructure at all
+So `edge.forms.takoform.com` travels as one segment and
+`edge.forms.takoform.com/v1beta1` travels as two. A group carries a version
+segment only while it has a published generation to keep apart (decision 0049),
+so both shapes are ordinary and a host serves whichever a group has. **No path
+segment ever percent-encodes a slash.** Proxies, gateways, and web frameworks
+disagree about whether `%2F` inside a path segment is passed through, decoded,
+rejected, or normalized, so a lane that required it could not be placed behind
+ordinary infrastructure at all
 ([decision 0018](../decisions/0018-the-host-api-is-deployable-behind-ordinary-infrastructure.md)).
-A host rejoins the two segments into the exact apiVersion; the FormRef
-`apiVersion` string is unchanged everywhere else — request bodies, responses,
-and the `group` query key still carry `edge.forms.takoform.com/v1beta2`
-verbatim. This is the required conformance check
-`namespaced-group-travels-as-two-path-segments`.
+
+The split is unambiguous without counting segments, and a host MUST resolve it
+by grammar rather than by arity: **the group is every segment before the first
+one that matches the `Kind` grammar** `^[A-Z][A-Za-z0-9]{0,63}$`. No group
+segment can match it — a DNS-like label is lowercase and a version segment
+begins with a lowercase `v` — so no group of any length can be confused with
+the kind that follows it. A host rejoins those segments into the exact
+apiVersion; the FormRef `apiVersion` string is unchanged everywhere else —
+request bodies, responses, and the `group` query key still carry
+`edge.forms.takoform.com` or `edge.forms.takoform.com/v1beta1` verbatim. This
+is the required conformance check `namespaced-group-travels-as-path-segments`.
 
 ## Addressing a resource
 
 The lane's resources are addressed by five facts: the authenticated tenant,
 the Space, and the exact FormRef's group, kind, and name. Three of them travel
-as path segments (`{formGroup}/{formVersion}/{kind}/{name}`); the remaining
+as path segments (`{formGroup}/{kind}/{name}`); the remaining
 exactness travels differently by direction, and the split is normative:
 
 - **Requests with a body** (`validate`, `prepare`, `apply`, `import`) carry
@@ -144,7 +169,7 @@ exactness travels differently by direction, and the split is normative:
 - **Requests without a body** (`read`, `observe`, `delete`, and the
   form-definition read) carry `space`, `definitionVersion`, and
   `schemaDigest` as query parameters, exactly as
-  [`operations-v1beta2.json`](operations-v1beta2.json) lists per operation.
+  [`operations-v1beta4.json`](operations-v1beta4.json) lists per operation.
   A listed required parameter that is absent or malformed is
   `invalid_argument`; a well-formed exact query naming a ref the resource is
   not bound to is `resource_not_found`, indistinguishably from a name nobody
@@ -203,10 +228,10 @@ identities; nobody trims, folds, or normalizes one.
 - A host that renders any part of a representation from OTHER resources MUST
   advance that resource's `metadata.revision` when the rendering changes, and
   MUST NOT move its `metadata.generation`: no desired spec changed. This lane
-  has two such renderings — relation drift and Worker readiness — so creating,
-  re-weighting, or deleting a `WorkerDeployment` moves the revision of the
-  `ModuleWorker` whose readiness follows it, and a target that is deleted or
-  replaced moves the revision of every source pinned to it. Serving the changed
+  has two such renderings — relation drift and derived readiness — so creating,
+  re-weighting, or deleting a resource whose selection another resource's
+  readiness follows moves that resource's revision, and a target that is
+  deleted or replaced moves the revision of every source pinned to it. Serving the changed
   representation under the old revision would make the ETag a validator that
   reports "unchanged" about a change, and `If-Match` a fence on a
   representation the client never saw. After an accepted mutation a host
@@ -313,9 +338,9 @@ already exists. It is a CLAIM, not a hint.
   the tenant.** Spaces partition one tenant's resources and a backend object does
   not partition with them, so two spaces adopting one object is the same
   duplication as two resources in one space. Neither is an object partitioned by
-  the Form that adopted it: it has one identity, so an `AtLeastOnceQueue` and an
-  `EdgeKVNamespace` of one tenant may not both name it, and a host keying the
-  claim by `(tenant, kind, nativeId)` is holding a narrower claim than this one.
+  the Form that adopted it: it has one identity, so two resources of one tenant
+  may not both name it whatever their kinds, and a host keying the claim by
+  `(tenant, kind, nativeId)` is holding a narrower claim than this one.
   It stops at the tenant for the reason every refusal in
   [Tenant isolation](#tenant-isolation) is shaped the way it is: a host-wide
   claim would answer "somebody already manages that" to a caller who cannot see
@@ -528,10 +553,10 @@ Everything else follows from the address.
 
 There is **one deliberate exception**, and it is the one
 [decision 0026](../decisions/0026-attachment-claims-are-canonical-and-acyclic.md)
-already decided: a `WorkerCustomDomain`'s canonical hostname is unique across
+already decided: a claimed value is unique across
 every space **of one tenant**, because spaces partition one tenant's resources
-and DNS does not partition with them
-([An attachment's claim is decided on canonical, resolved identity](#an-attachment-s-claim-is-decided-on-canonical-resolved-identity)).
+and a claimed namespace does not partition with them
+([Claimed values](#claimed-values)).
 That rule drops the space and keeps the tenant. It does not reach past the
 tenant, and no rule in this lane does.
 
@@ -577,20 +602,20 @@ obligations are proved by host-side tests in
 
 ## Lifecycle
 
-Endpoints under `/apis/forms.takoform.com/v1beta2`, keyed by group and
-kind so one kind name can exist in many groups. `{formGroup}/{formVersion}` is
-the two-segment group of [Path shape](#path-shape):
+Endpoints under `/apis/forms.takoform.com/v1beta4`, keyed by group and
+kind so one kind name can exist in many groups. `{formGroup}` is the group's
+own segments, as [Path shape](#path-shape) defines them:
 
 ```
 GET    {api}/forms                       enumeration; six optional filter keys
-GET    {api}/form-definitions/{formGroup}/{formVersion}/{kind}?space&definitionVersion&schemaDigest
+GET    {api}/form-definitions/{formGroup}/{kind}?space&definitionVersion&schemaDigest
 POST   {api}/resources/validate         diagnostics only, no mutation, no digest
 POST   {api}/resources/prepare          short-lived prepare digest for one exact spec
-PUT    {api}/resources/{formGroup}/{formVersion}/{kind}/{name}    apply; carries review.prepareDigest
-GET    {api}/resources/{formGroup}/{formVersion}/{kind}/{name}
-POST   {api}/resources/{formGroup}/{formVersion}/{kind}/{name}/import
-POST   {api}/resources/{formGroup}/{formVersion}/{kind}/{name}/observe
-DELETE {api}/resources/{formGroup}/{formVersion}/{kind}/{name}
+PUT    {api}/resources/{formGroup}/{kind}/{name}    apply; carries review.prepareDigest
+GET    {api}/resources/{formGroup}/{kind}/{name}
+POST   {api}/resources/{formGroup}/{kind}/{name}/import
+POST   {api}/resources/{formGroup}/{kind}/{name}/observe
+DELETE {api}/resources/{formGroup}/{kind}/{name}
 ```
 
 `GET {api}/forms` enumerates every installed exact Form the principal may
@@ -604,7 +629,7 @@ address ([Tenant isolation](#tenant-isolation)).
 `observe` is the lane's only fenced read-only re-observation. There is no
 `refresh` operation: v1alpha2 carried both under one contract, which meant two
 spellings of one behavior and therefore two ways for hosts to differ. A
-v1beta2 Form never declares the `refresh` capability and a v1beta2 host
+v1beta4 Form never declares the `refresh` capability and a v1beta4 host
 serves no `/refresh` route.
 
 `validate` reports diagnostics without mutating and without minting a
@@ -627,7 +652,7 @@ exist to prevent. Every observe executes.
 ### The fence matrix
 
 One table governs how a generation fence travels, and
-[`operations-v1beta2.json`](operations-v1beta2.json) carries it as data
+[`operations-v1beta4.json`](operations-v1beta4.json) carries it as data
 (`fences`):
 
 | Operation | Transport | Absent | Stale |
@@ -660,7 +685,7 @@ A **relation** is one reference from a resource's desired spec to another
 resource. Its wire shape is the closed three-member object
 
 ```json
-{ "apiVersion": "edge.forms.takoform.com/v1beta2", "kind": "EdgeKVNamespace", "name": "cache" }
+{ "apiVersion": "example.forms.takoform.com/v1", "kind": "ExampleStore", "name": "cache" }
 ```
 
 where `apiVersion` and `kind` are `const` in the referring Form's
@@ -678,14 +703,13 @@ Definition schema admits no such member
 A host derives the relation set from the same `desiredSchema` it serves: every
 closed object that requires AT LEAST `apiVersion`, `kind`, and `name` with the
 first two `const` is a relation, identified by its JSON Pointer with `*`
-standing for an array element (`/worker`, `/versions/*/workerVersion`,
-`/kvBindings/*/resource`). A reference MAY require additional members — a
-`DurableWorkflow` or `ActorNamespace` names the `className` its worker must
-export — and then the reference node carries the
-`x-takoform-relation-extras` annotation listing exactly those member names;
-extra members select WITHIN the pinned target and never weaken the pin. A
-closed reference-shaped object with extra members and no annotation is a
-Definition defect a package verifier refuses, never a silently un-derived
+standing for an array element (`/owner`, `/versions/*/revision`,
+`/bindings/*/resource`). A resource that selects a named export of its target
+names that export as its OWN top-level property, beside the reference rather
+than inside it: the export selects WITHIN the pinned target and never weakens
+the pin, and a sibling property needs no annotation to be found. A closed
+reference-shaped object carrying members the reference itself does not declare
+is a Definition defect a package verifier refuses, never a silently un-derived
 relation. A binding-list property additionally carries the
 `x-takoform-binding` annotation naming the Binding contract that governs the
 references inside it; the exact digest-bound BindingRef is the Definition's own
@@ -706,7 +730,7 @@ Definition schema already admits, exactly like `x-takoform-binding`
 
 ```json
 "x-takoform-target-formrefs": [
-  { "apiVersion": "edge.forms.takoform.com/v1beta2", "kind": "WorkerBundle",
+  { "apiVersion": "example.forms.takoform.com/v1", "kind": "ExampleArtifact",
     "definitionVersion": "0.1.0", "schemaDigest": "sha256:..." }
 ]
 ```
@@ -866,320 +890,143 @@ check, in this order:
 Rules 3 through 5 are about the target or holder the client chose and are
 therefore argument failures; rule 2 is about what this host can do at all.
 
-## The Worker aggregate
+## Declared cross-resource rules
 
-The rules of this section are decided by
-[decision 0016](../decisions/0016-the-worker-aggregate-has-one-active-deployment.md).
-They are semantics a desired-state schema cannot express — a schema cannot count
-the deployments pointing at one worker, read the `/worker` relation of a version
-it does not contain, add weights, know which handlers a referenced version
-exports, or reach across sibling properties — so they live in the host under
-[decision 0014](../decisions/0014-published-schemas-are-structural-minima.md)
-and are proven by required conformance checks.
+Some rules a desired-state schema cannot express. A schema cannot count the
+resources pointing at one target, read a relation of a resource it does not
+contain, add a column of weights, know which entrypoints a referenced revision
+exports, or reach across sibling properties. Those rules live in the host under
+[decision 0014](../decisions/0014-published-schemas-are-structural-minima.md).
 
-This chapter is the Edge family's aggregate statement, hosted here while the
-Edge family is this lane's only family; a family added to the lane brings its
-own aggregate statement in its own family document
-([`../form-families.md`](../form-families.md)), and the generic halves —
-role rules, the attachment gate, relation pinning, dependent-revision
-rendering — stay the lane's.
+The previous lane wrote them out one Form at a time. It said that a worker
+carries one active deployment, that a queue carries one consumer, that a
+database carries one live migration application — each a paragraph naming a
+Form kind, in a document that is supposed to be the protocol. Its own aggregate
+chapter admitted the shape of the problem: *hosted here while that family is
+this lane's only family*. The consequence was mechanical and it happened: a
+family that gained two Forms could not gain them without editing the protocol.
 
-A **Worker aggregate** is one `ModuleWorker` incarnation, the Worker Versions
-pinned to it, the one Worker Deployment governing its traffic, and everything
-activated against it. Every rule below is decided against the UID the reference
-RESOLVED to, never against the worker name a spec spells.
+**This lane states the MECHANISMS. A family states which of them apply to
+which of its references, in its own Definitions.** A host reads a Definition
+and enforces what it declares, without knowing what any Form is for. The lane
+therefore names no Form kind, and a check enforces that it does not.
 
-### One active deployment
+### Where a Form states them
 
-A `WorkerDeployment` whose resolved `/worker` UID already has one fails
-`invalid_argument` (400) before any mutation, on `apply` and on `import` alike.
-Re-applying a worker's own deployment is not a second one. Traffic moves by
-re-weighting the deployment a worker already has, which is what makes rollback a
-re-weighting rather than a mutation of a revision.
+A Definition carries a top-level `constraints` array. Each entry is an object
+whose `kind` is one of a CLOSED vocabulary — `exclusive`, `sum`, `claim`,
+`hostAssigned` — and whose remaining members are exactly the ones that kind's
+rule needs. A host reads this one list; it does not walk the desired schema
+looking for rules, because a rule is not the shape of a document.
 
-### Deployment integrity
+Adding a constraint kind is therefore one reviewed change to this lane and to
+the Definition profile, rather than an `x-` key that may appear at any depth of
+any schema
+([decision 0049](../decisions/0049-a-form-versions-alone.md)). The desired
+schema goes back to being plain JSON Schema that any validator reads
+completely.
 
-Before any mutation a host MUST refuse a deployment whose `versions[]`
+A host that cannot read an entry — an unknown `kind`, or a kind whose required
+members are absent — refuses the Form at install time with
+`unsupported_capability`, naming the entry. It never installs a Form while
+silently enforcing less than the Form declares: a constraint nobody enforces is
+worse than one nobody wrote, because the Definition promises it.
 
-- weights a `WorkerVersion` whose stored `/worker` relation targets a different
-  worker UID;
-- names one `WorkerVersion` twice, by resolved UID — `uniqueItems` rejects a
-  duplicated whole entry, so one version split across two different weights is
-  schema-valid and still says two things about one revision;
-- carries weights that do not sum to exactly 10000 basis points;
-- weights a version that is not Ready, or that an accepted delete is already
-  removing.
+Every rule below is decided against the UID a reference RESOLVED to, never
+against the name a spec spells.
 
-Two bounds are the desired schema's and are stated here because a reader of
-this document is entitled to know them without opening a Definition: a
-deployment carries **at most 8** weighted entries, and each `weight` is an
-integer in **1..10000**. There is no zero weight: a version that receives no
-traffic is absent from the list, so "weighted" and "serving" mean the same
-thing, and the sum rule needs no exception for entries that do not count. The
-ceiling is a portable floor every host meets, not a host's capacity.
+### Exclusive holds
 
-Each is `invalid_argument` (400): the request is well formed but states
-something untrue about what will run.
+`{"kind": "exclusive", "reference": <pointer>}` — **at most one LIVE resource of
+this Form kind may hold the target the named reference resolves to.** A second
+one fails `invalid_argument` (400) before any mutation: the request is well
+formed and what is untrue is what it says about the target it points at.
 
-### Attachment gate
+`reference` is a JSON Pointer to the desired property carrying the relation.
+The optional `keyedBy` member is a JSON Pointer to a sibling property of the
+same desired spec, and it joins the target in the key:
 
-The generic rule is the lane's; which entrypoints exist is each family's.
-An inward-activation attachment's target reference carries the
-`x-takoform-required-entrypoint` annotation naming the entrypoint of the
-target's runtime Interface that the attachment's events invoke. Activation is
-admitted against the target's ACTIVE DEPLOYMENT, not against any stored
-version, and EVERY version the deployment weights MUST provide the annotated
-entrypoint, because an event served by any weighted version has to find it.
-A class-selecting IDENTITY (`DurableWorkflow`, `ActorNamespace`) states the
-same kind of requirement — the class export its `x-takoform-relation-extras`
-member names — and is gated on it wherever a deployment exists to contradict
-it: a live deployment whose weighted code lacks the class refuses the identity,
-and a deployment change that would leave a live one's class unexported is
-refused the same way. It differs from an attachment in the ABSENT-deployment
-case, and the difference is structural rather than a concession. A worker's own
-version may declare a binding to the workflow or actor its own worker serves,
-so the identity, the version that implements it, and the deployment that
-selects that version are ordinarily created in ONE apply. Refusing the identity
-before a deployment exists would make that ordinary wiring unconstructible in
-any order — there is no order in which the deployment precedes the identity it
-needs. Such an identity therefore STORES with `Ready=False` / `Provisioning`,
-and the deployment that lands next is what makes it serve.
-
-The Edge family's instances of the rule are READ OUT OF its Definitions, not
-out of this document. They are listed here so a reader can see the shape, and
-a host that disagreed with the annotation would be wrong even if it agreed
-with this table:
-
-| Attachment | Required entrypoint | Where it says so |
+| `keyedBy` | The key is | Two holders conflict when |
 | --- | --- | --- |
-| `WorkerCustomDomain` | `fetch` | `/worker` annotation |
-| `WorkerEndpoint` | `fetch` | `/worker` annotation |
-| `WorkerCronTrigger` | `scheduled` | `/worker` annotation |
-| `QueueConsumer` | `queue` | `/worker` annotation |
-| `DurableWorkflow` | the declared workflow class export | `className` via `x-takoform-relation-extras` |
-| `ActorNamespace` | the declared actor class export | `className` via `x-takoform-relation-extras` |
+| absent | the resolved target | they resolve the same target |
+| a pointer | the target and that property's value | they resolve the same target AND carry the same value |
 
-For an ATTACHMENT, an absent deployment, or a weighted version that does not
-export the handler, fails `unsupported_capability` (422) before any mutation
-and the message names what is missing. For a class-selecting identity only the
-second is a refusal; the first stores `Provisioning`, as above. A stored
-version is a history entry, not a running one: gating on it would admit a cron
-trigger against code no deployment selects.
+A conflict is decided over LIVE resources only. A resource an accepted delete
+has removed holds nothing, so the target it held is free — a rule that outlived
+its holder would make a destroyed-and-recreated target permanently
+unmanageable.
 
-Two attachments carry a further rule the desired schema cannot state
-([decision 0020](../decisions/0020-the-edge-interfaces-state-their-data-and-delivery-model.md)).
+The rule is per exact Form kind, not per target: two resources of DIFFERENT
+kinds resolving one target are not a conflict. That is what lets one target
+carry an exclusive holder of one kind and any number of resources of another.
 
-A `WorkerCronTrigger`'s `cron` MUST be parsed, not merely matched against the
-pattern the Form Definition carries. That pattern is the structural minimum a
-host holding only the Definition can enforce, and it admits shapes that name no
-schedule — `0 24 * * *`, `5-1 * * * *`, `*/0 * * * *`, `0 0 32 * *`. A host MUST
-refuse each of them before any mutation, on `validate`, `prepare`, and `apply`
-alike, with `invalid_argument` (400), and MUST accept the sub-hourly schedules
-the grammar exists for, `*/5 * * * *` and `0 * * * *` among them. This is the
-required conformance check `cron-grammar-enforced`.
+### Summed members
 
-An `AtLeastOnceQueue` has AT MOST ONE `QueueConsumer`. A second consumer against
-the same queue incarnation fails `invalid_argument` (400) before any mutation:
-the consumer's `maxRetries`, `retryDelaySeconds`, `maxConcurrency`, and
-dead-letter destination are properties of how that queue is drained, so two
-consumers would give one queue two of each with no rule deciding which message
-got which. The rule is over the queue's UID rather than its name, exactly like
-the deployment rule above, and removing the first consumer makes the second
-representable. This is the required conformance check
-`queue-single-consumer-enforced`.
+`{"kind": "sum", "list": <pointer>, "member": <name>, "total": <integer>}` —
+in the object list at `list`, the integer member named by `member` MUST total
+exactly `total` across the elements. A list that does not fails
+`invalid_argument` (400) before any mutation.
 
-### An attachment's claim is decided on canonical, resolved identity
+A schema can bound each element and cannot add a column. This is the whole of
+what the constraint adds, and it adds it as data rather than as a sentence
+about one Form's traffic weights.
 
-Two further attachment rules are about what an attachment CLAIMS rather than
-about the worker it activates
-([decision 0026](../decisions/0026-attachment-claims-are-canonical-and-acyclic.md)).
-Both fail `invalid_argument` (400) before any mutation, on `apply` and on
-`import` alike, and are re-raised when an accepted `202` commits: each is a
-statement about the store, and the store moves between accept and commit. All
-three surfaces are measured, and the two beyond `apply` are where a laxer host
-is most likely to differ: `import` mints a resource for something already
-running, so an adoption that skips the scan is how a second attachment reaches a
-hostname the host already answers; and at commit each of the two requests that
-together produce the collision was correct when it was made. The required
-conformance checks are `attachment-claim-decided-on-import`, which drives both
-rules through adoption in both polarities so a host cannot pass by refusing every
-adoption, and `attachment-claim-revalidated-at-commit`, which accepts a `202`
-while the store makes it legal, moves the store with a synchronous request that
-is itself legal, and requires the commit to terminate `invalid_argument`, commit
-nothing, and leave the synchronous resource alive.
+### Claimed values
 
-A `WorkerCustomDomain`'s `hostname` is **canonicalized before it is compared and
-before it is stored**: the trailing root dot removed and every ASCII letter
-lowercased. Canonicalization happens at the same entry point as declared
-defaults — before validation, before the spec digest, before storage and echo —
-so `API.Example.com`, `api.example.com.` and `api.example.com` produce
-byte-identical desired state, the same `specDigest`, and the same `generation`.
-An internationalized name travels as its **A-label**; the Form's `hostname`
-pattern admits no non-ASCII byte, so a host performs no IDNA mapping of its own
-and two hosts on different Unicode tables cannot canonicalize one name two ways.
-This is a REFUSAL and not a conversion: a U-label is refused
-`invalid_argument` (400) at `validate` and at `prepare`, and the A-label of the
-same name is accepted and stored byte-for-byte as written. A host that mapped
-the U-label instead would put its own Unicode table version into a portable
-contract, so one desired state would claim two different hostnames depending on
-where it was applied. This is the required conformance check
-`custom-domain-u-label-refused`, driven while the name is free so nothing but the
-Form's grammar can produce the refusal.
-The canonical hostname is then unique **per tenant**: a second
-`WorkerCustomDomain` claiming a hostname a live one already serves — in that
-space or in any other space of the same tenant — fails `invalid_argument` (400),
-and releasing the holder makes the claim representable. Spaces partition one
-tenant's resources; DNS does not partition with them, and one hostname has one
-answer. The tenant is the AUTHENTICATED tenant of the request, because no
-reference and no metadata field names one, and at commit it is the tenant the
-accepted mutation was admitted from. A hostname a DIFFERENT tenant serves is
-outside the comparison: who controls a name is authority this contract does not
-answer, so a host MUST accept a claim on a hostname only another tenant serves,
-and the refusal it gives inside a tenant MUST name that tenant's own holder and
-no one else's — naming another tenant's resource discloses exactly what
-[Tenant isolation](#tenant-isolation) withholds. These are the required
-conformance checks `custom-domain-hostname-canonicalized`,
-`custom-domain-hostname-claim-unique`, and
-`custom-domain-hostname-claim-stops-at-the-tenant`; the second collides from a
-second space of the tenant, against an aggregate of its own, in both directions,
-and the third stands a second tenant's whole aggregate up and requires its claim
-on the served name to SUCCEED while a third claim inside that tenant is still
-refused.
+`{"kind": "claim", "property": <pointer>}` — the value at `property` is held by
+**at most one live resource per tenant**, across every space, compared on the
+CANONICAL form that property's own schema defines. A second claimant fails
+`invalid_argument` (400) before any mutation, and releasing the holder makes
+the claim representable again.
 
-A `QueueConsumer`'s `deadLetterQueue` MUST NOT lead back to the queue the
-consumer drains. A destination resolving to the same queue UID is refused, and
-so is one closing a cycle through the dead-letter graph of any length: the graph
-is over queues, where the edge `Q -> D` exists when the consumer of `Q` declares
-`D`. An exhausted message arrives at its dead-letter queue as a NEW message with
-its attempt count starting again at 1, so a cycle is a loop `maxRetries` cannot
-bound — the platform would build an infinite redelivery for the author. Because
-a queue has at most one consumer it has at most one outgoing edge, so a host
-follows a single path; the walk admits each queue UID once, so it terminates on
-any graph shape, including a cycle a laxer state left behind. Any length means
-any: a host that asks only whether the destination's own consumer points back
-admits `A -> B -> C -> A`, so the required conformance check
-`dead-letter-cycle-rejected` closes a three-queue cycle and accepts a
-four-queue chain. In-degree is UNBOUNDED: one consumer is one outgoing edge, and
-any number of chains may end at one queue, so the same check accepts a DIAMOND
-and a host refusing a destination something already dead-letters to fails it.
+Canonicalization happens before comparison and before storage, so two spellings
+of one value are one claim rather than two. Which spellings are equal is the
+property's schema to say; that the comparison happens on the canonical form is
+this lane's.
 
-### The host-assigned endpoint
+### Host-assigned outputs
 
-The rules of this section are decided by
-[decision 0024](../decisions/0024-a-worker-is-reachable-at-a-host-assigned-address.md).
+`{"kind": "hostAssigned", "output": <pointer>}` — the host mints the value of
+the named declared output, it is immutable for the lifetime of the resource's
+UID, and no desired property may state it. A consumer may store it; a portable
+configuration never parses it, asserts a suffix of it, or reconstructs it from
+a resource name.
 
-A `WorkerEndpoint` makes one worker reachable over HTTPS without a
-customer-owned domain. Its desired state is the worker reference and NOTHING
-else: the author asks for reachability, and the address is the host's decision,
-in the same class as an account, a region, and a vendor subdomain
-([decision 0008](../decisions/0008-forms-preserve-service-shape.md)).
+### Activation entrypoints
 
-- A host returns `status.outputs` carrying `hostname`, the DNS name it assigned,
-  and `url`, which is exactly `https://` + that hostname + `/`. The scheme is
-  HTTPS and TLS is not optional; there is no port and no deeper path. The
-  assigned `hostname` is in CANONICAL form — lowercase, no trailing root dot —
-  because a name a host produced has no earlier spelling to preserve, and the
-  Form's own output grammar admits only that form, so the rule and the pattern
-  a host is held to are one statement. The two members are held to that one
-  grammar, so a hostname no `url` could be built from is not representable. The
-  desired-state grammar of `WorkerCustomDomain` is deliberately laxer and stays
-  so: an author writes a name and the host canonicalizes it, which is a
-  different rule about a different value.
-- **The address is immutable for the lifetime of the endpoint's attachment
-  UID.** `hostname` and `url` MUST NOT change on deployment promotion, on status
-  refresh, on a host's internal placement change, or on a backend migration. A
-  host that needs to change the address deletes the endpoint and the author
-  creates a new one — a new attachment, with a new UID, which may legitimately
-  carry a new address. Without this rule the published address is a value a
-  consumer may read and never store, which is not an address.
-- A portable author may rely on three things and no others: that a value comes
-  back, that it is HTTPS, and that it routes to the worker's ACTIVE DEPLOYMENT.
-  The SHAPE of the address — which label, which subdomain, which apex, how long,
-  whether it resembles the resource name — is host detail, so a configuration
-  MUST NOT parse the hostname, assert a suffix, or reconstruct either value from
-  anything else it knows. Nothing measures the shape either: an address that
-  resembles the resource name is conforming, because the endpoint's desired
-  state carries no address for a host to have echoed.
-- Two endpoints on two workers carry two DIFFERENT addresses. It follows from
-  the third guarantee rather than from any rule about the shape: one address at
-  one path root cannot invoke the active deployments of two workers, so a host
-  answering both with the same value has made the guarantee false for one of
-  them.
-- The endpoint holds no version reference, so promotion and rollback move what
-  answers without the endpoint being re-applied and without its address
-  changing. "Active deployment" is the one this document already defines.
-- A worker has AT MOST ONE endpoint. A second `WorkerEndpoint` whose resolved
-  `/worker` UID already has one fails `invalid_argument` (400) before any
-  mutation, on `apply` and `import` alike. The rule is over the worker's UID and
-  lives in the host because a desired schema cannot count the endpoints pointing
-  at one worker, exactly like the one-deployment and one-consumer rules above.
-- A host that supports the Form but cannot offer a host-assigned hostname MUST
-  fail `unsupported_capability` (422) before any mutation. It MUST NOT store the
-  endpoint, and it MUST NOT answer with an address it did not assign: the whole
-  point of the Form is that the returned address is reachable.
-- Deleting the endpoint never deletes the worker (the `attachment` role rule),
-  and deleting the worker while a live endpoint pins it fails
-  `dependency_in_use` (409) like every other relation. An endpoint therefore
-  never outlives its worker, by refusal and ordering rather than by cascade.
+A reference may declare `x-takoform-required-entrypoint`: the entrypoint of the
+target's runtime Interface that this resource's inward activation invokes.
+Activation is admitted against the target's ACTIVE selecting resource — not
+against any stored revision — and EVERY revision that selection weights MUST
+provide the annotated entrypoint, because an event served by any weighted
+revision has to find it.
 
-These are the required conformance checks
-`worker-endpoint-address-is-host-assigned`, `worker-endpoint-single-per-worker`,
-`worker-endpoint-follows-the-active-deployment`, and
-`worker-endpoint-address-is-stable-for-its-uid`, which drives the three triggers
-a black-box runner can cause — a host-side status refresh, a promotion of the
-worker, and a re-read — against one endpoint and compares the UID as well as the
-value. A placement change and a backend migration are not causable from outside
-a host and stay obligations below.
+An absent selection, or a weighted revision that does not provide the
+entrypoint, fails `unsupported_capability` (422) before any mutation and the
+message names what is missing. A stored revision is a history entry, not a
+running one: gating on it would admit an activation against code no selection
+serves.
 
-### Reverse validation and deletion
+A resource that SELECTS a named export rather than activating one states the
+same requirement through its own top-level property, and is gated on it
+wherever a selection exists to contradict it. It differs in the absent-selection case, and the difference is
+structural rather than a concession: a revision may declare a binding to the
+selector its own identity serves, so identity, revision, and selection are
+ordinarily created in ONE apply and no order exists in which the selection
+comes first. Such a resource STORES with `Ready=False` / `Provisioning`, and
+the selection that lands next is what makes it serve.
 
-The gate holds in both directions.
+### Dependents and reverse validation
 
-- An apply that would leave a live dependent unserved fails
-  `unsupported_capability` (422) before any mutation. The dependents are a live
-  `WorkerCustomDomain` (`fetch`), a live `WorkerEndpoint` (`fetch`), a live
-  `WorkerCronTrigger` (`scheduled`), a live `QueueConsumer` (`queue`), and a
-  live INBOUND service binding — another Form's `serviceBindings` entry
-  targeting this worker — which requires `fetch`.
-- Deleting a `WorkerDeployment` while any of those lives fails
-  `dependency_in_use` (409). Nothing REFERENCES a deployment, so this is not the
-  relation rule above; it is the same statement about a different edge. A host
-  fails closed rather than degrading the dependents, and an accepted (202)
-  delete re-runs the scan at commit time.
+The dependents of a selecting resource are DERIVED, not listed: they are the
+live resources whose annotated entrypoint that selection must keep serving, and
+the live bindings that resolve to it. A change that would stop serving a
+dependent's entrypoint, and a delete of a selection a dependent still needs,
+both fail `dependency_in_use` (409) naming what depends on it.
 
-### Worker readiness and inbound service bindings
-
-`worker.service` is provided by the `ModuleWorker` identity and answered by
-whatever its active deployment selects, so readiness is a claim about SERVICE:
-
-- `Ready=True` / `Available` only when the worker has an active deployment whose
-  every weighted version exports `fetch`;
-- `Ready=False` / `Provisioning` when it has no deployment;
-- `Ready=False` / `UnsupportedCapability` when its deployment serves no `fetch`.
-
-Both false cases carry a `hostReason` naming the worker and what is missing. A
-`module-worker.service` binding to a worker in either state is refused at BIND
-time with `unsupported_capability` (422), rather than stored and reported
-not-Ready: a stored binding that projects nothing is a declared capability no
-host can keep.
-
-The worker is not addressed by any of the mutations that move it between these
-three states, so this is a representation rendered from another resource: a host
-MUST advance the worker's `metadata.revision`, and MUST NOT move its
-`metadata.generation`, when a deployment change flips the condition (see
-[Resource identity](#resource-identity)).
-
-### The environment namespace is single
-
-Within one `WorkerVersion`, `vars` keys, `requiredSensitiveVars` entries, and
-every binding `name` across every binding list are projected into ONE runtime
-environment object, so their union MUST be unique. A collision fails
-`invalid_argument` (400) before any mutation, and a client SHOULD refuse it at
-plan time so the author sees it without a round trip. The schema cannot state
-it: `uniqueItems` compares whole objects, so two bindings agreeing only on
-`name` are distinct, and no keyword relates a property's keys to a sibling
-array's element member. A host discovers the binding lists from the
-`x-takoform-binding` annotation the desired schema already carries.
+Nothing here enumerates a Form kind. A family that adds an activation adds an
+annotated reference, and its dependents are counted by the same walk that
+counted every other one.
 
 ## External standard services
 
@@ -1400,9 +1247,9 @@ endpoints share the lane's auth, idempotency, and error taxonomy.
 The desired state of an artifact-backed revision resource is the **manifest
 digest and nothing else**: the committed artifact manifest describes the
 bytes, so the manifest and the desired spec are never two spellings of the
-same facts. `WorkerBundle` requires manifest kind `WorkerBundle`,
-`StaticAssetBundle` requires `StaticAssetBundle`, and `SQLiteMigrationSet`
-requires `MigrationBundle`. A host MUST resolve the referenced manifest before
+same facts. Which manifest kind a given Form requires is that Form's family to
+state ([`../form-families.md`](../form-families.md)); a host MUST resolve the
+referenced manifest before
 it mutates anything, on apply and on import alike, and fail closed when
 
 - the digest names no committed manifest the caller's tenant holds —
@@ -1424,19 +1271,17 @@ unresolvable.
 
 ### A bundle's modules are what the runtime can load
 
-The module media types a `WorkerBundle` manifest admits are exactly the
-LOADABLE set `worker.runtime@1.0.0` imports —
-`application/javascript+module`, `text/plain`, `application/octet-stream`,
-`application/wasm` — plus the AUXILIARY set a bundle carries and the graph
-never imports, today `application/source-map+json` alone. `application/json`
-is in neither: this ABI version loads none, and the published manifest enum
-never admitted one
-([decision 0019](../decisions/0019-the-module-worker-abi-is-an-exact-contract.md)).
+A manifest whose entries are a module graph splits its media types into a
+LOADABLE set the runtime contract imports and an AUXILIARY set the bundle
+carries and the graph never imports. WHICH types fall on each side is the
+runtime contract's to state and the family's to reference
+([decision 0019](../decisions/0019-the-module-worker-abi-is-an-exact-contract.md));
+that the split exists, and what a host does with it, is this lane's.
 
-A host MUST refuse a `WorkerBundle` whose `mainModule` names an auxiliary
+A host MUST refuse such a manifest whose `mainModule` names an auxiliary
 module, before commit and before any mutation that references the manifest,
 with `artifact_invalid` (400) — and MUST NOT refuse a bundle merely for
-CARRYING one. The published manifest schema states the union in one enum and
+CARRYING one. A published manifest schema states the union in one enum and
 cannot relate `mainModule` to the media type of the module it names, so the
 split is host-enforced under
 [decision 0014](../decisions/0014-published-schemas-are-structural-minima.md)
@@ -1445,84 +1290,27 @@ The corresponding runtime obligation — an import resolving to an auxiliary
 module fails `unsupported_media_type` — is behavior no desired-state runner
 observes, and stays a host obligation with the rest of the ABI.
 
-### Static assets on a Worker Version
+### A Form's own artifact semantics are its family's
 
-The rules here are decided by
-[decision 0033](../decisions/0033-edge-app-assets-and-sqlite-migrations-are-content-addressed.md).
-A `WorkerVersion` with no `assets` member performs no asset lookup. When the
-member is present it is one closed object with three required members:
+What an artifact MEANS to the Form that references it — which manifest kind
+it must be, what its entries may contain, what the host does with them, and
+what makes the referencing resource Ready — is stated by the family that
+defines that Form, not here. The previous lane wrote two such rulebooks into
+the protocol document, and they were the clearest case of the problem this
+lane exists to fix: a reader of the protocol had to scroll past one family's
+asset-fallback order and another's migration ledger to reach the next
+protocol rule.
 
-```json
-{
-  "bundle": {
-    "apiVersion": "edge.forms.takoform.com/v1beta2",
-    "kind": "StaticAssetBundle",
-    "name": "static-assets"
-  },
-  "runWorkerFirst": true,
-  "notFoundHandling": "single_page_application"
-}
-```
+What stays here is the obligation every artifact reference carries, whatever
+it references: **a host MUST resolve the referenced manifest and hold it to
+the contract the referring Form states, before it mutates anything, on apply
+and on import alike.** A reference whose manifest does not resolve, or
+resolves to something the Form does not accept, fails before mutation — never
+after, and never as a readiness condition on a resource that was already
+stored.
 
-The bundle relation requires the target's exact FormRef and is UID-pinned like
-every other relation. `notFoundHandling` is exactly `none` or
-`single_page_application`.
-
-- With `runWorkerFirst=false`, the host performs asset lookup first and invokes
-  `fetch` only when that stage produces no response.
-- With `runWorkerFirst=true`, it invokes `fetch` first and performs asset lookup
-  only when the worker returns 404. An asset response wins; if asset lookup
-  misses, the worker's 404 is preserved.
-- `none` leaves a missing exact path as a miss.
-- `single_page_application` answers a missing path with `index.html`. The host
-  MUST resolve the exact referenced manifest and refuse the Worker Version with
-  `invalid_argument` (400), before mutation, when it contains no `index.html`.
-
-Asset lookup maps the runtime URL `pathname` to a manifest path as one closed
-operation. Query strings and fragments are ignored; the escaped pathname is
-percent-decoded once as strict UTF-8, and exactly one leading `/` is removed.
-The host MUST reject encoded `/` or `\\`, repeated or empty interior segments,
-dot segments, backslashes, controls, Unicode noncharacters, malformed escapes,
-and invalid UTF-8. A valid path must still match the manifest's relative path
-grammar. Invalid paths fail closed and MUST NOT enter SPA fallback. A valid
-missing path is a miss under `none`, or resolves to `index.html` under
-`single_page_application`; the root pathname `/` is the canonical empty-path
-miss and follows that same fallback rule.
-
-The attachment never grants a runtime binding and never changes the asset
-bundle. A provider may author the manifest from local files, but desired state
-and provider state carry no file bytes.
-
-### SQLite migration history
-
-A `MigrationBundle` is an ordered non-empty `files` list and every entry MUST
-use `application/sql`; other media types are `artifact_invalid` (400).
-`SQLiteMigrationApplication` pins exact `SQLiteDatabase` and
-`SQLiteMigrationSet` relations. The host keeps a durable ordered ledger in the
-database, whose entry identity is `(path, digest)`.
-
-Before mutation, and again when an accepted operation commits, the host MUST
-serialize against other migration applications for the database and prove the
-ledger is an exact prefix of the referenced manifest. An applied entry that is
-absent, moved, or has another digest is `migration_required` (409) and changes
-nothing. Only the unapplied suffix may execute. Each file's SQL execution and
-its ledger insertion are one SQLite transaction: failure rolls back both for
-that file, keeps earlier committed entries, and makes a retry resume at the
-same suffix boundary. Ready means the durable ledger equals the exact ordered
-set.
-
-A database has AT MOST ONE live `SQLiteMigrationApplication`, over its UID
-exactly like the deployment and consumer rules; a second application against
-the same database incarnation fails `invalid_argument` (400) before any
-mutation. Advancing a database's schema is deleting the application and
-creating one referencing the longer set — the ledger check makes the new
-application resume at the unapplied suffix, so the handover replays nothing.
-
-Deleting `SQLiteMigrationApplication` removes the attachment and its relation
-holders only. It MUST NOT execute down SQL, remove ledger entries, reinterpret
-the schema, or delete the database. The database and set are protected by
-ordinary `dependency_in_use` while the attachment lives; database deletion
-after it is gone is a separate database policy, not migration rollback.
+The Edge Platform Family's own artifact semantics are in
+[`../form-families.md`](../form-families.md).
 
 ### Upload sessions are owned
 
@@ -1578,7 +1366,7 @@ required conformance check `manifest-reference-is-not-a-capability`.
 
 ```
 GET {api}/support/forms
-GET {api}/support/forms/{formGroup}/{formVersion}/{kind}/{definitionVersion}
+GET {api}/support/forms/{formGroup}/{kind}/{definitionVersion}
 GET {api}/support/interfaces/{name}/{version}
 GET {api}/support/bindings/{name}/{version}
 GET {api}/support/standard-services/{protocol}
@@ -1606,26 +1394,24 @@ Satisfiability is tenant wiring, so the answer is tenant-scoped, `validate`
 never depends on it, and the plan-time refusal of an unsatisfiable REQUIRED
 slot lives in `prepare` (`unsupported_capability`), the earliest surface that
 knows the tenant ([`../standard-services/README.md`](../standard-services/README.md)). Artifact-backed Forms publish
-`maximumBundleBytes` together with `maximumBundleFiles`: the portable profile
-uses 4,096 modules for `WorkerBundle` and 16,384 files for
-`StaticAssetBundle`/`SQLiteMigrationSet`. Price, SKU, region, quota, and
+`maximumBundleBytes` together with `maximumBundleFiles`, at the portable floors
+their family states. Price, SKU, region, quota, and
 commercial policy MUST NOT appear; those remain Service Offering data outside
 this API.
 
-A host that supports the Edge Platform Family's `ModuleWorker` MUST advertise
-the ES Module Worker runtime ABI contract `worker.runtime@1.0.0` at the exact
-`schemaDigest` that Form's `providedInterfaces` names, and MUST advertise the
-`WorkerVersion` `handlers` enum as exactly the handler vocabulary that contract
-defines. It MUST NOT advertise a `compatibilityDate` range or a
-`compatibilityFlags` enum: runtime behavior is stated by implementing an exact
+A host that supports a Form providing a runtime ABI contract MUST advertise
+that contract at the exact `schemaDigest` the Form's `providedInterfaces`
+names, and MUST advertise any enum derived from it as exactly the vocabulary
+that contract defines. It MUST NOT advertise a compatibility date range or a
+compatibility flag enum: runtime behavior is stated by implementing an exact
 contract, not by a token no registry interprets
 ([decision 0019](../decisions/0019-the-module-worker-abi-is-an-exact-contract.md)).
-A `WorkerVersion` declaring a handler the runtime contract does not define MUST
-be refused before any mutation, and so MUST a `WorkerVersion` declaring a
-handler the main module of the `WorkerBundle` it references does not export:
-`loadModule` fails that version with `handler_not_exported` before any traffic
-arrives, so storing it would leave the attachment gate above admitting a cron
-trigger or a queue consumer against a handler that does not exist. The first is
+A revision declaring an entrypoint the runtime contract does not define MUST
+be refused before any mutation, and so MUST a revision declaring an
+entrypoint the artifact it references does not provide:
+loading fails that revision before any traffic
+arrives, so storing it would leave the activation gate above admitting an
+activation against an entrypoint that does not exist. The first is
 decidable from the spec alone and is refused on `validate`, `prepare`, and
 `apply` alike; the second needs the bundle relation, the committed manifest, and
 the module bytes, so it is refused before any mutation on `apply` and `import`
@@ -1644,8 +1430,8 @@ observe, so the split is stated rather than implied.
 Proven by required checks:
 
 - the host advertises the runtime contract at the EXACT pinned `schemaDigest`,
-  and supports the exact `ModuleWorker` Form line that provides it;
-- the `WorkerVersion` `handlers` enum it advertises is exactly that contract's
+  and supports the exact Form line that provides it;
+- any entrypoint enum it advertises is exactly that contract's
   vocabulary, and it advertises no `compatibilityDate` range or
   `compatibilityFlags` enum;
 - a version declaring a handler outside the vocabulary is refused, and one
@@ -1655,8 +1441,8 @@ Proven by required checks:
   handlers is still accepted;
 - every inward-activation attachment is gated on the handler its events invoke,
   in both directions;
-- a `WorkerEndpoint` is answered with a complete HTTPS address the host
-  assigned, in canonical form and with the two published members built from one
+- a host-assigned output is answered with a complete address the host
+  minted, in canonical form and with every published member built from one
   hostname; that address is still the same address, under the same UID, after a
   host-side status refresh, a promotion of the worker it serves, and a re-read;
   and a second endpoint against one worker is refused.
@@ -1679,9 +1465,9 @@ proving them means executing the module rather than driving the Host API:
 - the `globals` floor, the loadable module media types, and that an import
   resolving to an auxiliary module fails `unsupported_media_type` rather than
   linking source-map evidence into the graph;
-- that a request to a `WorkerEndpoint`'s published address actually ARRIVES at
-  the worker. The lane drives desired state and sends no traffic, so what it
-  proves is that a host answers with a complete HTTPS address it assigned and
+- that a request to a host-assigned published address actually ARRIVES at
+  the resource. The lane drives desired state and sends no traffic, so what it
+  proves is that a host answers with a complete address it minted and
   keeps that address stable across a promotion — not that anything is listening
   on it. Nor can it prove the refusal branch: a black-box runner cannot take the
   address-assignment capability away from the host under test, so
@@ -1732,12 +1518,12 @@ Proven by required checks:
   `schemaDigest`, which is what turns "this host has a KV store" into a
   statement about a consistency model, a value model, an error vocabulary, and a
   set of limits (`edge-interface-contracts-advertised`);
-- a `WorkerCronTrigger` whose expression is a shape rather than a schedule is
+- a schedule expression that is a shape rather than a schedule is
   refused, and the sub-hourly schedules the grammar exists for are accepted
   (`cron-grammar-enforced`);
-- a second `QueueConsumer` against one queue is refused, and the same consumer
+- a second holder of an exclusively held target is refused, and the same holder
   is accepted once the first is gone (`queue-single-consumer-enforced`);
-- a `WorkerCustomDomain` written in any spelling of one DNS name is stored under
+- a claimed value written in any spelling of one name is stored under
   the canonical one, and a second attachment claiming it — in either spelling —
   is refused while the first lives and accepted once it is gone
   (`custom-domain-hostname-canonicalized`,
@@ -1746,7 +1532,7 @@ Proven by required checks:
   uids, releasing one leaves the other alone, and inside either tenant a second
   claim is still refused without naming anyone else's resource
   (`custom-domain-hostname-claim-stops-at-the-tenant`);
-- a `QueueConsumer` whose dead-letter destination resolves to its own queue, or
+- a resource whose dead-letter destination resolves to its own target, or
   closes a cycle through another consumer's, is refused, and an acyclic
   destination is accepted, including one that shares a destination with another
   chain (`dead-letter-cycle-rejected`).
@@ -1755,9 +1541,9 @@ Obligations a conforming host MUST meet that this lane does NOT prove, because
 proving them means exercising the data plane rather than driving the Host API:
 
 - **Static-asset routing.** That request paths resolve to the exact bytes in the
-  referenced `StaticAssetBundle`, that `runWorkerFirst` orders the asset and
-  worker stages as declared, and that SPA fallback serves those `index.html`
-  bytes rather than a host-owned document. The reference host proves the exact
+  referenced asset manifest, that a family's declared stage order is honoured,
+  and that a declared fallback serves those bytes rather than a host-owned
+  document. The reference host proves the exact
   relation and refuses an SPA bundle without that path; it serves no HTTP
   application traffic.
 - **SQLite migration execution.** That each SQL file and its `(path, digest)`
