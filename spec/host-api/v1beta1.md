@@ -1445,7 +1445,7 @@ a new exact runtime Interface version, never as a bare handler
 Those are stated normatively in the contract's own descriptions and proven by
 its behavior fixtures, which a runtime conformance run executes against a real
 isolate ([`../interface-contract/`](../interface-contract/README.md)). That run
-is [`../../conformance/runtime-abi-v1/`](../../conformance/runtime-abi-v1/contract.json),
+is the [immutable predecessor runtime ABI corpus](https://github.com/tako0614/terraform-provider-takoform/blob/1fa34160a4ed152443b4ea424a324f7677716e36/conformance/runtime-abi-v1/contract.json),
 whose runner drives a worker deployed from its own byte-pinned bundle and a
 disposable adapter over the runtime's module loader; it is a separate corpus,
 runner, and command from this lane precisely because the subjects differ

@@ -6,10 +6,10 @@ Accepted for the W09 Specification 1.1 release. This decision supersedes the
 numbered-release wording in decisions 0052, 0053, and 0055 where those records
 refer to Specification 1.0 or require implementation evidence. Those records
 remain historical decisions; the current machine authority is
-[`../publication-evidence.json`](../publication-evidence.json),
+the [immutable predecessor publication evidence](https://github.com/tako0614/terraform-provider-takoform/blob/1fa34160a4ed152443b4ea424a324f7677716e36/spec/publication-evidence.json),
 [`../../release/specification-releases.json`](../../release/specification-releases.json).
 The generated
-[`../../release/specification-compatibility.json`](../../release/specification-compatibility.json)
+[`../../docs/extraction/history/specification-compatibility.json`](../../docs/extraction/history/specification-compatibility.json)
 is a separate compatibility report and is not release authority.
 
 ## Decision

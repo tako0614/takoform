@@ -25,10 +25,10 @@ type PublicationLocator struct {
 
 // PublicationLocatorFor derives the only canonical locator for an already
 // verified package index and digest. v1alpha1 retains its immutable SemVer
-// locator; v1alpha2, v1alpha3, and v1alpha4 use the package digest and forbid
-// a second version clock. v1alpha4 (Form Family) release IDs encode the
-// namespaced group together with the kind so a family kind can never collide
-// with a frozen central-epoch kind of the same name.
+// locator; v1alpha2 through v1alpha5 use the package digest and forbid a second
+// version clock. Form Family release IDs encode the namespaced group together
+// with the kind so a family kind can never collide with a frozen central-epoch
+// kind of the same name.
 func PublicationLocatorFor(index PackageIndex, packageDigest string) (PublicationLocator, error) {
 	if index.Kind != PackageKind || index.FormRef.Kind == "" || !ValidDigest(packageDigest) {
 		return PublicationLocator{}, fmt.Errorf("package publication identity requires FormPackage, FormRef kind, and canonical package digest")
@@ -65,59 +65,118 @@ func PublicationLocatorFor(index PackageIndex, packageDigest string) (Publicatio
 	}
 }
 
-// ParsePublicationTag recognizes the three immutable publication locator
-// profiles without interpreting any of them as Form maturity: the retained
-// v1alpha1 SemVer lane, the content-addressed provider-v2 v1alpha3 lane, and
-// the content-addressed Form Family v1alpha4 lane.
+// ParsePublicationTag recognizes only publication locators whose package
+// generation is recoverable from the tag itself: the retained v1alpha1 SemVer
+// lane and the two Form Family lanes. A bare central release ID with a digest
+// artifact is shared by v1alpha2 and v1alpha3, so this function fails closed
+// rather than guessing. Call ParsePublicationTagForPackageAPIVersion when a
+// verified package envelope supplies that missing identity.
 //
 // The two content-addressed lanes share an artifact grammar, so the release ID
 // is what tells them apart: a family release ID decodes to "<group>/<Kind>"
 // (ReleaseIDForGroupKind) while a central one decodes to a bare Kind, and the
 // Kind grammar admits no "/", so any decoded value containing one is a family
-// locator. Without that distinction every Edge Family tag decoded as the
+// locator. Without that distinction every versioned-family tag decoded as the
 // retained v1alpha3 lane and nothing in the family could ever be published.
-func ParsePublicationTag(tag string) (PublicationLocator, error) {
+type parsedPublicationTag struct {
+	releaseID string
+	decoded   string
+	segment   string
+}
+
+func parsePublicationTag(tag string) (parsedPublicationTag, error) {
 	parts := strings.Split(tag, "/")
 	if len(parts) != 3 || parts[0] != "forms" {
-		return PublicationLocator{}, fmt.Errorf("Form Package tag %q is not a canonical publication locator", tag)
+		return parsedPublicationTag{}, fmt.Errorf("Form Package tag %q is not a canonical publication locator", tag)
 	}
 	releaseID := parts[1]
 	decoded, err := KindFromReleaseID(releaseID)
 	if err != nil {
+		return parsedPublicationTag{}, err
+	}
+	return parsedPublicationTag{releaseID: releaseID, decoded: decoded, segment: parts[2]}, nil
+}
+
+func publicationLocatorFromParsedTag(tag, packageAPIVersion, artifactID string, parsed parsedPublicationTag) PublicationLocator {
+	return PublicationLocator{
+		APIVersion: packageAPIVersion, ReleaseID: parsed.releaseID, ArtifactID: artifactID,
+		Tag: tag, SourcePath: path.Join("forms", "releases", parsed.releaseID, artifactID),
+	}
+}
+
+func ParsePublicationTag(tag string) (PublicationLocator, error) {
+	parsed, err := parsePublicationTag(tag)
+	if err != nil {
 		return PublicationLocator{}, err
 	}
-	family := strings.Contains(decoded, "/")
-	segment := parts[2]
+	family := strings.Contains(parsed.decoded, "/")
+	segment := parsed.segment
 	if strings.HasPrefix(segment, "v") && legacyPackageArtifactPattern.MatchString(strings.TrimPrefix(segment, "v")) {
 		if family {
 			return PublicationLocator{}, fmt.Errorf(
 				"Form Package tag %q carries a Form Family release id with a retained SemVer artifact locator", tag)
 		}
 		artifactID := strings.TrimPrefix(segment, "v")
-		return PublicationLocator{
-			APIVersion: PackageAPIVersion, ReleaseID: releaseID, ArtifactID: artifactID,
-			Tag: tag, SourcePath: path.Join("forms", "releases", releaseID, artifactID),
-		}, nil
+		return publicationLocatorFromParsedTag(tag, PackageAPIVersion, artifactID, parsed), nil
 	}
 	if currentPackageArtifactPattern.MatchString(segment) {
-		apiVersion := CurrentPackageAPIVersion
-		if family {
-			// The decoded release id is "<group>/<Kind>", so the group is
-			// recoverable here, and which family lane a tag belongs to is
-			// exactly whether that group carries a version segment: a
-			// versionless one cannot be described by the v1alpha4 index
-			// schema, whose FormRef reference requires one (decision 0049).
-			apiVersion = FamilyPackageAPIVersion
-			if !strings.Contains(strings.TrimSuffix(decoded, "/"+path.Base(decoded)), "/") {
-				apiVersion = VersionlessFamilyPackageAPIVersion
-			}
+		if !family {
+			return PublicationLocator{}, fmt.Errorf(
+				"Form Package tag %q is ambiguous between central content-addressed package apiVersions %q and %q; use ParsePublicationTagForPackageAPIVersion",
+				tag, LegacyContentAddressedPackageAPIVersion, CurrentPackageAPIVersion)
 		}
-		return PublicationLocator{
-			APIVersion: apiVersion, ReleaseID: releaseID, ArtifactID: segment,
-			Tag: tag, SourcePath: path.Join("forms", "releases", releaseID, segment),
-		}, nil
+		// The decoded release id is "<group>/<Kind>", so the group is
+		// recoverable here, and which family lane a tag belongs to is
+		// exactly whether that group carries a version segment: a
+		// versionless one cannot be described by the v1alpha4 index
+		// schema, whose FormRef reference requires one (decision 0049).
+		apiVersion := FamilyPackageAPIVersion
+		if !strings.Contains(strings.TrimSuffix(parsed.decoded, "/"+path.Base(parsed.decoded)), "/") {
+			apiVersion = VersionlessFamilyPackageAPIVersion
+		}
+		return publicationLocatorFromParsedTag(tag, apiVersion, segment, parsed), nil
 	}
 	return PublicationLocator{}, fmt.Errorf("Form Package tag %q has an unsupported artifact locator", tag)
+}
+
+// ParsePublicationTagForPackageAPIVersion parses one canonical publication tag
+// under an explicit Form Package envelope identity. The package apiVersion is
+// the only information capable of distinguishing the byte-identical central
+// v1alpha2 and v1alpha3 tag grammars; publisher and Form group names do not
+// participate in that decision.
+func ParsePublicationTagForPackageAPIVersion(tag, packageAPIVersion string) (PublicationLocator, error) {
+	switch packageAPIVersion {
+	case PackageAPIVersion, FamilyPackageAPIVersion, VersionlessFamilyPackageAPIVersion:
+		locator, err := ParsePublicationTag(tag)
+		if err != nil {
+			return PublicationLocator{}, err
+		}
+		if locator.APIVersion != packageAPIVersion {
+			return PublicationLocator{}, fmt.Errorf(
+				"Form Package tag %q belongs to package apiVersion %q, not %q",
+				tag, locator.APIVersion, packageAPIVersion)
+		}
+		return locator, nil
+	case LegacyContentAddressedPackageAPIVersion, CurrentPackageAPIVersion:
+		parsed, err := parsePublicationTag(tag)
+		if err != nil {
+			return PublicationLocator{}, err
+		}
+		if strings.Contains(parsed.decoded, "/") {
+			return PublicationLocator{}, fmt.Errorf(
+				"Form Package tag %q carries a Form Family release id, not a central package apiVersion %q",
+				tag, packageAPIVersion)
+		}
+		artifactID := parsed.segment
+		if !currentPackageArtifactPattern.MatchString(artifactID) {
+			return PublicationLocator{}, fmt.Errorf(
+				"Form Package tag %q does not carry the content-addressed artifact required by package apiVersion %q",
+				tag, packageAPIVersion)
+		}
+		return publicationLocatorFromParsedTag(tag, packageAPIVersion, artifactID, parsed), nil
+	default:
+		return PublicationLocator{}, fmt.Errorf("unsupported package apiVersion %q", packageAPIVersion)
+	}
 }
 
 // FamilyPackageLane reports whether a package index apiVersion is one of the
@@ -150,11 +209,11 @@ func ReleaseIDForKind(kind string) string {
 
 // ReleaseIDForGroupKind is the v1alpha4 release identity: it encodes the
 // namespaced Form group (the FormRef apiVersion) together with the kind, so
-// "edge.forms.takoform.com/v1beta1 ObjectBucket" and the frozen central
+// "storage.publisher.example/v1beta1 ObjectBucket" and the frozen central
 // "ObjectBucket" own different release lines.
 //
 // The joined string contains MORE than one "/": a Form group is itself
-// "<dns-name>/<groupVersion>", so "edge.forms.takoform.com/v1beta1" plus
+// "<dns-name>/<groupVersion>", so "storage.publisher.example/v1beta1" plus
 // "ObjectBucket" joins to a value with two separators. The separator is
 // therefore not unique and never was. What makes the encoding unambiguous is
 // the Kind grammar (^[A-Z][A-Za-z0-9]{0,63}$, spec/schemas/form-ref-*.json),

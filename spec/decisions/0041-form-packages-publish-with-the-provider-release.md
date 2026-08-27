@@ -14,7 +14,7 @@ Measured, most of the merge has already happened, one release at a time:
   format tag, not an axis
   ([decision 0040](0040-the-package-envelope-is-a-format-not-an-axis.md)).
 - **The provider release already fixes the package set.**
-  [`../../release/provider-form-identities.json`](../../release/provider-form-identities.json)
+  [the immutable predecessor provider identity ledger](https://github.com/tako0614/terraform-provider-takoform/blob/1fa34160a4ed152443b4ea424a324f7677716e36/release/provider-form-identities.json)
   locks, append-only, the exact `packageDigest` of every Form a provider
   release embeds, and the release gate asserts that embedded set byte-equals
   the candidate set. Provider `v2.1.1` names all fifteen Beta package digests.

@@ -60,22 +60,98 @@ func TestPublicationLocatorRejectsMismatchedPackageProfiles(t *testing.T) {
 	}
 }
 
-func TestParsePublicationTagRoundTripsBothProfiles(t *testing.T) {
+func TestParsePublicationTagRoundTripsTheUnambiguousLegacyProfile(t *testing.T) {
 	t.Parallel()
 	releaseID := ReleaseIDForKind("Example")
-	for name, tag := range map[string]string{
-		"Legacy":  "forms/" + releaseID + "/v1.2.3",
-		"current": "forms/" + releaseID + "/sha256-" + strings.Repeat("d", 64),
-	} {
-		name, tag := name, tag
-		t.Run(name, func(t *testing.T) {
+	tag := "forms/" + releaseID + "/v1.2.3"
+	locator, err := ParsePublicationTag(tag)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if locator.Tag != tag || locator.ReleaseID != releaseID || locator.SourcePath == "" {
+		t.Fatalf("parsed locator = %#v", locator)
+	}
+	if locator.APIVersion != PackageAPIVersion {
+		t.Fatalf("parsed apiVersion = %q, want %q", locator.APIVersion, PackageAPIVersion)
+	}
+}
+
+func TestParsePublicationTagRejectsAmbiguousCentralContentAddressedGeneration(t *testing.T) {
+	t.Parallel()
+	digest := "sha256:" + strings.Repeat("d", 64)
+	index := PackageIndex{
+		APIVersion: LegacyContentAddressedPackageAPIVersion,
+		Kind:       PackageKind,
+		FormRef:    FormRef{Kind: "Example"},
+	}
+	legacy, err := PublicationLocatorFor(index, digest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	index.APIVersion = CurrentPackageAPIVersion
+	current, err := PublicationLocatorFor(index, digest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if legacy.Tag != current.Tag {
+		t.Fatalf("central generations unexpectedly encoded different tags: %q != %q", legacy.Tag, current.Tag)
+	}
+	if _, err := ParsePublicationTag(legacy.Tag); err == nil || !strings.Contains(err.Error(), "ambiguous") {
+		t.Fatalf("ambiguous central tag %q was accepted: %v", legacy.Tag, err)
+	}
+}
+
+func TestParsePublicationTagForPackageAPIVersionRoundTripsEveryGeneration(t *testing.T) {
+	t.Parallel()
+	indexes := []PackageIndex{
+		{
+			APIVersion:     PackageAPIVersion,
+			Kind:           PackageKind,
+			PackageVersion: "1.2.3",
+			FormRef:        FormRef{Kind: "LegacyExample"},
+		},
+		{
+			APIVersion: LegacyContentAddressedPackageAPIVersion,
+			Kind:       PackageKind,
+			FormRef:    FormRef{Kind: "LegacyDigestExample"},
+		},
+		{
+			APIVersion: CurrentPackageAPIVersion,
+			Kind:       PackageKind,
+			FormRef:    FormRef{Kind: "CurrentExample"},
+		},
+		{
+			APIVersion: FamilyPackageAPIVersion,
+			Kind:       PackageKind,
+			FormRef: FormRef{
+				APIVersion: "resources.publisher.example/v1beta1",
+				Kind:       "VersionedExample",
+			},
+		},
+		{
+			APIVersion: VersionlessFamilyPackageAPIVersion,
+			Kind:       PackageKind,
+			FormRef: FormRef{
+				APIVersion: "resources.publisher.example",
+				Kind:       "NeutralExample",
+			},
+		},
+	}
+	digest := "sha256:" + strings.Repeat("e", 64)
+	for _, index := range indexes {
+		index := index
+		t.Run(index.APIVersion, func(t *testing.T) {
 			t.Parallel()
-			locator, err := ParsePublicationTag(tag)
+			locator, err := PublicationLocatorFor(index, digest)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if locator.Tag != tag || locator.ReleaseID != releaseID || locator.SourcePath == "" {
-				t.Fatalf("parsed locator = %#v", locator)
+			parsed, err := ParsePublicationTagForPackageAPIVersion(locator.Tag, index.APIVersion)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if parsed != locator {
+				t.Fatalf("locator did not round-trip: parsed=%#v want=%#v", parsed, locator)
 			}
 		})
 	}

@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-const testFamilyGroup = "edge.forms.takoform.com/v1beta1"
+const testFamilyGroup = "resources.publisher.example/v1beta1"
 
 func familyPortableMapKeys() map[string]any {
 	return map[string]any{
@@ -58,7 +58,7 @@ func makeFamilyDefinition() map[string]any {
 		"providedInterfaces": []any{
 			map[string]any{
 				"apiVersion":   "interfaces.takoform.com/v1alpha1",
-				"name":         "edge.kv",
+				"name":         "example.kv",
 				"version":      "1.0.0",
 				"schemaDigest": "sha256:" + strings.Repeat("a", 64),
 			},
@@ -66,7 +66,7 @@ func makeFamilyDefinition() map[string]any {
 		"acceptedBindings": []any{
 			map[string]any{
 				"apiVersion":   "bindings.takoform.com/v1alpha1",
-				"name":         "module-worker.edge-kv",
+				"name":         "runtime-job.example-kv",
 				"version":      "1.0.0",
 				"schemaDigest": "sha256:" + strings.Repeat("b", 64),
 			},
@@ -85,7 +85,7 @@ func makeFamilyDefinition() map[string]any {
 	}
 }
 
-func makeFamilyPackage(t *testing.T, mutateDefinition func(map[string]any)) string {
+func makeFamilyPackageForGeneration(t *testing.T, packageAPIVersion string, mutateDefinition func(map[string]any)) string {
 	t.Helper()
 	root := t.TempDir()
 	definition := makeFamilyDefinition()
@@ -99,7 +99,7 @@ func makeFamilyPackage(t *testing.T, mutateDefinition func(map[string]any)) stri
 	writeFixtureFile(t, filepath.Join(root, "fixtures", "desired.json"), desiredRaw, 0o644)
 	writeFixtureFile(t, filepath.Join(root, "fixtures", "negative-missing-main-module.json"), negativeRaw, 0o644)
 	index := map[string]any{
-		"apiVersion": FamilyPackageAPIVersion,
+		"apiVersion": packageAPIVersion,
 		"kind":       PackageKind,
 		"formRef": map[string]any{
 			"apiVersion":        definition["apiVersion"],
@@ -116,6 +116,24 @@ func makeFamilyPackage(t *testing.T, mutateDefinition func(map[string]any)) stri
 	}
 	writeFixtureFile(t, filepath.Join(root, PackageIndexFilename), canonicalMarshal(t, index), 0o644)
 	return root
+}
+
+func makeFamilyPackage(t *testing.T, mutateDefinition func(map[string]any)) string {
+	t.Helper()
+	return makeFamilyPackageForGeneration(t, FamilyPackageAPIVersion, mutateDefinition)
+}
+
+func makeCurrentFamilyPackage(t *testing.T, mutateDefinition func(map[string]any)) string {
+	t.Helper()
+	return makeFamilyPackageForGeneration(t, VersionlessFamilyPackageAPIVersion, func(definition map[string]any) {
+		definition["apiVersion"] = "resources.publisher.example"
+		definition["requiresHostApi"] = stableHostAPIVersion
+		binding := definition["acceptedBindings"].([]any)[0].(map[string]any)
+		binding["apiVersion"] = "bindings.takoform.com/v1alpha2"
+		if mutateDefinition != nil {
+			mutateDefinition(definition)
+		}
+	})
 }
 
 func TestVerifyDirectoryAcceptsFamilyV1Alpha4Package(t *testing.T) {
@@ -140,18 +158,38 @@ func TestFamilyDefinitionRejectsRevisionUpdateCapability(t *testing.T) {
 	}
 }
 
-func TestFamilyDefinitionAcceptsBindingsForDeclaredNonRevisionRole(t *testing.T) {
+func TestCurrentFamilyDefinitionAcceptsBindingsForDeclaredNonRevisionRole(t *testing.T) {
 	t.Parallel()
-	root := makeFamilyPackage(t, func(definition map[string]any) {
-		definition["apiVersion"] = "forms.example.com/v1alpha1"
-		definition["requiresHostApi"] = stableHostAPIVersion
+	root := makeCurrentFamilyPackage(t, func(definition map[string]any) {
 		definition["role"] = "identity"
 		definition["lifecycleCapabilities"] = []any{"create", "read", "update", "delete", "import", "observe"}
-		binding := definition["acceptedBindings"].([]any)[0].(map[string]any)
-		binding["apiVersion"] = "bindings.takoform.com/v1alpha2"
 	})
 	if _, err := VerifyDirectory(root); err != nil {
 		t.Fatalf("identity Form with a declared capability binding was rejected: %v", err)
+	}
+}
+
+func TestPackageGenerationAloneSelectsTheFamilySchema(t *testing.T) {
+	t.Parallel()
+	if _, err := VerifyDirectory(makeFamilyPackage(t, nil)); err != nil {
+		t.Fatalf("retained v1alpha4 profile rejected its synthetic versioned Definition: %v", err)
+	}
+	if _, err := VerifyDirectory(makeCurrentFamilyPackage(t, nil)); err != nil {
+		t.Fatalf("current v1alpha5 profile rejected its synthetic neutral Definition: %v", err)
+	}
+
+	currentBytesInRetainedEnvelope := makeFamilyPackage(t, func(definition map[string]any) {
+		definition["requiresHostApi"] = stableHostAPIVersion
+	})
+	if _, err := VerifyDirectory(currentBytesInRetainedEnvelope); err == nil {
+		t.Fatal("v1alpha4 package inferred the current profile from publisher-owned Definition bytes")
+	}
+
+	retainedBytesInCurrentEnvelope := makeFamilyPackageForGeneration(t, VersionlessFamilyPackageAPIVersion, func(definition map[string]any) {
+		definition["apiVersion"] = "resources.publisher.example"
+	})
+	if _, err := VerifyDirectory(retainedBytesInCurrentEnvelope); err == nil {
+		t.Fatal("v1alpha5 package inferred a retained profile from publisher-owned Definition bytes")
 	}
 }
 
@@ -169,7 +207,7 @@ func TestFamilyDefinitionRejectsFrozenCentralGroups(t *testing.T) {
 func TestFamilyFormRefAcceptsNamespacedGroups(t *testing.T) {
 	t.Parallel()
 	ref := map[string]any{
-		"apiVersion":        "forms.example.com/v1alpha1",
+		"apiVersion":        "forms.example.com",
 		"kind":              "ExampleStore",
 		"definitionVersion": "0.1.0",
 		"schemaDigest":      "sha256:" + strings.Repeat("c", 64),
@@ -178,7 +216,7 @@ func TestFamilyFormRefAcceptsNamespacedGroups(t *testing.T) {
 	if err != nil {
 		t.Fatalf("valid third-party family FormRef rejected: %v", err)
 	}
-	if parsed.APIVersion != "forms.example.com/v1alpha1" {
+	if parsed.APIVersion != "forms.example.com" {
 		t.Fatalf("parsed FormRef = %+v", parsed)
 	}
 	for name, invalid := range map[string]string{

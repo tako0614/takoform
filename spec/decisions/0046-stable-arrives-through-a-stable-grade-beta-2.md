@@ -75,7 +75,7 @@ whichever channel the lane then occupies), family `/v1` groups, and Form
 `1.0.0` identities carrying the Beta 2 contracts unchanged. Provider `3.0.0`
 ships them; its release is the same event
 ([decision 0041](0041-form-packages-publish-with-the-provider-release.md),
-[`../../release/migrations/v2-to-v3.md`](../../release/migrations/v2-to-v3.md)).
+[the immutable predecessor v2-to-v3 migration](https://github.com/tako0614/terraform-provider-takoform/blob/1fa34160a4ed152443b4ea424a324f7677716e36/release/migrations/v2-to-v3.md)).
 
 ## Enforcement
 

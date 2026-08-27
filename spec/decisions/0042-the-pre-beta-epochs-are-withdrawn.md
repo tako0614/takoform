@@ -42,7 +42,7 @@ publication-truth machinery derived from the admission evidence.
 
 **What a withdrawal is.** Every served identity moves to the `retired` list of
 the ledger that owns it — document addresses in
-[`../../release/published-document-lanes.json`](../../release/published-document-lanes.json),
+[the extracted W09 document ledger](../../docs/extraction/history/published-document-lanes.json),
 schema `$id`s in
 [`../../release/public-schema-identities.json`](../../release/public-schema-identities.json) —
 with the bytes it had and the reason. A retired identity is never reused: the
@@ -74,7 +74,7 @@ repository's git history and in the immutable `forms/*` release tags.
 
 **What this forces next.** The provider built from this repository exposes
 only the 15 Family resources, so the next published release MUST be a major,
-`3.0.0`; [`../../release/migrations/v2-to-v3.md`](../../release/migrations/v2-to-v3.md)
+`3.0.0`; [the immutable predecessor v2-to-v3 migration](https://github.com/tako0614/terraform-provider-takoform/blob/1fa34160a4ed152443b4ea424a324f7677716e36/release/migrations/v2-to-v3.md)
 is the migration contract for users of the nine. The signed Registry readback
 lane was epoch-bound tooling and is retired with it; the `v2.1.1` readback
 closure is retained in `release/provider-release-identities.json`, and the

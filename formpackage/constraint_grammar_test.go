@@ -2,7 +2,6 @@ package formpackage
 
 import (
 	"encoding/json"
-	"os"
 	"testing"
 )
 
@@ -19,19 +18,9 @@ import (
 // behaviour this list exists to remove.
 func TestConstraintEntriesCarryExactlyTheirKindsMembers(t *testing.T) {
 	t.Parallel()
-	raw, err := os.ReadFile(
-		"../forms/candidates/edge.forms.takoform.com/worker-deployment/definition.json",
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var base map[string]any
-	if err := json.Unmarshal(raw, &base); err != nil {
-		t.Fatal(err)
-	}
-	base["requiresHostApi"] = "forms.takoform.com/v1"
+	base := currentFamilyDefinitionFixture(t)
 	if _, err := ValidateDefinition(canonicalMarshal(t, base)); err != nil {
-		t.Fatalf("the published Definition this test builds on does not validate: %v", err)
+		t.Fatalf("the synthetic Definition this test builds on does not validate: %v", err)
 	}
 	desired := base["desiredSchema"].(map[string]any)
 	properties := desired["properties"].(map[string]any)
@@ -59,7 +48,7 @@ func TestConstraintEntriesCarryExactlyTheirKindsMembers(t *testing.T) {
 		// Every kind, with exactly what its rule needs.
 		"exclusive over a reference":   {`{"kind":"exclusive","reference":"/worker"}`, true},
 		"exclusive keyed by a sibling": {`{"kind":"exclusive","reference":"/worker","keyedBy":"/className"}`, true},
-		"sum over a list":              {`{"kind":"sum","list":"/targets","member":"weight","total":10000}`, true},
+		"sum over a list":              {`{"kind":"sum","list":"/weights","member":"weight","total":10000}`, true},
 		"claim over a property":        {`{"kind":"claim","property":"/hostname"}`, true},
 		"host-assigned output":         {`{"kind":"hostAssigned","output":"/address"}`, true},
 		"ordered numeric pair":         {`{"kind":"orderedPair","references":["/minimum","/maximum"]}`, true},
@@ -76,7 +65,7 @@ func TestConstraintEntriesCarryExactlyTheirKindsMembers(t *testing.T) {
 		// A kind carrying another kind's members names two rules and is neither.
 		"claim wearing a sum's members":    {`{"kind":"claim","list":"/x","member":"weight","total":10}`, false},
 		"claim with an output":             {`{"kind":"claim","property":"/hostname","output":"/address"}`, false},
-		"sum missing its total":            {`{"kind":"sum","list":"/targets","member":"weight"}`, false},
+		"sum missing its total":            {`{"kind":"sum","list":"/weights","member":"weight"}`, false},
 		"host-assigned with a reference":   {`{"kind":"hostAssigned","output":"/address","reference":"/worker"}`, false},
 		"ordered pair with one value":      {`{"kind":"orderedPair","references":["/minimum"]}`, false},
 		"ordered pair with optional value": {`{"kind":"orderedPair","references":["/minimum","/optionalNumber"]}`, false},

@@ -3,23 +3,30 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 
-	"github.com/tako0614/terraform-provider-takoform/formpackage"
+	"github.com/tako0614/takoform/formpackage"
+	"github.com/tako0614/takoform/internal/buildinfo"
 )
 
 func main() {
-	if err := run(os.Args[1:]); err != nil {
+	if err := run(os.Args[1:], os.Stdout); err != nil {
 		fmt.Fprintln(os.Stderr, "form-package:", err)
 		os.Exit(1)
 	}
 }
 
-func run(arguments []string) error {
+func run(arguments []string, output io.Writer) error {
 	if len(arguments) == 0 {
 		return usageError()
 	}
 	switch arguments[0] {
+	case "version":
+		if len(arguments) != 1 {
+			return usageError()
+		}
+		return buildinfo.WriteJSON(output, "form-package")
 	case "verify":
 		if len(arguments) != 2 {
 			return usageError()
@@ -28,7 +35,7 @@ func run(arguments []string) error {
 		if err != nil {
 			return err
 		}
-		return writeJSON(report)
+		return writeJSON(output, report)
 	case "canonicalize":
 		if len(arguments) != 2 {
 			return usageError()
@@ -41,7 +48,7 @@ func run(arguments []string) error {
 		if err != nil {
 			return err
 		}
-		_, err = os.Stdout.Write(append(canonical, '\n'))
+		_, err = output.Write(append(canonical, '\n'))
 		return err
 	case "digest":
 		if len(arguments) != 2 {
@@ -55,8 +62,8 @@ func run(arguments []string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Println(digest)
-		return nil
+		_, err = fmt.Fprintln(output, digest)
+		return err
 	case "validate-revocation":
 		if len(arguments) != 2 {
 			return usageError()
@@ -69,7 +76,7 @@ func run(arguments []string) error {
 		if err != nil {
 			return err
 		}
-		return writeJSON(statement)
+		return writeJSON(output, statement)
 	case "validate-revocation-checkpoint":
 		if len(arguments) != 2 {
 			return usageError()
@@ -82,19 +89,19 @@ func run(arguments []string) error {
 		if err != nil {
 			return err
 		}
-		return writeJSON(checkpoint)
+		return writeJSON(output, checkpoint)
 	default:
 		return usageError()
 	}
 }
 
-func writeJSON(value any) error {
-	encoder := json.NewEncoder(os.Stdout)
+func writeJSON(output io.Writer, value any) error {
+	encoder := json.NewEncoder(output)
 	encoder.SetEscapeHTML(false)
 	encoder.SetIndent("", "  ")
 	return encoder.Encode(value)
 }
 
 func usageError() error {
-	return fmt.Errorf("usage: form-package verify DIR | canonicalize FILE | digest FILE | validate-revocation FILE | validate-revocation-checkpoint FILE")
+	return fmt.Errorf("usage: form-package version | verify DIR | canonicalize FILE | digest FILE | validate-revocation FILE | validate-revocation-checkpoint FILE")
 }

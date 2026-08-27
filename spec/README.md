@@ -1,187 +1,120 @@
 # Takoform portable specification
 
-This directory is the portable specification surface for Takoform. It defines
-**Specification 1.1** and carries the literal Host API v1 source candidate.
-Host API v1 is a separate, unpublished protocol identity; publishing
-Specification 1.1 does not publish or promote it. The append-only numbered
-release ledger is the authority for whether Specification 1.1 has a publication
-receipt. Takoform defines a small desired-state
-boundary between infrastructure-as-code clients and resource hosts. It is not
-an industry standards body, certification authority, or guarantee of backend
-portability.
+This directory is the family-neutral contract surface for Takoform. It defines
+portable identities, data-only Form Packages, immutable Snapshot compilation,
+Host lifecycle messages, trust inputs, and conformance language. It does not
+define an official Form roster, a Terraform Provider, a Host implementation,
+backend placement, credentials, activation, billing, or a catalog.
 
-Requirement keywords, conformance classes, and what a passing check does and
-does not prove are defined in [`conformance.md`](conformance.md). How the API
-group, Forms, packages, and the provider are versioned is in
-[`versioning.md`](versioning.md). Current project positioning and the
-Proposal → Experimental → Stable → Legacy lifecycle are defined in
-[`project-lifecycle.md`](project-lifecycle.md). The exact boundary between
-portable workload semantics and host/profile/operator concerns is
-[`portability-boundary.md`](portability-boundary.md).
+Requirement keywords and conformance classes are defined in
+[`conformance.md`](conformance.md). Independent version axes and compatibility
+rules are defined in [`versioning.md`](versioning.md). Form maturity and the
+separate authored, published, installed, supported, activated, provisioned,
+client-supported, and offered facts are defined in
+[`project-lifecycle.md`](project-lifecycle.md).
 
-## Product contract map
+## Publication status
 
-Takoform has five public contract interfaces:
+Takoform Specification 1.1 is the first numbered release. It was published as
+an immutable source snapshot by the predecessor repository before Core
+ownership moved. Its exact source commit, annotated tag object, release,
+snapshot digest, and asset digest remain in the imported append-only
+[`Specification release ledger`](../release/specification-releases.json).
+Identity 1.0 was never published, is withdrawn, and is never reused.
+
+The current repository tree is an unreleased post-1.1 draft. A source change in
+this tree does not alter the published 1.1 snapshot and does not itself publish
+any protocol, Form, package, SDK, Provider, support, activation, or Offering
+fact. The current publication and writer boundary is
+[`publication-freeze.md`](publication-freeze.md); the one-way authority record
+is [`release/specification-authority.json`](../release/specification-authority.json).
+
+The literal Host API `forms.takoform.com/v1` is a separate unpublished
+candidate. Specification 1.1 did not publish it. There is no `/v1.1` Host lane,
+and API v2 remains proposal-only: no v2 route, schema, tag, or receipt is minted
+by this tree.
+
+## Contract map
+
+Takoform has five independent contract areas.
 
 1. **Exact Form and Package data.**
-   [`form-definition/`](form-definition/) defines immutable `FormRef` and the
-   desired/observed/output shape. [`form-package/`](form-package/) binds one
-   exact definition and its data-only fixtures into immutable package bytes
-   under the current `packages.forms.takoform.com/v1alpha5` envelope.
-   [`core/`](core/) defines the family-neutral compilation of admitted package
-   semantic closures into one immutable exact-identity Snapshot.
+   [`form-definition/`](form-definition/) defines the four-field exact FormRef
+   and portable desired, observed, and output shapes.
+   [`form-package/`](form-package/) defines a closed data-only package for one
+   exact Form. [`core/`](core/) defines compilation of already verified,
+   digest-pinned packages and contracts into one immutable Snapshot.
 2. **Desired Resource lifecycle.**
-   [`host-api/`](host-api/) defines discovery, exact Form availability,
-   preview/apply, read/import/observe/refresh/delete, fencing, and portable
-   errors on the `forms.takoform.com/v1` wire, reached through
-   `/.well-known/takoform/v1`. The host chooses implementation and
-   placement.
-3. **Form Families and their contract surfaces.**
-   [`form-families.md`](form-families.md) defines namespaced Form Family
-   groups; current families use versionless groups such as
-   `edge.forms.takoform.com`.
-   [`host-api/v1.md`](host-api/v1.md) defines the Host API channel
-   with UID/generation/revision resource identity, long-running Operations,
-   and Host Support Profiles.
-4. **Interface, Binding, and artifact contracts.**
-   [`interface-contract/`](interface-contract/) defines exact digest-bound
-   Interface contracts, [`binding-contract/`](binding-contract/) defines typed
-   Binding contracts, [`artifact-transport/`](artifact-transport/) defines
-   content-addressed artifact upload, and
-   [`standard-services/`](standard-services/) defines Host-resolved sealed-slot
-   access by opaque `standards.takoform.com/v1` reverse-DNS protocol identity.
-5. **Trust, lifecycle, version, and release identity.**
-   [`trust/`](trust/) defines immutable publisher evidence and revocation;
-   [`project-lifecycle.md`](project-lifecycle.md) separates Form maturity from
-   Host Support and availability; [`versioning.md`](versioning.md) keeps
-   provider, API, Form, and package compatibility independent.
-   [`release/`](../release/README.md) binds artifacts to those exact identities
-   without changing the contracts above.
+   [`host-api/`](host-api/) defines discovery, support, validate/prepare/apply,
+   read/import/observe/refresh/delete, asynchronous Operations, identity fences,
+   and portable errors. A Host owns implementation, placement, credentials,
+   state, and mutation.
+3. **Family namespaces.**
+   [`form-families.md`](form-families.md) defines versionless reverse-DNS group
+   ownership and group-first exact lookup. Core has no built-in publisher or
+   family list; any publisher may use a namespace it controls.
+4. **Interface, Binding, artifact, and standard-service contracts.**
+   [`interface-contract/`](interface-contract/),
+   [`binding-contract/`](binding-contract/),
+   [`artifact-transport/`](artifact-transport/), and
+   [`standard-services/`](standard-services/) define digest-bound data
+   contracts. They do not carry executable implementations or credentials.
+5. **Trust, lifecycle, and release identity.**
+   [`trust/`](trust/) defines caller-supplied publisher provenance and offline
+   verification inputs. [`schemas/`](schemas/) carries active authoring schemas
+   and byte-exact verify-only history. The append-only release ledgers bind
+   published identities without advancing another version axis.
 
-[`schemas/`](schemas/), [`conformance.md`](conformance.md), and
-[`decisions/`](decisions/) support those interfaces with structural minima,
-executable evidence language, and decision rationale. They are not additional
-product interfaces. The generated current inventory is
-[`../forms/README.md`](../forms/README.md), host discovery validation is
-[`schemas/host-discovery-v1.schema.json`](schemas/host-discovery-v1.schema.json),
-and the local evidence map is
-[`../conformance/README.md`](../conformance/README.md).
+## Publisher equality
 
-## Current status
+A FormRef contains only `apiVersion`, `kind`, `definitionVersion`, and
+`schemaDigest`. It has no official bit. Official and independently maintained
+publishers use the same package schema, canonical digest, signature and source
+policy, revocation processing, installation record, Host support report, and
+activation mechanism.
 
-Specification 1.1 is the first numbered release identity. Its release state is
-derived from the append-only numbered ledger; this normative document does not
-hard-code a transient candidate or publication state. Identity 1.0 was never
-published, is withdrawn, and is never reused. The separately generated
-five-class compatibility report at
-[`../release/specification-compatibility.json`](../release/specification-compatibility.json)
-binds raw source bytes to owning ledgers and migration dispositions and
-byte-pins the literal Host API v1 candidate. It is compatibility evidence only,
-not publication evidence, a release asset, or a prerequisite. Current Forms,
-packages, and Host API v1 remain unpublished candidates; no `/v1.1` or v2
-lane/schema/tag/receipt is created.
+The difference is provenance: a publisher controls a namespace and source, and
+an operator chooses which exact issuer/repository/workflow/ref policy to trust.
+Core ships no ambient trusted publisher, privileged route, default allowlist,
+or trust bypass.
 
-## C1, C2, C3, and C4 release boundaries
+Verification does not install a package. Installation does not imply Host
+support. Support does not activate a Form. Activation does not add a typed
+client projection or commercial Offering. Customer Resource traffic must not
+download packages or executable code.
 
-The W09 workflow keeps four commits distinct:
+## Schemas and retained identities
 
-- **C1 — normative freeze:** the normative `spec/` tree and executable
-  validation tooling are frozen; every publication-evidence field remains
-  `null`.
-- **C2 — source evidence:** an evidence-only change records one exact committed
-  Specification source snapshot and its static projection. Candidate corpus,
-  reference conformance, Provider, Host, and compatibility-report data remain
-  outside this evidence record.
-- **C3 — publication receipt:** a later authoritative receipt appends one
-  immutable Specification 1.1 entry to the numbered ledger and its projections;
-  it carries only the source-snapshot prerequisite and live publication
-  readback.
-- **C4 — derived public refresh:** the direct single-parent child of C3 updates
-  only the explicit deterministic compatibility, site-status, README, and
-  website outputs. It is not publication authority and cannot change
-  `spec/**`, publication evidence, any ledger or ledger projection, release
-  tooling, Provider/Form/Host source, or an unrelated file.
+[`release/public-schema-identities.json`](../release/public-schema-identities.json)
+is the current schema identity ledger. Every active and verify-only entry keeps
+an exact `$id`, repository path, and raw SHA-256. Verify-only schemas exist so
+historical artifacts remain readable; they are not valid authoring or new
+publication inputs.
 
-The compatibility report is generated and checked separately. It is never a C2
-or C3 asset, prerequisite, or release identity. C3 and C4 remain distinct in
-linear history; later descendants are allowed only after that fixed point.
+The extracted W09 compatibility and mixed publication records are preserved
+byte-exact under [`docs/extraction/history/`](../docs/extraction/history/README.md).
+They explain predecessor history and are never regenerated or treated as
+current Core authority.
 
-The FormRef, Form Definition, package-index, revocation, and cumulative
-revocation-checkpoint schemas, the RFC 8785/I-JSON library, the closed local
-verifier, the positive/negative corpus, the protected keyless Sigstore release
-lane, and the signed append-only checkpoint delivery lane are implemented.
+## Public reference implementation
 
-The neutral Core tracer compiles zero families, synthetic external groups, and
-the generated current package set through artifact bytes without importing an
-official family. It remains an internal pre-extraction implementation; it is
-not a public SDK or independent module release.
+The repository's Go packages implement, but do not redefine, the contracts:
 
-Current Form design work uses eight versionless namespaced Form Family groups
-([`form-families.md`](form-families.md)) and 31 exact Experimental `0.x`
-FormRefs. Edge contains 16 and has no current `ObjectBucket`; packages use
-`packages.forms.takoform.com/v1alpha5`. Package publication, Form maturity,
-Host API version, Specification release, and Provider release are independent.
-A repository implementation or local passing gate is not Form publication,
-Host Support, activation, or live availability.
+- [`formpackage`](../formpackage/) performs canonical package validation;
+- [`snapshot`](../snapshot/) compiles a deterministic immutable graph and
+  returns no partial Snapshot on failure;
+- [`hostclient`](../hostclient/) implements the literal Host API v1 client; and
+- [`trust`](../trust/) verifies caller-supplied trust material offline.
 
-Two pre-Beta epochs preceded this one and were **withdrawn** while Takoform is
-pre-Stable ([decision
-0042](decisions/0042-the-pre-beta-epochs-are-withdrawn.md)). Decision
-[`0004`](decisions/0004-takoform-is-an-experimental-specification.md) made the
-previously published `forms.takoform.com/v1alpha1` line Legacy after it was
-labelled `standard` without sufficient independent implementation and
-operational evidence; decision
-[`0006`](decisions/0006-v1alpha2-restarts-form-lines.md) restarted selected
-kinds in the distinct v1alpha2 epoch. Both epochs' served identities — wire
-lanes, schema addresses, corpus and candidate documents — are recorded as
-retired in [`../release/published-document-lanes.json`](../release/published-document-lanes.json)
-and [`../release/public-schema-identities.json`](../release/public-schema-identities.json),
-so a withdrawn address can never quietly answer again meaning something else.
-Their bytes stay verifiable in this repository's git history and release tags;
-the [`formpackage`](../formpackage/) verifier deliberately keeps every epoch's
-schema for that purpose. Historical `standard` and `portable-standard` fields
-in those immutable bytes do not define a current approved subset, and nothing
-derives current approval or admission from that history.
+Generic conformance uses synthetic reverse-DNS families and must pass with zero
+official families. Family semantics and concrete Host adapters belong to their
+own publishers and Hosts.
 
-The literal Host API v1 candidate uses wire `forms.takoform.com/v1`, reached
-through `/.well-known/takoform/v1` with API root
-`/apis/forms.takoform.com/v1`. The Specification readiness assertion derives
-`open` from null source evidence and `ready` from one exact committed source
-snapshot; the numbered ledger independently derives publication state. The
-Host API group is a protocol compatibility identity independent of every Form
-group and Form maturity; Specification 1.1 publication does not publish or
-promote this Host API candidate. The current package envelope is
-`packages.forms.takoform.com/v1alpha5`; Interface and Binding refs remain
-`interfaces.takoform.com/v1alpha1` and `bindings.takoform.com/v1alpha2`. The
-Terraform provider identity is `registry.terraform.io/tako0614/takoform`;
-current Provider `v3.0.0` is Registry-published for the 31 current Forms, while
-`v2.1.1` on retained Host API `forms.takoform.com/v1beta1` is immutable history.
-Both are independent from all of these current API identities. The
-`release/version.json` descriptor remains `candidate-only` metadata by design
-after owner publication.
+## Verification boundary
 
-Provider 3 is a separate Registry-published, non-normative reference
-implementation. It may implement the exact current `0.x` Forms without
-defining their semantics or blocking Specification 1.1. Publishing
-Specification 1.1 does not promote those Forms to `1.0.0`; publishing the
-separate Host API v1 candidate would not do so either. A future Stable Form
-requires an explicit per-Form decision.
-
-## Normative consistency audit
-
-`go test ./spec` is the cross-specification contradiction gate. It does not
-repeat the Form Package verifier, provider schema tests, or portable-host
-runner. Instead, it joins their machine-readable inputs and fails when:
-
-- host operations, mutation fences, idempotency, or the stable error taxonomy
-  disagree with the portable-host conformance contract;
-- the portable API identity, provider candidate version, or canonical provider
-  FQN diverges between release, schema, trust, and conformance locks; or
-- a normative active Form, package, schema, or host contract leaks a concrete
-  backend vocabulary such as Cloudflare/Workers configuration.
-
-The complete repository gate, `bun run check`, runs this audit together with
-the deeper package-byte, provider-schema, and generated-surface verifiers.
-Passing it remains local evidence only; it does not prove Registry
-publication, Host Support, Form maturity, production activation, or
-interoperability.
+`bun run check` is the complete portable repository gate. It validates source
+ownership, extraction and immutable record pins, schema closure, formatting,
+static analysis, tests, generic conformance, race-sensitive packages, and
+standalone builds. It does not publish, sign, deploy, install, activate, or
+mutate a Resource, and a green result is not live interoperability or operator
+evidence.

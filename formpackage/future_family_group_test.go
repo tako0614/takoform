@@ -1,21 +1,28 @@
 package formpackage
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
-// A family minted after the current one must validate against the CURRENT
-// schema, not silently fall through to the retained closure.
-func TestFutureFamilyGroupUsesTheCurrentSchema(t *testing.T) {
+func TestArbitraryReverseDNSFormRefsUseTheCurrentNeutralProfile(t *testing.T) {
+	t.Parallel()
 	for _, group := range []string{
-		"edge.forms.takoform.com",
-		"edge.forms.takoform.com/v1",
-		"edge.forms.takoform.com/v1beta2",
-		"containers.forms.takoform.com/v1alpha1",
+		"resources.publisher.example",
+		"queues.another-publisher.example",
 	} {
-		if retainedFamilyGroup(group) {
-			t.Fatalf("%s must not select the retained family schema", group)
+		ref := map[string]any{
+			"apiVersion":        group,
+			"kind":              "ExampleStore",
+			"definitionVersion": "0.1.0",
+			"schemaDigest":      "sha256:" + strings.Repeat("a", 64),
 		}
-	}
-	if !retainedFamilyGroup("edge.forms.takoform.com/v1alpha1") {
-		t.Fatal("the withdrawn Edge family must still select the retained schema")
+		if _, err := ValidateFormRef(canonicalMarshal(t, ref)); err != nil {
+			t.Fatalf("current neutral FormRef for %s was rejected: %v", group, err)
+		}
+		ref["apiVersion"] = group + "/v1beta1"
+		if _, err := ValidateFormRef(canonicalMarshal(t, ref)); err == nil {
+			t.Fatalf("direct FormRef API inferred a retained profile for %s", group)
+		}
 	}
 }

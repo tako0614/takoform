@@ -84,48 +84,29 @@ type compiledSchemas struct {
 	bindingDefinition        *jsonschema.Schema
 }
 
-// namespacedFormGroupPattern mirrors the apiVersion grammar of the family
-// FormRef schema: a DNS-like Form group and, OPTIONALLY, a group version. The
-// version is optional because a group carries one only while it has a
-// published generation to keep apart; kind, definitionVersion and schemaDigest
-// already name the exact contract (decision 0049). The two frozen central
-// groups are recognized before this pattern is consulted, so a match selects
-// one of the family validation lanes below.
+// namespacedFormGroupPattern recognizes every syntactically valid external Form
+// group. Schema-profile selection is deliberately separate: package identity
+// selects a retained verification profile, while the direct APIs always use
+// the current neutral profile. A publisher name never selects a schema.
 var namespacedFormGroupPattern = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+(?:/v[0-9]+(?:(?:alpha|beta)[0-9]+)?)?$`)
 
-// retainedFamilyGroups are the namespaced families published under the
-// immutable v1alpha3 schema closure, listed one by one. Everything else — the
-// current family and any family minted after it — validates against the
-// current schema.
-//
-// This used to be the other way round: a `/v1beta1$` pattern selected the
-// current schema and ANY other namespaced group silently fell through to the
-// retained one. A family minted at a version the pattern did not anticipate,
-// including a future versioned successor to the current versionless Edge
-// group, would have been validated against the wrong published $id without
-// an error. Naming the retained set instead makes the default correct and
-// makes adding to it an edit somebody has to justify.
-var retainedFamilyGroups = map[string]struct{}{
-	"edge.forms.takoform.com/v1alpha1": {},
-}
+type familyValidationProfile uint8
 
-func retainedFamilyGroup(apiVersion string) bool {
-	_, retained := retainedFamilyGroups[apiVersion]
-	return retained
-}
+const (
+	currentNeutralFamilyProfile familyValidationProfile = iota
+	retainedBetaFamilyProfile
+)
 
-// retainedProfileFamilyGroups are the families whose PUBLISHED packages were
-// validated under the v1beta1 Form Definition profile. They keep it: a package
-// already in the world was accepted against that document, and re-reading it
-// under a narrower successor could reject bytes nobody may now change.
-// Everything minted afterwards uses the current profile.
-var retainedProfileFamilyGroups = map[string]struct{}{
-	"edge.forms.takoform.com/v1beta1": {},
-}
-
-func retainedProfileFamilyGroup(apiVersion string) bool {
-	_, retained := retainedProfileFamilyGroups[apiVersion]
-	return retained
+// familyProfileForPackage derives the only retained family-profile exception
+// from the immutable package envelope. The v1alpha4 package generation carries
+// the retained versioned-family schema; v1alpha5 and direct callers use the
+// current neutral, versionless profile. Earlier generations carry one of the
+// two central Form epochs and never reach family dispatch.
+func familyProfileForPackage(packageAPIVersion string) familyValidationProfile {
+	if packageAPIVersion == FamilyPackageAPIVersion {
+		return retainedBetaFamilyProfile
+	}
+	return currentNeutralFamilyProfile
 }
 
 // reservedFormsTakoformNamespaces are the subdomains of forms.takoform.com the
@@ -152,7 +133,7 @@ var reservedFormsTakoformNamespaces = map[string]struct{}{
 //   - the bare forms.takoform.com group in every version AND with no version
 //     at all. That domain names retained Form epochs and Host API wire
 //     identities (forms.takoform.com/v1alpha3 is the Host API lane, not a Form
-//     group), while official families use subdomains of it.
+//     group), while publisher-owned families may use subdomains of it.
 //   - the reserved envelope namespaces packages.forms.takoform.com and
 //     trust.forms.takoform.com, likewise versioned or not.
 //
@@ -346,6 +327,10 @@ func loadSchemas() (compiledSchemas, error) {
 }
 
 func validateFormRef(raw []byte) (FormRef, error) {
+	return validateFormRefWithFamilyProfile(raw, currentNeutralFamilyProfile)
+}
+
+func validateFormRefWithFamilyProfile(raw []byte, familyProfile familyValidationProfile) (FormRef, error) {
 	schemas, err := loadSchemas()
 	if err != nil {
 		return FormRef{}, err
@@ -363,15 +348,13 @@ func validateFormRef(raw []byte) (FormRef, error) {
 	case envelope.APIVersion == CurrentFormAPIVersion:
 		schema = schemas.currentFormRef
 	case NamespacedFormGroup(envelope.APIVersion):
-		// Mirrors the Definition profile selection below: a group keeps the
-		// FormRef schema its packages were published under, and everything
-		// minted afterwards reads the current one.
-		switch {
-		case retainedFamilyGroup(envelope.APIVersion):
-			schema = schemas.retainedFamilyFormRef
-		case retainedProfileFamilyGroup(envelope.APIVersion):
+		switch familyProfile {
+		case retainedBetaFamilyProfile:
 			schema = schemas.betaFamilyFormRef
 		default:
+			if strings.Contains(envelope.APIVersion, "/") {
+				return FormRef{}, fmt.Errorf("FormRef: current neutral profile requires a versionless reverse-DNS group")
+			}
 			schema = schemas.betaTwoFamilyFormRef
 		}
 	default:
@@ -397,13 +380,16 @@ type compiledDefinitionSchemas struct {
 }
 
 func validateDefinitionWithSchemas(raw []byte) (FormDefinition, any, compiledDefinitionSchemas, error) {
+	return validateDefinitionWithFamilyProfile(raw, currentNeutralFamilyProfile)
+}
+
+func validateDefinitionWithFamilyProfile(raw []byte, familyProfile familyValidationProfile) (FormDefinition, any, compiledDefinitionSchemas, error) {
 	schemas, err := loadSchemas()
 	if err != nil {
 		return FormDefinition{}, nil, compiledDefinitionSchemas{}, err
 	}
 	var envelope struct {
-		APIVersion      string `json:"apiVersion"`
-		RequiresHostAPI string `json:"requiresHostApi"`
+		APIVersion string `json:"apiVersion"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil {
 		return FormDefinition{}, nil, compiledDefinitionSchemas{}, fmt.Errorf("Form Definition: %w", err)
@@ -415,15 +401,11 @@ func validateDefinitionWithSchemas(raw []byte) (FormDefinition, any, compiledDef
 	case envelope.APIVersion == CurrentFormAPIVersion:
 		schema = schemas.currentDefinition
 	case NamespacedFormGroup(envelope.APIVersion):
-		switch {
-		case retainedFamilyGroup(envelope.APIVersion):
-			schema = schemas.retainedFamilyDefinition
-		case retainedProfileFamilyGroup(envelope.APIVersion):
+		switch familyProfile {
+		case retainedBetaFamilyProfile:
 			schema = schemas.betaFamilyDefinition
-		case !strings.Contains(envelope.APIVersion, "/") && envelope.RequiresHostAPI == stableHostAPIVersion:
-			schema = schemas.stableFamilyDefinition
 		default:
-			schema = schemas.betaTwoFamilyDefinition
+			schema = schemas.stableFamilyDefinition
 		}
 	default:
 		return FormDefinition{}, nil, compiledDefinitionSchemas{}, fmt.Errorf("Form Definition: unsupported apiVersion %q", envelope.APIVersion)
@@ -671,6 +653,21 @@ func validateDefinition(raw []byte) (FormDefinition, any, error) {
 // schemas, and the fail-closed data-only content policy.
 func ValidateDefinition(raw []byte) (FormDefinition, error) {
 	definition, _, err := validateDefinition(raw)
+	return definition, err
+}
+
+// RevalidateDefinition rechecks the canonical Definition carried by a
+// verifier-issued package under the schema profile selected by that package's
+// immutable envelope identity. Publisher and Form group names never affect the
+// profile. An invalid or caller-constructed package capability is refused.
+func (packageValue VerifiedPackage) RevalidateDefinition() (FormDefinition, error) {
+	if !packageValue.Valid() {
+		return FormDefinition{}, fmt.Errorf("Form Package capability is invalid")
+	}
+	definition, _, _, err := validateDefinitionWithFamilyProfile(
+		packageValue.data.canonicalDefinition,
+		familyProfileForPackage(packageValue.data.index.APIVersion),
+	)
 	return definition, err
 }
 

@@ -1,0 +1,16 @@
+{
+  "kind": "takoform.record-head@v1",
+  "generation": 1,
+  "specificationReleases": {
+    "sequence": 1,
+    "releaseCount": 1,
+    "entrySha256": "sha256:1dd8e2d031d68eab69e1e1d4baacb4e1af12b2bd889975fc1a36666ac73c31f7"
+  },
+  "publicSchemaIdentities": {
+    "sequence": 1,
+    "activeCount": 31,
+    "verifyOnlyCount": 15,
+    "entrySha256": "sha256:17cd0076bea0a95260f721d64b57fc4dbe91b4e8224bd752b0bb25b2cbc57558"
+  },
+  "previousHeadSha256": null
+}

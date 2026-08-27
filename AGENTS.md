@@ -4,7 +4,7 @@
 
 ## Repository
 
-- Scope: Portable Service Form specification, schemas, conformance fixtures, and typed OpenTofu provider.
+- Scope: Independent Takoform Specification and publisher-neutral Core, schemas, SDK/CLI, verifier, trust contracts, and generic conformance.
 - Repository kind: `product`
 - Direct sibling dependencies: なし
 - Repository gate: `bun run check`
@@ -12,9 +12,9 @@
 
 ## Ownership
 
-- Owns: Portable Service Form specification and exact identities / Typed Terraform and OpenTofu provider / Data-only Form Packages, trust rules, and conformance corpus
-- Does not own: Any host implementation, hosted Form instance, backend lifecycle, target, or credential / Backend managers or executable package code / Cloud pricing, billing, quota, capacity, or SLA
-- Hazards: Normative changes require maintainer authorization, ADR, and contract-lock re-pin. / Do not claim publication or admission without signed live evidence. / Remain independent of Takosumi, Takoserver, and Takosumi Hosted code.
+- Owns: Normative Takoform Specification, exact public schemas, identity grammar, and release ledgers / Publisher-neutral Go SDK/CLI, package verifier, Snapshot compiler, trust and revocation contracts / Generic Form-neutral conformance and schema-origin projection
+- Does not own: Any Form family, Form definition, package release, publisher catalog, or publisher trust / Terraform or OpenTofu mappings, state, import, codecs, diagnostics, or Provider history / Host implementation, backend lifecycle, targets, credentials, pricing, capacity, or SLA
+- Hazards: Official and external publishers use the same package, verification, trust, installation, support, and activation mechanism; never add a publisher class or bypass. / Specification 1.1 is immutable predecessor history, and no Host API or package v2 identity is published by the W10 cutover. / Do not claim a release, schema cutover, admission, or activation without its exact signed live evidence.
 
 ## Required workflow
 

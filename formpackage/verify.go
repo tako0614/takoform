@@ -171,7 +171,8 @@ func VerifyDirectory(root string) (VerificationReport, error) {
 		return VerificationReport{}, fmt.Errorf("definitionPath %q has media type %q, want %q", index.DefinitionPath, definitionFile.MediaType, DefinitionMediaType)
 	}
 	definitionRaw := payloads[index.DefinitionPath]
-	definition, _, definitionSchemas, err := validateDefinitionWithSchemas(definitionRaw)
+	familyProfile := familyProfileForPackage(index.APIVersion)
+	definition, _, definitionSchemas, err := validateDefinitionWithFamilyProfile(definitionRaw, familyProfile)
 	if err != nil {
 		return VerificationReport{}, err
 	}
@@ -190,7 +191,7 @@ func VerifyDirectory(root string) (VerificationReport, error) {
 	if err != nil {
 		return VerificationReport{}, fmt.Errorf("encode FormRef for validation: %w", err)
 	}
-	if _, err := validateFormRef(formRefRaw); err != nil {
+	if _, err := validateFormRefWithFamilyProfile(formRefRaw, familyProfile); err != nil {
 		return VerificationReport{}, err
 	}
 	// A desired fixture may use a sensitive-looking property name only when

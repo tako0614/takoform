@@ -77,7 +77,7 @@ one a reader happens to open first.
 ## Decision
 
 **A generation move records what it changed, per Form.**
-[`../../release/form-contract-continuity.json`](../../release/form-contract-continuity.json)
+[the immutable predecessor continuity ledger](https://github.com/tako0614/terraform-provider-takoform/blob/1fa34160a4ed152443b4ea424a324f7677716e36/release/form-contract-continuity.json)
 carries, for each move, which contracts changed and which were only
 re-identified. The classification is DERIVED — definitions compared before and
 after with version words normalised — so it cannot drift from the definitions

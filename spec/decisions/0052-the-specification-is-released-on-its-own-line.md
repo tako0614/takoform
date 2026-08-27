@@ -87,7 +87,7 @@ and must equal the record read from `HEAD` before a prerequisite can close.
 
 The repository currently records a **Specification 1.0 candidate**, not a
 completed release. The evidence tuple remains absent in
-[`../publication-evidence.json`](../publication-evidence.json), and the three
+[the immutable predecessor publication evidence](https://github.com/tako0614/terraform-provider-takoform/blob/1fa34160a4ed152443b4ea424a324f7677716e36/spec/publication-evidence.json), and the three
 Specification evidence objects are `null`. This is intentional: a dirty or
 uncommitted worktree cannot be the exact source snapshot and must remain red.
 

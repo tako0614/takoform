@@ -3,7 +3,6 @@ package formpackage
 import (
 	"bytes"
 	"encoding/json"
-	"os"
 	"strings"
 	"testing"
 )
@@ -74,8 +73,8 @@ func reviewedTaggedTargetSchema() map[string]any {
 	return map[string]any{
 		"x-takoform-discriminator": "type",
 		"oneOf": []any{
-			branch("queueMessage", "queue", "queue.forms.takoform.com", "PullQueue"),
-			branch("topicPublish", "topic", "topic.forms.takoform.com", "Topic"),
+			branch("queueMessage", "queue", "queue.publisher.example", "PullQueue"),
+			branch("topicPublish", "topic", "topic.publisher.example", "Topic"),
 		},
 	}
 }
@@ -86,7 +85,7 @@ func TestValidateDefinitionAcceptsOnlySchemaProvenPortableTargetFields(t *testin
 		name   string
 		target map[string]any
 	}{
-		{name: "direct canonical ResourceTarget", target: reviewedInterfaceTargetSchema("queue.forms.takoform.com", "PullQueue")},
+		{name: "direct canonical ResourceTarget", target: reviewedInterfaceTargetSchema("queue.publisher.example", "PullQueue")},
 		{name: "closed tagged target union", target: reviewedTaggedTargetSchema()},
 	} {
 		test := test
@@ -107,13 +106,13 @@ func TestValidateDefinitionAcceptsOnlySchemaProvenPortableTargetFields(t *testin
 
 func TestValidateDefinitionRejectsExecutableOrOpenCommandAndTargetFields(t *testing.T) {
 	t.Parallel()
-	openTarget := reviewedInterfaceTargetSchema("queue.forms.takoform.com", "PullQueue")
+	openTarget := reviewedInterfaceTargetSchema("queue.publisher.example", "PullQueue")
 	openTarget["additionalProperties"] = true
-	unannotatedTarget := reviewedInterfaceTargetSchema("queue.forms.takoform.com", "PullQueue")
+	unannotatedTarget := reviewedInterfaceTargetSchema("queue.publisher.example", "PullQueue")
 	delete(unannotatedTarget, "x-takoform-required-interface")
-	ambiguousTarget := reviewedInterfaceTargetSchema("queue.forms.takoform.com", "PullQueue")
+	ambiguousTarget := reviewedInterfaceTargetSchema("queue.publisher.example", "PullQueue")
 	ambiguousTarget["x-takoform-target-formrefs"] = []any{map[string]any{
-		"apiVersion": "queue.forms.takoform.com", "kind": "PullQueue", "definitionVersion": "0.1.0",
+		"apiVersion": "queue.publisher.example", "kind": "PullQueue", "definitionVersion": "0.1.0",
 		"schemaDigest": "sha256:" + strings.Repeat("b", 64),
 	}}
 	partlyAnnotatedUnion := reviewedTaggedTargetSchema()
@@ -134,7 +133,7 @@ func TestValidateDefinitionRejectsExecutableOrOpenCommandAndTargetFields(t *test
 		{name: "unannotated ResourceTarget", field: "target", shape: unannotatedTarget},
 		{name: "ambiguous target contract", field: "target", shape: ambiguousTarget},
 		{name: "partly annotated tagged target", field: "target", shape: partlyAnnotatedUnion},
-		{name: "backend target", field: "backendTarget", shape: reviewedInterfaceTargetSchema("queue.forms.takoform.com", "PullQueue")},
+		{name: "backend target", field: "backendTarget", shape: reviewedInterfaceTargetSchema("queue.publisher.example", "PullQueue")},
 		{name: "unbounded concurrency target", field: "concurrencyTarget", shape: map[string]any{"type": "integer", "minimum": 1}},
 	} {
 		test := test
@@ -154,27 +153,69 @@ func TestValidateDefinitionRejectsExecutableOrOpenCommandAndTargetFields(t *test
 
 func currentFamilyDefinitionFixture(t *testing.T) map[string]any {
 	t.Helper()
-	raw, err := os.ReadFile("../forms/candidates/edge.forms.takoform.com/worker-deployment/definition.json")
-	if err != nil {
-		t.Fatal(err)
+	relation := func(kind string) map[string]any {
+		return reviewedInterfaceTargetSchema("compute.publisher.example", kind)
 	}
-	var definition map[string]any
-	if err := DecodeStrictIJSON(raw, &definition); err != nil {
-		t.Fatal(err)
+	return map[string]any{
+		"apiVersion":        "compute.publisher.example",
+		"kind":              "JobDeployment",
+		"definitionVersion": "0.1.0",
+		"title":             "Synthetic job deployment",
+		"role":              "deployment",
+		"requiresHostApi":   stableHostAPIVersion,
+		"desiredSchema": map[string]any{
+			"$schema":              "https://json-schema.org/draft/2020-12/schema",
+			"type":                 "object",
+			"additionalProperties": false,
+			"required":             []any{"className", "hostname", "otherWorker", "versions", "weights", "worker"},
+			"properties": map[string]any{
+				"className":   map[string]any{"type": "string", "minLength": 1, "maxLength": 64},
+				"hostname":    map[string]any{"type": "string", "minLength": 1, "maxLength": 253},
+				"worker":      relation("Job"),
+				"otherWorker": relation("Job"),
+				"weights": map[string]any{
+					"type": "array", "minItems": 1, "maxItems": 8,
+					"items": map[string]any{
+						"type":                 "object",
+						"additionalProperties": false,
+						"required":             []any{"weight"},
+						"properties": map[string]any{
+							"weight": map[string]any{"type": "integer", "minimum": 1, "maximum": 10000},
+						},
+					},
+				},
+				"versions": map[string]any{
+					"type": "array", "minItems": 1, "maxItems": 8,
+					"items": map[string]any{
+						"type":                 "object",
+						"additionalProperties": false,
+						"required":             []any{"workerVersion"},
+						"properties": map[string]any{
+							"workerVersion": relation("JobRevision"),
+						},
+					},
+				},
+			},
+		},
+		"outputSchema": map[string]any{
+			"$schema":              "https://json-schema.org/draft/2020-12/schema",
+			"type":                 "object",
+			"additionalProperties": false,
+			"required":             []any{"address"},
+			"properties": map[string]any{
+				"address": map[string]any{"type": "string", "minLength": 1, "maxLength": 256},
+			},
+		},
+		"immutableFields":       []any{"/worker"},
+		"lifecycleCapabilities": []any{"create", "read", "update", "delete", "import", "observe"},
 	}
-	return definition
 }
 
-// TestValidateDefinitionSelectsTheEmbeddedV1Profile proves the runtime
-// parser, not only a direct normative-schema test, owns the new profile. The
-// versionless group with an exact stable Host requirement accepts the v1-only
-// constraint, while the retained
-// versioned group is checked against its own immutable predecessor and cannot
-// float onto the current schema.
-func TestValidateDefinitionSelectsTheEmbeddedV1Profile(t *testing.T) {
+// TestValidateDefinitionUsesCurrentNeutralProfileForEveryPublisher proves the
+// direct parser never infers compatibility from a publisher-owned group name.
+func TestValidateDefinitionUsesCurrentNeutralProfileForEveryPublisher(t *testing.T) {
 	t.Parallel()
 	current := currentFamilyDefinitionFixture(t)
-	current["requiresHostApi"] = "forms.takoform.com/v1"
 	current["constraints"] = []any{map[string]any{"kind": "acyclic", "reference": "/worker"}}
 	raw := canonicalMarshal(t, current)
 	decoded, err := ValidateDefinition(raw)
@@ -185,20 +226,27 @@ func TestValidateDefinitionSelectsTheEmbeddedV1Profile(t *testing.T) {
 		t.Fatalf("decoded v1 constraint = %#v", decoded.Constraints)
 	}
 
-	retained := make(map[string]any, len(current))
-	for key, value := range current {
-		retained[key] = value
-	}
-	retained["apiVersion"] = "edge.forms.takoform.com/v1beta1"
-	if _, err := ValidateDefinition(canonicalMarshal(t, retained)); err == nil {
-		t.Fatal("retained versioned family floated onto the v1 Definition profile")
+	for _, group := range []string{"compute.publisher.example", "service.another-publisher.example"} {
+		candidate := make(map[string]any, len(current))
+		for key, value := range current {
+			candidate[key] = value
+		}
+		candidate["apiVersion"] = group
+		if _, err := ValidateDefinition(canonicalMarshal(t, candidate)); err != nil {
+			t.Fatalf("current neutral Definition for %s was rejected: %v", group, err)
+		}
 	}
 
-	occupiedBeta4 := currentFamilyDefinitionFixture(t)
-	occupiedBeta4["requiresHostApi"] = "forms.takoform.com/v1beta4"
-	occupiedBeta4["constraints"] = []any{map[string]any{"kind": "acyclic", "reference": "/worker"}}
-	if _, err := ValidateDefinition(canonicalMarshal(t, occupiedBeta4)); err == nil {
-		t.Fatal("occupied beta4 Host lane silently selected the stable v1 Definition profile")
+	versioned := currentFamilyDefinitionFixture(t)
+	versioned["apiVersion"] = "compute.publisher.example/v1beta1"
+	if _, err := ValidateDefinition(canonicalMarshal(t, versioned)); err == nil {
+		t.Fatal("direct API inferred a retained profile from a versioned publisher group")
+	}
+
+	preStableHost := currentFamilyDefinitionFixture(t)
+	preStableHost["requiresHostApi"] = "forms.takoform.com/v1beta4"
+	if _, err := ValidateDefinition(canonicalMarshal(t, preStableHost)); err == nil {
+		t.Fatal("direct API silently selected a predecessor Definition profile")
 	}
 }
 

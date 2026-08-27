@@ -2,25 +2,46 @@ package formpackage
 
 import (
 	"encoding/json"
-	"os"
 	"strings"
 	"testing"
 )
 
+func bindingDefinitionFixture() map[string]any {
+	return map[string]any{
+		"apiVersion": "bindings.takoform.com/v1alpha2",
+		"kind":       "BindingDefinition",
+		"name":       "runtime-job.cache",
+		"version":    "1.0.0",
+		"title":      "Runtime job cache binding",
+		"sourceRole": "revision",
+		"targetInterface": map[string]any{
+			"apiVersion":   "interfaces.takoform.com/v1alpha1",
+			"name":         "cache.entries",
+			"version":      "1.0.0",
+			"schemaDigest": "sha256:" + strings.Repeat("a", 64),
+		},
+		"allowedTargetForms": []any{map[string]any{
+			"apiVersion": "cache.publisher.example",
+			"kind":       "CacheNamespace",
+		}},
+		"bindingNameGrammar": "^[A-Za-z_$][A-Za-z0-9_$]*$",
+		"runtimeProjection": map[string]any{
+			"operations": []any{"get", "put"},
+		},
+		"lifecycle": map[string]any{
+			"targetDeletion": "refuse_while_bound",
+		},
+	}
+}
+
 func TestValidateBindingDefinitionUsesEmbeddedNormativeSchema(t *testing.T) {
 	t.Parallel()
-	raw, err := os.ReadFile("../bindings/candidates/v1alpha2/module-worker.actor/definition.json")
-	if err != nil {
-		t.Fatal(err)
-	}
+	fixture := bindingDefinitionFixture()
+	raw := canonicalMarshal(t, fixture)
 	if err := ValidateBindingDefinition(raw); err != nil {
 		t.Fatalf("valid current Binding Definition was rejected: %v", err)
 	}
 
-	var fixture map[string]any
-	if err := json.Unmarshal(raw, &fixture); err != nil {
-		t.Fatal(err)
-	}
 	for _, test := range []struct {
 		name   string
 		mutate func(map[string]any)
@@ -77,10 +98,7 @@ func TestValidateBindingDefinitionUsesEmbeddedNormativeSchema(t *testing.T) {
 	} {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
-			candidate := make(map[string]any, len(fixture)+1)
-			for key, value := range fixture {
-				candidate[key] = value
-			}
+			candidate := bindingDefinitionFixture()
 			test.mutate(candidate)
 			encoded, err := json.Marshal(candidate)
 			if err != nil {

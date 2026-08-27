@@ -1,159 +1,64 @@
-# Specification, Provider, and publication evidence policy
+# Current publication and change boundary
 
-Takoform has independent release and publication axes. Evidence from one axis
-MUST NOT be treated as authority for another.
+This tree is an unreleased post-1.1 draft. The predecessor W09 policy and
+publication evidence are imported under
+[`docs/extraction/history/`](../docs/extraction/history/README.md); they are
+history, not current writer authority.
 
-## Specification 1.1
+## Published identity
 
-The normative Specification 1.1 track freezes the portable specification
-source. The repository also carries the unchanged literal Host API v1 source
-candidate at `forms.takoform.com/v1`, but that is a separate unpublished
-protocol identity. Publishing Specification 1.1 does not publish or promote
-Host API v1. One complete, exact committed snapshot of the normative `spec/`
-tree satisfies Specification release readiness; the append-only numbered
-ledger is the authority for publication state. Candidate Forms, packages,
-conformance corpora, and reference implementations remain quality and adoption
-evidence; they are not Specification release prerequisites.
+Takoform Specification 1.1 is immutable history published from
+`github.com/tako0614/terraform-provider-takoform`. Its original source, tag,
+Release, snapshot, and asset receipt remain exact in
+[`release/specification-releases.json`](../release/specification-releases.json).
+This repository must not recreate, retag, overwrite, or relocate it.
+Specification 1.0 was never published, is withdrawn, and cannot be reused.
 
-Identity `1.0` was never published, is withdrawn, and is never reused. The
-separately generated five-class [compatibility report](../release/specification-compatibility.json)
-records raw source digests, owning ledgers, migration dispositions, and the
-byte pin for the Host API v1 candidate. It is compatibility evidence only, not
-publication evidence, a release asset, or a prerequisite. Specification 1.1
-has no Host API, Form publication, or Provider effect and does not mint a
-`/v1.1` or v2 lane/schema/tag/receipt.
+Editing `main` does not publish a Specification, Host API, Form, Form Package,
+Interface, Binding, Provider, Host capability, activation, or Offering. The
+literal `forms.takoform.com/v1` Host API remains an independent unpublished
+candidate.
 
-The canonical machine policy is
-[`publication-evidence.json`](publication-evidence.json), and the numbered
-release ledger is
-[`../release/specification-releases.json`](../release/specification-releases.json).
-Decision [0057](decisions/0057-specification-1-1-compatibility-and-independent-identities.md)
-amends decisions [0052](decisions/0052-the-specification-is-released-on-its-own-line.md)
-and
-[0053](decisions/0053-specification-and-provider-release-evidence.md), and
-[0055](decisions/0055-specification-release-needs-only-normative-source.md)
-define the boundary.
+## Dormant writer
 
-## C1, C2, C3, and C4
+[`release/specification-authority.json`](../release/specification-authority.json)
+remains `prepared-writer-disabled`. The repository may contain the reviewed P0
+writer, adapter, policies, tests, and owning deploy interface, but every
+release phase, including release verification, must reject before constructing an adapter or touching a
+signer, credential, writer, package/source script, or network callback. There
+is no CI writer, ambient root/bypass authority, or public identity implied by
+dormant code.
 
-The W09 workflow keeps the freeze, evidence, receipt, and derived-public
-boundaries separate:
+P0 is an immutable transitive execution closure. P records P0 in its direct
+authority-only child; predecessor tombstone T pins P; the separate first
+schema-origin cutover must complete; and only then may direct authority-only A
+activate the successor. A dual-writer interval and authority reopening are
+forbidden. A later P0 program change requires another explicit authority
+rotation; D, N, E, recovery, and receipt commits cannot change it. The exact
+rules are in
+[`release/specification-release-policy.md`](../release/specification-release-policy.md).
 
-- **C1 — normative freeze and executable tooling:** the normative `spec/` tree
-  and its validation tooling are frozen, while every field in the publication
-  evidence record remains `null`.
-- **C2 — evidence-only source snapshot:** one exact committed Specification
-  source snapshot is recorded, with only the allowed evidence projections;
-  candidate corpus, reference conformance, Provider, Host, and compatibility
-  report data remain outside the release evidence record.
-- **C3 — authoritative publication receipt:** one immutable Specification 1.1
-  receipt is appended to the numbered ledger and its static projections. The
-  receipt carries only the source-snapshot prerequisite and publication
-  readback.
-- **C4 — deterministic derived-public refresh:** the first ancestry commit
-  after C3 is its direct single-parent child and changes only the explicit
-  generated compatibility, site-status, README, and website outputs. C4 is not
-  publication authority. It MUST NOT change `spec/**`, publication evidence,
-  any ledger or ledger projection, release authority/tooling, Provider/Form/Host
-  source, or an unrelated file. Later descendants are permitted after this
-  fixed point.
+## Independent publication lanes
 
-  Concretely, that bounded write set is `README.md`; the canonical/static/public
-  compatibility report; the static/public site status; every generated
-  VitePress `website/public/**/*.html` page (including `404.html`); and only the
-  content-hashed `website/public/assets/**` closure changed by the build.
-  The immutable runtime-ABI fixture
-  `website/public/conformance/runtime-abi-v1/bundles/unsupported-media-type/page.html`,
-  `website/docs/reference.md`, and `website/public/hashmap.json` do not change in
-  this transition and are not allowed C4 paths.
+A future Specification `1.x` release may have zero schema additions, N equal
+to D, and no Cloudflare mutation. A schema-only append/deploy has no
+Specification version, tag, Release, or receipt. A composed operation may do
+both, but neither identity depends on the other. The initial schema-origin
+authority cutover remains a separate one-time authority transfer.
 
-The compatibility report is generated and checked independently and is never a
-C2/C3 asset, prerequisite, or release identity. C3 and C4 remain separate,
-linear commits and are never squashed.
+No current or future command in this lane may mint Specification 2.x, Host API
+v2, a v2 schema/route/tag/receipt/Release, or claim a new public identity.
+Design text for a possible v2 is allowed only below `spec/proposals/` with
+exact `classification: non-normative-proposal` front matter. Normative source
+snapshot creation and publication re-read exact D bytes and enforce that
+classification.
 
-The current generator index contains eight versionless families and 31 exact
-Experimental `0.x` FormRefs. Edge contains 16 and has no current
-`ObjectBucket`, `edge.objects`, or `module-worker.object-bucket`. The stable
-standard-service contract is `standards.takoform.com/v1`; protocol identifiers
-are opaque reverse-DNS strings, not a Takoform-owned enum.
+Specification, Core SDK/CLI, Host API, each Form and Form Package, Provider,
+Host implementation, support, activation, and commercial Offering remain
+independent release axes. Official and third-party publishers use the same
+package, verification, trust, revocation, installation, support, and activation
+mechanisms; provenance may differ, but the contract has no official privilege
+bit or bypass.
 
-Publishing Specification 1.1 does not publish or promote the separate Host API
-v1 candidate, and it does not:
-
-- relabel any current Form as `1.0.0` or Stable;
-- publish a Form Package, Interface, or Binding;
-- release Provider 3;
-- prove any Host, backend, runtime, or product supports the contract; or
-- authorize a commit, tag, publication, deployment, signing action, or
-  production change.
-
-A future Stable Form begins at `1.0.0` only through an explicit per-Form
-decision. Form maturity remains independent from the Host API and numbered
-Specification.
-
-## Official Provider
-
-The Terraform Provider is an independent implementation stream. Provider
-2.1.1 and its exact Host v1beta1/versioned Edge 15-Form identities remain
-immutable Registry history.
-
-Provider 3.0.0 is a Registry-published but non-normative reference
-implementation. Its evidence track binds
-the exact current Form projection, Provider identity ledger, retained codecs,
-state continuity, and migration behavior. Its publication cannot close the
-Specification track.
-
-## Adoption evidence
-
-Independent Hosts, Takoserver, Takosumi, other backends, runtime ABI reports,
-production consumers, compatibility windows, package publishers, signers, and
-operators may record adoption evidence in their owning repositories. Those
-facts are useful for support, implementation confidence, and product
-readiness. They are not Takoform release authorities and can neither add a
-Specification prerequisite nor substitute for one.
-
-Decisions 0044 and 0046 are retained as adoption-program history. Decision
-0053 supersedes them as Specification and Provider release gates.
-
-## Retained publication history
-
-[`publication-blockers.json`](publication-blockers.json) records an earlier
-v1beta1 Form Package/public-service attempt. Its bytes and open statuses remain
-immutable historical truth. The new Specification assertion does not rewrite
-or require closure of those rows.
-
-Likewise:
-
-- published schema identities remain append-only in
-  [`../release/public-schema-identities.json`](../release/public-schema-identities.json);
-- occupied document lanes remain recorded in
-  [`../release/published-document-lanes.json`](../release/published-document-lanes.json);
-- Provider release and FormRef identities remain append-only in the release
-  ledgers; and
-- retired or retained bytes are never republished under a different meaning.
-
-The historical `assert:publishable` command remains the assertion for that old
-Form Package/public-service obligation set. It is not a Specification 1.1 or
-Provider 3 gate.
-
-## Fail-closed checks
-
-- `bun run check:publication-evidence` validates both independent track shapes
-  and reports their open/ready state.
-- `bun run check:specification-releases` validates the numbered ledger,
-  protects committed release entries append-only, and enforces the exact
-  C3-to-C4 history fixed point after a 1.1 receipt exists.
-- `bun run check:specification-1-1-release` asserts only the normative source
-  snapshot.
-- `bun run check:provider-v3-release` asserts only the non-normative Provider
-  milestone.
-- `bun run check:takoform-milestones` asserts both as an optional project
-  checkpoint.
-
-When Specification source evidence is `null`, readiness remains open; when it
-records one clean reachable commit, its exact normative bytes must match.
-Candidate and reference evidence may stay `null` without blocking it. A dirty,
-staged, unreachable, or digest-mismatched normative snapshot fails.
-
-There is no `stable-mint` alias. The readiness assertion does not silently
-promote Forms or packages.
+`bun run check` is a read-only portable gate. It does not publish, sign,
+install, activate, deploy, or mutate a Resource.

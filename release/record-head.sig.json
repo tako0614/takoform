@@ -1,0 +1,8 @@
+{
+  "kind": "takoform.record-head-signature@v1",
+  "algorithm": "ed25519",
+  "publicKeySha256": "sha256:a4f2a0811b8d9432a8d5ecea246f768470d78d0ed53214a587ba2f7c238e8cbb",
+  "subject": "release/record-head.json",
+  "subjectSha256": "sha256:8651d9c8a7fd8ded87c7a2a175aefac6676bf4795082ee4df04a0faf35aa1bc5",
+  "signature": "mgoL3QHbpBsTY0mWO+jcU6J//cn2U7tHn46GQSIpXKyvaZVIW9nX6jqNywcV3R/P96784gOFpcq0CXZma/buAw=="
+}

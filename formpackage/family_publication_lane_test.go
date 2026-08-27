@@ -1,11 +1,10 @@
 package formpackage
 
 // family_publication_lane_test.go pins the publication lane a tag belongs to.
-// A Form Family release id encodes "<group>/<Kind>", the retained central lanes
-// encode a bare Kind, and both content-addressed lanes share an artifact
-// grammar — so the release id is the only thing that tells them apart. When
-// ParsePublicationTag reported every family tag as the retained v1alpha3 lane,
-// nothing in the Edge Family could be tagged at all.
+// A Form Family release id encodes "<group>/<Kind>", while the retained central
+// lanes encode a bare Kind. That distinguishes family from central tags, but a
+// central digest tag still needs its package envelope to distinguish v1alpha2
+// from v1alpha3.
 
 import (
 	"strings"
@@ -18,8 +17,8 @@ func TestParsePublicationTagRoundTripsTheFamilyLane(t *testing.T) {
 		group string
 		kind  string
 	}{
-		"edge family":        {group: testFamilyGroup, kind: "ObjectBucket"},
-		"third-party family": {group: "forms.example.com/v1alpha1", kind: "ExampleStore"},
+		"versioned family": {group: testFamilyGroup, kind: "ObjectBucket"},
+		"external family":  {group: "forms.example.com/v1alpha1", kind: "ExampleStore"},
 	} {
 		name, testCase := name, testCase
 		t.Run(name, func(t *testing.T) {
@@ -60,9 +59,9 @@ func TestParsePublicationTagRoundTripsTheFamilyLane(t *testing.T) {
 	}
 }
 
-// TestParsePublicationTagKeepsTheRetainedLanesByteCompatible proves the new
-// family branch changes nothing about the tags that already exist.
-func TestParsePublicationTagKeepsTheRetainedLanesByteCompatible(t *testing.T) {
+// TestPublicationTagParsingKeepsTheRetainedLanesByteCompatible proves explicit
+// central-generation parsing changes none of the tags that already exist.
+func TestPublicationTagParsingKeepsTheRetainedLanesByteCompatible(t *testing.T) {
 	t.Parallel()
 	releaseID := ReleaseIDForKind("ExampleStore")
 	digestArtifact := "sha256-" + strings.Repeat("d", 64)
@@ -89,7 +88,13 @@ func TestParsePublicationTagKeepsTheRetainedLanesByteCompatible(t *testing.T) {
 		name, testCase := name, testCase
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			parsed, err := ParsePublicationTag(testCase.tag)
+			var parsed PublicationLocator
+			var err error
+			if testCase.wantAPIVersion == CurrentPackageAPIVersion {
+				parsed, err = ParsePublicationTagForPackageAPIVersion(testCase.tag, testCase.wantAPIVersion)
+			} else {
+				parsed, err = ParsePublicationTag(testCase.tag)
+			}
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -122,9 +127,9 @@ func TestParsePublicationTagRejectsACrossedLane(t *testing.T) {
 func TestFamilyAndCentralReleaseLinesNeverCollide(t *testing.T) {
 	t.Parallel()
 	central := ReleaseIDForKind("ObjectBucket")
-	edge := ReleaseIDForGroupKind(testFamilyGroup, "ObjectBucket")
+	family := ReleaseIDForGroupKind(testFamilyGroup, "ObjectBucket")
 	other := ReleaseIDForGroupKind("forms.example.com/v1alpha1", "ObjectBucket")
-	for _, pair := range [][2]string{{central, edge}, {central, other}, {edge, other}} {
+	for _, pair := range [][2]string{{central, family}, {central, other}, {family, other}} {
 		if pair[0] == pair[1] {
 			t.Fatalf("release lines collided: %q", pair[0])
 		}

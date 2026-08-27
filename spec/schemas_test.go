@@ -19,6 +19,15 @@ import (
 // would be enforcing a contract nobody can read.
 func TestNormativeSchemasMatchTheImplementation(t *testing.T) {
 	implementations := map[string]string{
+		"form-ref.schema.json":                           filepath.Join("..", "formpackage", "schemas", "form-ref.schema.json"),
+		"form-definition.schema.json":                    filepath.Join("..", "formpackage", "schemas", "form-definition.schema.json"),
+		"package-index.schema.json":                      filepath.Join("..", "formpackage", "schemas", "package-index.schema.json"),
+		"form-ref-v1alpha2.schema.json":                  filepath.Join("..", "formpackage", "schemas", "form-ref-v1alpha2.schema.json"),
+		"form-definition-v1alpha2.schema.json":           filepath.Join("..", "formpackage", "schemas", "form-definition-v1alpha2.schema.json"),
+		"package-index-v1alpha2.schema.json":             filepath.Join("..", "formpackage", "schemas", "package-index-v1alpha2.schema.json"),
+		"form-ref-v1alpha3.schema.json":                  filepath.Join("..", "formpackage", "schemas", "form-ref-v1alpha3.schema.json"),
+		"form-definition-v1alpha3.schema.json":           filepath.Join("..", "formpackage", "schemas", "form-definition-v1alpha3.schema.json"),
+		"package-index-v1alpha3.schema.json":             filepath.Join("..", "formpackage", "schemas", "package-index-v1alpha3.schema.json"),
 		"form-ref-v1beta1.schema.json":                   filepath.Join("..", "formpackage", "schemas", "form-ref-v1beta1.schema.json"),
 		"form-definition-v1beta1.schema.json":            filepath.Join("..", "formpackage", "schemas", "form-definition-v1beta1.schema.json"),
 		"form-definition-v1beta2.schema.json":            filepath.Join("..", "formpackage", "schemas", "form-definition-v1beta2.schema.json"),
@@ -34,6 +43,12 @@ func TestNormativeSchemasMatchTheImplementation(t *testing.T) {
 		"form-package-revocation-checkpoint.schema.json": filepath.Join("..", "formpackage", "schemas", "form-package-revocation-checkpoint.schema.json"),
 	}
 	normativeOnly := map[string]bool{
+		"host-api-wire.schema.json":                 true,
+		"host-discovery.schema.json":                true,
+		"host-api-wire-v1alpha2.schema.json":        true,
+		"host-discovery-v1alpha2.schema.json":       true,
+		"host-api-wire-v1alpha3.schema.json":        true,
+		"host-discovery-v1alpha3.schema.json":       true,
 		"host-api-wire-v1beta1.schema.json":         true,
 		"host-discovery-v1beta1.schema.json":        true,
 		"binding-definition-v1alpha1.schema.json":   true,

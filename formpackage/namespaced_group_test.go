@@ -20,7 +20,7 @@ func TestNamespacedFormGroupIsAStrictSupersetOfTheSchemaExclusions(t *testing.T)
 		"forms.takoform.com/v1alpha3": false,
 		"forms.takoform.com/v1alpha4": false,
 		"forms.takoform.com/v1":       false,
-		"forms.takoform.com/v2beta1":  false,
+		"forms.takoform.com/v9beta1":  false,
 		// And the bare group with no version at all. Decision 0049 made a
 		// versionless group legal, which is exactly what a reserved name would
 		// use to slip past a guard that only read the reserved list when a
@@ -35,14 +35,12 @@ func TestNamespacedFormGroupIsAStrictSupersetOfTheSchemaExclusions(t *testing.T)
 		"packages.forms.takoform.com/v1alpha4": false,
 		"trust.forms.takoform.com/v1alpha1":    false,
 		"trust.forms.takoform.com/v1":          false,
-		// Official families are subdomains of forms.takoform.com, and since
-		// decision 0049 they carry no version.
-		"edge.forms.takoform.com":          true,
-		"edge.forms.takoform.com/v1alpha1": true,
-		// Third-party families are any other DNS-like group.
-		"forms.example.com":          true,
-		"forms.example.com/v1alpha1": true,
-		"forms.example.com/v1":       true,
+		// Publisher-owned families may use any other DNS-like group.
+		"resources.publisher.example":          true,
+		"resources.publisher.example/v1alpha1": true,
+		"forms.example.com":                    true,
+		"forms.example.com/v1alpha1":           true,
+		"forms.example.com/v1":                 true,
 		// Grammar failures stay grammar failures.
 		"forms/v1":                   false,
 		"forms":                      false,

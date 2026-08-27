@@ -1,177 +1,121 @@
 # Takoform
 
-Takoform is an **Experimental specification and tooling project** for
-host-neutral desired-state contracts. It is not an industry standard, a cloud
-catalog, or a promise that a workload can move between backends without
-migration.
+Takoform is the independent home of the **Takoform Specification and Core**:
+the normative desired-state contract, neutral schemas, data-only Form Package
+verification, immutable Snapshot compilation, the Host API client, offline
+trust verification, and generic conformance.
 
-Takoform does not define least-common-denominator cloud resources. A Form
-fixes the application-visible shape of one proven service primitive —
-execution ABI, consistency, delivery guarantees, update units — completely,
-and leaves only the vendor's identity, account, placement, and commerce
-outside the contract. Hosts are exchangeable; resource semantics are not
-([decision 0008](spec/decisions/0008-forms-preserve-service-shape.md)).
+It is an experimental specification and tooling project. It is not a cloud
+catalog, a hosted control plane, a Terraform Provider, or a claim that unlike
+service semantics can be made portable by renaming fields.
 
-## Which identity is current
+## Independent version axes
 
-<!-- current-generation:begin -->
-
-| Axis | Current identity | |
+| Axis | Current identity | Meaning |
 | --- | --- | --- |
-| Specification | `1.1` | released; one exact committed normative source snapshot is release authority |
-| Host API candidate | `forms.takoform.com/v1` | unpublished-candidate; separate protocol identity |
-| Current Form corpus | `forms/candidates/current-family-index.json` | 8 versionless families, 31 exact `0.x` experimental Forms |
-| Form Package envelope | `packages.forms.takoform.com/v1alpha5` | package artifacts are unpublished |
-| Provider distribution | `3.0.0` | current Registry-published typed reference implementation; not Specification authority |
+| Specification | `1.1` | immutable normative source snapshot released from the predecessor repository |
+| Core SDK and CLI | `v0.1.0` candidate | public Go packages and command behavior; released only after the W10 authority cutover |
+| Host API | `forms.takoform.com/v1` | separate unpublished protocol candidate |
+| Form Package format | `packages.forms.takoform.com/v1alpha5` | current data-envelope schema identity, not Core SemVer |
 
-These identities are independent. A Specification 1.1 release does not
-publish or promote the separate Host API v1 candidate, relabel any current
-Form as `1.0.0`, publish a Form Package, or release the non-normative Provider.
-This table is generated from repository bytes
-by `bun run sync:current-generation`; the numbered release ledger derives
-the Specification row as `candidate-open` or `released` without changing any
-Host API, Form, package, or Provider identity.
+These axes never advance one another implicitly. Specification 1.1 did not
+publish Host API v1, a Form, a Form Package, a Provider, Host support,
+activation, or an Offering. Core `v0.1.0` will not mint an API v2 identity.
 
-<!-- current-generation:end -->
+Specification 1.1 remains bound to its original immutable release:
 
-## Specification 1.1, compatibility, and retained Provider history
+- repository: `github.com/tako0614/terraform-provider-takoform`
+- tag: `specification/1.1`
+- annotated tag object: `e2c1ba71766a6b25cae0826df99c8906a7f3f20b`
+- normative source commit: `00ae5ee4e2ea2eb62ea796499a93081374dc36b9`
+- release commit: `35c03a76326c808e859aa77172e086f15a2aeb5d`
+- source snapshot: `sha256:23a9b14dc79f46fae632624fc5c442f947f63565e9d7f9d0a614598b5027ae03`
 
-Takoform Specification 1.1 is the current Specification. Its release status is
-derived from the append-only `release/specification-releases.json` ledger and
-reflected in the generated `takoform-site.json` status document. Its normative
-source references the literal Host API v1 contract. Host API v1 is a separate,
-unpublished protocol candidate; publishing Specification 1.1 does not publish
-or promote it. The Specification's sole release prerequisite is an exact
-committed snapshot of the normative `spec/` tree. Candidate Forms, reference
-conformance, Providers, external Hosts, products, deployments, signers, and
-operators are implementation or adoption evidence, not Specification authority
-([decision 0055](spec/decisions/0055-specification-release-needs-only-normative-source.md)).
+This repository imports that receipt but never recreates or retags the release.
+The extraction and future-writer handoff are recorded in
+[`docs/extraction/w10-core-cutover.md`](docs/extraction/w10-core-cutover.md).
 
-The separately generated [five-class compatibility report](release/specification-compatibility.json)
-binds current Form/Package, Host lifecycle, family/Host support,
-Interface/Binding/transport/service, and trust/revocation/lifecycle/version/
-release identities to raw source bytes and owning ledgers. It byte-pins the
-literal Host API v1 candidate and records candidates without publishing them.
-It is compatibility evidence only, not Specification release evidence, an
-asset, or a prerequisite. Specification 1.1 has no Host API, Form publication,
-or Provider effect; it does not mint a `/v1.1` lane, a v2 lane, schema, tag, or
-receipt. Identity `1.0` was never published, is withdrawn, and is never reused.
+## Public Core packages
 
-The W09 release has four explicit boundaries: C1 freezes the normative tree
-and executable tooling while publication-evidence fields stay `null`; C2 is an
-evidence-only source-snapshot change; C3 is the authoritative append-only
-publication receipt; and C4 is its direct generated-output-only child that
-refreshes the released public state. The compatibility report is checked
-separately and is never a C2/C3 asset or prerequisite.
+- [`formpackage`](formpackage) validates canonical data-only Form Packages,
+  their exact FormRef and schema closure, package digests, fixtures, and
+  append-only revocation documents.
+- [`snapshot`](snapshot) compiles already verified, digest-pinned packages and
+  contracts into one immutable, order-independent exact-identity graph. A
+  failed compilation returns no partial Snapshot.
+- [`hostclient`](hostclient) implements the neutral Host API client, including
+  discovery, support, artifacts, asynchronous operations, identity fences, and
+  Resource lifecycle calls.
+- [`trust`](trust) verifies caller-supplied publisher policy, subject, Sigstore
+  bundle, trusted root, and revocation state offline. It carries no ambient
+  publisher trust.
 
-W09's current owner is the existing
-`https://github.com/tako0614/terraform-provider-takoform.git` repository. A
-future W10 Core owner may write later releases only; it must never reissue,
-rewrite, or retag Specification 1.1.
+The command-line tools expose the same libraries; command output is intended to
+be machine-readable and fails closed.
 
-The current corpus contains 31 exact Experimental `0.x` Forms in eight
-versionless families. The Edge family contains these 16 Forms and no current
-`ObjectBucket`: `ModuleWorker`, `WorkerBundle`, `StaticAssetBundle`,
-`WorkerVersion`, `WorkerDeployment`, `WorkerCustomDomain`, `WorkerEndpoint`,
-`WorkerCronTrigger`, `EdgeKVNamespace`, `SQLiteDatabase`,
-`SQLiteMigrationSet`, `SQLiteMigrationApplication`, `AtLeastOnceQueue`,
-`QueueConsumer`, `DurableWorkflow`, and `ActorNamespace`. The other current
-families are Container, Function, Pull Queue, Schedule, Table, Topic, and
-Vector. Releasing Specification 1.1 does not silently mint Form `1.0.0`
-identities; a future stable Form starts at `1.0.0` only by an explicit
-per-Form decision.
+## Publishers are equal at the Core boundary
 
-Provider SemVer is independent. Provider `v2.1.1` remains immutable,
-Registry-readback history for the retained `v1beta1` Host/family identities,
-and Provider `v2.0.0` and `v1.0.3` remain earlier published history. The
-official Provider 3 implementation may reference the exact current `0.x`
-Forms, but it is non-normative and cannot block Specification 1.1. Provider 3
-remains typed; it does not add an opaque generic JSON resource.
+A Form identity contains its reverse-DNS group, Kind, definition version, and
+schema digest. It contains no `official` bit. The package schema, canonical
+digest, signature verification, revocation checks, Snapshot compiler, Host
+installation mechanism, support report, and activation decision are the same
+regardless of who publishes it.
 
-## Using retained Provider 2.1.1 history
+The only difference between publishers is provenance: who maintains the source
+and which issuer, repository, workflow, ref, and revocation feed an operator
+chooses to trust. Core accepts that policy as data supplied by the caller; it
+does not ship a privileged publisher allowlist or a special activation route.
 
-```hcl
-terraform {
-  required_providers {
-    takoform = {
-      source  = "registry.terraform.io/tako0614/takoform"
-      version = "= 2.1.1"
-    }
-  }
-}
+Package verification is not installation. Installation is not Host support.
+Support is not activation. Activation is not a commercial Offering.
 
-provider "takoform" {
-  endpoint = "https://forms.example.com"
-  space    = "prod"
-}
-```
+## Ownership boundary
 
-`endpoint`, `space`, and bearer `token` may instead come from
-`TAKOFORM_ENDPOINT`, `TAKOFORM_SPACE`, and `TAKOFORM_TOKEN`.
+Core owns:
 
-Provider 2.1.1 speaks its retained Beta lane: discovery at
-`/.well-known/takoform/v1beta1` and the API base
-`/apis/forms.takoform.com/v1beta1`, with UID/generation/revision identity,
-long-running operations, and content-addressed artifact upload
-([`spec/host-api/v1beta1.md`](spec/host-api/v1beta1.md)). One discovery
-response never points two client generations at an ambiguous API base.
+- normative Specification source and active or verify-only schemas;
+- package canonicalization, validation, trust formats, and generic conformance;
+- immutable Snapshot compilation and the Host API client;
+- future Specification and public-schema release records after the one-way
+  authority handoff.
 
-### Run the current reference Host on your machine
+Core does not own:
 
-`forms.example.com` above is a placeholder. Independently, this repository
-carries a reference implementation of the current Host API v1 contract:
+- official or third-party Form source and publication workflows;
+- Terraform/OpenTofu resource mappings, state, import, or Provider releases;
+- a Host implementation, installation database, activation, backend capacity,
+  credentials, billing, support, or customer traffic;
+- a central Form catalog or a universal opaque Terraform resource.
 
-```console
-go run ./cmd/reference-host --addr 127.0.0.1:8080
-```
-
-The frozen reference suite executes through
-`go run ./cmd/portable-host-conformance suite --manifest
-conformance/takoform-v1/manifest.json`. Provider 2.1.1 compatibility and the
-current Host v1 reference are independent surfaces; their presence in one
-repository is not a claim that the retained Provider release implements the
-new Specification lane.
-
-**What that host is not.** It stores desired state and serves no application
-traffic: the worker you create has no isolate, a `WorkerEndpoint`'s address
-answers nothing, and a queue delivers no message. This lane drives desired state
-and never moves a byte of application data
-([`spec/host-api/v1.md`](spec/host-api/v1.md)). It also implements the
-runner-only conformance probe headers and its credentials are three constants
-compiled into this repository, so keep it on loopback. It is a host to learn and
-develop against. Evidence from a real product or production Host is optional
-adoption evidence, not Specification release authority.
-
-## What a host owns
-
-Using the provider requires a compatible host that independently advertises
-exact support and availability; this repository does not own or assert any
-hosted service's live catalog. Host evidence, when recorded, does not grant
-Takoform maturity, publication, or approval authority.
-
-The provider contains no target-pool, backend, credential, price, quota,
-billing, or activation resources. A host owns exact Form support, activation,
-placement, credentials, and commercial policy. Provider state retains only the
-exact FormRef/package identity, portable desired fields, generation fences,
-and schema-validated public output.
-
-The generated inventories:
-
-- [Form inventory](forms/README.md)
-- [Provider reference](docs/index.md)
-- [Current family index](forms/candidates/current-family-index.json)
+The existing Provider and its immutable release history remain in
+`github.com/tako0614/terraform-provider-takoform`. The official Form publisher
+will be a separate `github.com/tako0614/takoform-forms` repository only after
+its packages pass the same released path as independently maintained packages.
 
 ## Development
 
+The portable complete gate is:
+
 ```console
-go test ./...
-go run ./cmd/worker-authoring-conformance matrix --opentofu tofu --terraform terraform
-go run ./cmd/standard-form-conformance verify
+bun install --frozen-lockfile
 bun run check
 ```
 
-No check, task, or candidate descriptor publishes a provider, Form Package, or
-website. Publication and deployment remain separate explicit operations.
+The gate formats nothing and publishes nothing. It checks the final module and
+ownership boundary, schema and release records, Go formatting/static analysis,
+all portable tests, generic conformance, and standalone builds. No sibling
+Provider checkout or `replace` directive is allowed.
+
+## Version cadence
+
+Specification majors receive deliberate compatibility review and normally no
+more than one planned release per year. A minor is released only when a coherent
+compatible body of change is ready; there is no obligation to mint one every
+month. Proposals accumulate before publication. Forms, packages, Core, Hosts,
+and Providers release on their own evidence and cadence.
+
+API v2 remains proposal-only until a later explicit decision and release. This
+repository does not publish or route it as part of W09-W19.
 
 ## License
 

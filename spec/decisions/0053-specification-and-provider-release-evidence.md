@@ -37,7 +37,7 @@ operator authority over the Specification release.
 ## Decision
 
 Takoform records two independent release tracks in
-[`../publication-evidence.json`](../publication-evidence.json).
+[the immutable predecessor publication evidence](https://github.com/tako0614/terraform-provider-takoform/blob/1fa34160a4ed152443b4ea424a324f7677716e36/spec/publication-evidence.json).
 
 ### Normative Specification 1.0
 

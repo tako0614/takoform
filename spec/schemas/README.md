@@ -39,11 +39,13 @@ wins.
 
 The withdrawn pre-Beta epochs' schemas (the v1alpha1, v1alpha2, and v1alpha3
 FormRef/definition/package/discovery/wire sets) are recorded as retired
-identities in the ledger below and are deliberately absent here
+identities in the ledger below and retained here byte-for-byte as
+**verify-only** inputs
 ([decision 0042](../decisions/0042-the-pre-beta-epochs-are-withdrawn.md)).
-The [`formpackage`](../../formpackage/) verifier keeps embedded copies of every
-epoch's package schemas so bytes retained in git history and release tags stay
-verifiable.
+Their presence authorizes no new document, Host support, or publication under
+those epochs. The [`formpackage`](../../formpackage/) verifier keeps matching
+embedded copies of the package schemas so retained artifacts stay verifiable
+without a filesystem dependency.
 
 The Form Package verifier embeds its own copies of the package schemas so it
 has no filesystem dependency at runtime. The wire-envelope schema is normative
@@ -52,22 +54,19 @@ data-only package verifier. `go test ./spec` compiles every schema and proves
 every implementation copy is byte-identical to its normative source.
 
 Every schema `$id` is also a retrieval URL. The files in this directory are the
-only source; `bun run sync:public-schemas` projects them byte-for-byte into
-`website/public/schemas/`, and `bun run check:public-surfaces` rejects missing,
-extra, or drifted public copies. Do not edit the generated public copies.
+only current source. `bun run check:records` requires every active and
+verify-only file, `$id`, raw SHA-256 digest, and ledger entry to agree. A public
+projection is generated only from this closed set after schema publication
+authority has moved to this repository; the extraction does not grant a second
+writer during the handoff.
 
 Once a `$id` URL resolves, its bytes are an immutable published identity while
 they are served. [`release/public-schema-identities.json`](../../release/public-schema-identities.json)
 is the append-only ledger of every such identity, its exact digest, normative
 source, and public projection; a withdrawn identity moves to the ledger's
 `retired` list with the bytes it had and the reason, and can never be reused
-for different bytes. The public-surface gate requires the normative set to
-equal that ledger. Deployment also compares the candidate ledger with every
-retained ledger version in repository history, so a published identity cannot
-disappear by deleting both its source and current ledger entry.
-
-Deployment fetches every retained URL immediately before mutation and refuses
-to overwrite a differing or unavailable identity. A wholly DNS-absent origin
-can be minted only through the explicit initial-origin acknowledgement
-documented in [`website/README.md`](../../website/README.md); that
-acknowledgement cannot bypass any existing response or mismatch.
+for different bytes. The repository gate requires the complete schema set to
+equal that ledger. Publication additionally reads back every retained URL and
+refuses to overwrite a differing or unavailable identity. The one-way writer
+handoff and rollback/fork boundary are recorded in
+[`docs/extraction/w10-core-cutover.md`](../../docs/extraction/w10-core-cutover.md).

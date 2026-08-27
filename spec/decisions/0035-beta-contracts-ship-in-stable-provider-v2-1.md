@@ -54,7 +54,7 @@ write the Beta family to a new path and never replace it.
 
 ### Provider identity and state immutability
 
-[`release/provider-form-identities.json`](../../release/provider-form-identities.json)
+[the immutable predecessor provider identity ledger](https://github.com/tako0614/terraform-provider-takoform/blob/1fa34160a4ed152443b4ea424a324f7677716e36/release/provider-form-identities.json)
 is the append-only provider compatibility authority. Provider v2.1 embeds
 exactly the 15 Beta FormRefs, Definition digests, package digests, and Terraform
 resource type mappings. This identity commitment exists even while the package
