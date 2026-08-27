@@ -36,21 +36,6 @@ describe("Core source boundary", () => {
     expect(inspectSource(entries)).toEqual([]);
   });
 
-  test("allows only the exact predecessor repository as cutover evidence", () => {
-    const entries = validEntries();
-    entries.set(
-      "scripts/schema-origin-deploy.mjs",
-      'const predecessor = "https://github.com/tako0614/terraform-provider-takoform.git";\n',
-    );
-    expect(inspectSource(entries)).toEqual([]);
-
-    entries.set(
-      "scripts/schema-origin-deploy.mjs",
-      'const predecessor = "https://github.com/tako0614/terraform-provider-takoform.git";\nconst command = "github.com/tako0614/terraform-provider-takoform/formpackage";\n',
-    );
-    expect(inspectSource(entries)).not.toEqual([]);
-  });
-
   test("rejects Provider dependencies and sibling replacement", () => {
     const entries = validEntries();
     entries.set(
@@ -66,5 +51,83 @@ describe("Core source boundary", () => {
     expect(inspectSource(entries)).toContain(
       "forbidden pre-extraction source remains under internal/currentformsnapshot/",
     );
+  });
+
+  test.each([
+    ["retired deploy route", "scripts/deploy.mjs", 'const surface = "takoform-specification-release";'],
+    ["retired writer import", "scripts/release.mjs", 'import "./specification-release.mjs";'],
+    ["retired credential lane", "scripts/launcher.mjs", 'const key = "TAKOFORM_SPECIFICATION_REF_WRITE_TOKEN";'],
+    ["retired activation phase", "scripts/schema.mjs", 'const phase = "prepare-activation";'],
+  ])("rejects %s", (_name, path, content) => {
+    const entries = validEntries();
+    entries.set(path, content);
+    expect(inspectSource(entries)).not.toEqual([]);
+  });
+
+  test("rejects restoration of every retired Specification authority file", () => {
+    for (const path of [
+      "release/specification-authority.json",
+      "release/specification-release-policy.md",
+      "release/authority/specification-schema-tool-closure.json",
+      "release/authority/specification-writer-closure.json",
+      "release/authority/specification-writer-rotations.json",
+      "scripts/specification-release.mjs",
+      "scripts/specification-release.test.mjs",
+      "scripts/specification-release-adapter.mjs",
+      "scripts/specification-release-adapter.test.mjs",
+    ]) {
+      const entries = validEntries();
+      entries.set(path, "retired\n");
+      expect(inspectSource(entries)).toContain(
+        `retired Specification authority path must remain absent: ${path}`,
+      );
+    }
+  });
+
+  test("rejects restoration of bespoke release authority and credential brokers", () => {
+    for (const path of [
+      "release/authority/core-release-broker.json",
+      "release/authority/core-release-continuation-review.pub",
+      "release/authority/core-tag-allowed-signers",
+      "release/core-releases.json",
+      "release/broker/main.go",
+      "scripts/deploy.mjs",
+      "scripts/deploy.test.mjs",
+      "scripts/sealed-deploy-bootstrap.mjs",
+      "scripts/sealed-deploy-launcher.mjs",
+      "scripts/sealed-deploy-runner.mjs",
+    ]) {
+      const entries = validEntries();
+      entries.set(path, "retired\n");
+      expect(inspectSource(entries)).not.toEqual([]);
+    }
+    for (const token of [
+      "TAKOFORM_CORE_TAG_SIGNING_KEY",
+      "prepare-sealed-continuation",
+      "takoform.core-release-receipt@v2",
+      "record-push",
+      "ruleset-id",
+      "tag-bundle",
+    ]) {
+      const entries = validEntries();
+      entries.set("scripts/release.mjs", `const retired = ${JSON.stringify(token)};\n`);
+      expect(inspectSource(entries)).not.toEqual([]);
+    }
+  });
+
+  test("rejects platform-specific schema hosting machinery", () => {
+    for (const [path, content] of [
+      ["schema-origin/wrangler.jsonc", "{}\n"],
+      ["release/schema-origin-policy.md", "hosting\n"],
+      ["release/authority/schema-origin-tool-closure.json", "{}\n"],
+      ["scripts/schema-origin-deploy.mjs", "export const route = true;\n"],
+      ["scripts/deploy.mjs", 'const surface = "takoform-schema-origin";\n'],
+      ["scripts/release.mjs", 'const token = "CLOUDFLARE_API_TOKEN";\n'],
+      ["package.json", '{"devDependencies":{"wrangler":"1.0.0"}}\n'],
+    ]) {
+      const entries = validEntries();
+      entries.set(path, content);
+      expect(inspectSource(entries)).not.toEqual([]);
+    }
   });
 });

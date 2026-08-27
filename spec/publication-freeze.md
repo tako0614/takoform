@@ -1,7 +1,7 @@
 # Current publication and change boundary
 
-This tree is an unreleased post-1.1 draft. The predecessor W09 policy and
-publication evidence are imported under
+This tree is an unreleased draft after the historical Specification 1.1
+snapshot. The predecessor W09 policy and publication evidence are imported under
 [`docs/extraction/history/`](../docs/extraction/history/README.md); they are
 history, not current writer authority.
 
@@ -19,44 +19,42 @@ Interface, Binding, Provider, Host capability, activation, or Offering. The
 literal `forms.takoform.com/v1` Host API remains an independent unpublished
 candidate.
 
-## Dormant writer
+## Closed writer boundary
 
-[`release/specification-authority.json`](../release/specification-authority.json)
-remains `prepared-writer-disabled`. The repository may contain the reviewed P0
-writer, adapter, policies, tests, and owning deploy interface, but every
-release phase, including release verification, must reject before constructing an adapter or touching a
-signer, credential, writer, package/source script, or network callback. There
-is no CI writer, ambient root/bypass authority, or public identity implied by
-dormant code.
+Predecessor tombstone
+`220d37b284d8288e6e12d31375ecfdca6a5f15c5` disables the old repository's
+Specification and schema writers. The
+cleanup child deletes the successor's dormant numbered writer, adapter,
+policy, closures, rotations, deploy route, credential lanes, and activation
+phase. Their exact P-tree byte digests survive only in
+[`docs/extraction/history/w10-retired-specification-writer.json`](../docs/extraction/history/w10-retired-specification-writer.json).
 
-P0 is an immutable transitive execution closure. P records P0 in its direct
-authority-only child; predecessor tombstone T pins P; the separate first
-schema-origin cutover must complete; and only then may direct authority-only A
-activate the successor. A dual-writer interval and authority reopening are
-forbidden. A later P0 program change requires another explicit authority
-rotation; D, N, E, recovery, and receipt commits cannot change it. The exact
-rules are in
-[`release/specification-release-policy.md`](../release/specification-release-policy.md).
+Core owns the normative schema files and their immutable logical identities.
+It owns no schema hosting Worker, route, account, zone, credential, deployment,
+or platform-specific publication machinery; hosting is an external publisher
+or operator concern. There is no CI writer, ambient root/bypass authority, or
+executable/public authority for another numbered Specification 1.x. Neither
+predecessor writer may reopen.
 
-## Independent publication lanes
+## Current revision and proposal lanes
 
-A future Specification `1.x` release may have zero schema additions, N equal
-to D, and no Cloudflare mutation. A schema-only append/deploy has no
-Specification version, tag, Release, or receipt. A composed operation may do
-both, but neither identity depends on the other. The initial schema-origin
-authority cutover remains a separate one-time authority transfer.
+Specification 1.1 is the sole numbered historical snapshot. There is no future
+Specification 1.x stream. Compatible Host API v1 source revisions are
+identified by exact commit, tree, and digest. Public schema formats and Core or
+client releases retain their own append-only artifact identities without
+becoming Takoform domain versions.
 
-No current or future command in this lane may mint Specification 2.x, Host API
-v2, a v2 schema/route/tag/receipt/Release, or claim a new public identity.
-Design text for a possible v2 is allowed only below `spec/proposals/` with
-exact `classification: non-normative-proposal` front matter. Normative source
-snapshot creation and publication re-read exact D bytes and enforce that
-classification.
+No current or future command may mint Host API v2, a v2
+schema/route/tag/receipt/Release, or another numbered Specification identity.
+Design text for a possible v2 is allowed only below `spec/proposals/` with exact
+`classification: non-normative-proposal` front matter. A proposal changes no
+released contract.
 
-Specification, Core SDK/CLI, Host API, each Form and Form Package, Provider,
-Host implementation, support, activation, and commercial Offering remain
-independent release axes. Official and third-party publishers use the same
-package, verification, trust, revocation, installation, support, and activation
+Takoform's two domain axes are Host API major and each Form's
+`definitionVersion`. Form groups are namespaces; packages, Core SDK/CLI,
+Providers, schemas, trust records, and Interface/Binding refs have exact
+artifact identities. Official and third-party publishers use the same package,
+verification, trust, revocation, installation, support, and activation
 mechanisms; provenance may differ, but the contract has no official privilege
 bit or bypass.
 

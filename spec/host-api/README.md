@@ -1,9 +1,10 @@
 # Portable Form Host APIs
 
-## Current unreleased post-1.1 draft: Host API v1
+## Current unreleased Host API v1 draft
 
-This is the current unreleased post-1.1 draft of the literal,
-provider-neutral Host API v1 candidate ([`v1.md`](v1.md)):
+This is the current unreleased draft of the literal, provider-neutral Host API
+v1 candidate ([`v1.md`](v1.md)), authored after the separate historical
+Specification 1.1 snapshot:
 
 - discovery: `GET /.well-known/takoform/v1`;
 - API root: `/apis/forms.takoform.com/v1`;

@@ -3,6 +3,13 @@
 - Status: Accepted
 - Date: 2026-08-22
 
+> Current applicability (2026-08-27): the envelope-format conclusion remains
+> current. The final paragraph's three-axis inventory is superseded by
+> [`../versioning.md`](../versioning.md): Takoform now has only Host API major
+> and per-Form `definitionVersion` as domain axes. Provider SemVer is a client
+> artifact release identity; Interface/Binding identities are digest-bound
+> contract artifacts whose Form-owned compatibility follows the Form version.
+
 ## Context
 
 `packages.forms.takoform.com/vN` is the `apiVersion` of a package index: the

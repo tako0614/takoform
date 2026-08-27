@@ -3,6 +3,13 @@
 - Status: Accepted
 - Date: 2026-08-22
 
+> Current applicability (2026-08-27): the occupied-lane immutability and
+> protocol-change test remain valid. Maturity-only lane graduation is
+> superseded by [`../versioning.md`](../versioning.md): a new API major may be
+> proposed only for an evidenced incompatible Host protocol requirement.
+> Historical alpha/beta identities remain verify-only and are not precedent
+> for another maturity channel.
+
 ## Context
 
 [Decision 0038](0038-a-generation-move-is-measured-not-assumed.md) recorded a

@@ -58,6 +58,16 @@ const providerAuthorityTokens = Object.freeze([
 
 const hostApiV2Token = /\bforms\.takoform\.com\/v2(?:[^A-Za-z0-9_]|$)/iu;
 
+const hostApi11Token =
+  /(?:\b(?:Host API|API)\s+(?:v)?1\.1\b|\bforms\.takoform\.com\/v1\.1\b)/iu;
+
+const ambiguousPostSpecificationToken = /\bpost-1\.1\b/iu;
+
+const futureSpecificationWriterToken =
+  /\b(?:current|future|continuing|new)\s+(?:numbered\s+)?Specification(?:\s+1\.x)?\s+(?:writer|release|stream)\b/iu;
+
+const platformSchemaHostingToken = /\b(?:Cloudflare|Wrangler|schema-origin)\b/iu;
+
 const exceptionWords = /\b(?:histor(?:y|ical)|predecessor|retained|withdrawn|legacy|proposal|proposed|verify-only|compatibility[- ]only|not\s+current|not\s+a\s+current|old\s+repository|former|superseded|unserved|forbidden|never\s+reuse)\b/iu;
 const negationWords = /\b(?:no|not|never|without|neither|nor|cannot|does\s+not|do\s+not|doesn't|don't|isn't|aren't|none)\b/iu;
 
@@ -142,6 +152,21 @@ function checkVocabulary(path, content, problems) {
       if (!hasExceptionContext(normalizedContent, absoluteV2) && !isNegated(normalizedContent, absoluteV2)) {
         problems.push(`${path}:${index + 1} claims a positive Host API v2 identity: ${v2[0]}`);
       }
+    }
+    for (const v11 of matchesInLine(line, hostApi11Token)) {
+      problems.push(`${path}:${index + 1} conflates Specification 1.1 with a Host API lane: ${v11[0]}`);
+    }
+    for (const ambiguous of matchesInLine(line, ambiguousPostSpecificationToken)) {
+      problems.push(`${path}:${index + 1} uses ambiguous 1.1 shorthand instead of naming the historical Specification snapshot: ${ambiguous[0]}`);
+    }
+    for (const writer of matchesInLine(line, futureSpecificationWriterToken)) {
+      const absoluteWriter = { ...writer, index: absoluteOffset + (writer.index ?? 0) };
+      if (!hasExceptionContext(normalizedContent, absoluteWriter) && !isNegated(normalizedContent, absoluteWriter)) {
+        problems.push(`${path}:${index + 1} claims retired numbered Specification authority: ${writer[0]}`);
+      }
+    }
+    for (const hosting of matchesInLine(line, platformSchemaHostingToken)) {
+      problems.push(`${path}:${index + 1} retains platform-specific schema hosting vocabulary: ${hosting[0]}`);
     }
     lineOffset += line.length + 1;
   }

@@ -1,0 +1,62 @@
+{
+  "kind": "takoform.retired-specification-writer-history@v1",
+  "sourceCommit": "94d22e4325695b4ffb215629f4bb937e35a6fed0",
+  "sourceTree": "f6a3ba75d8f2f84d4d0d4e23ddcb5ac3431071bc",
+  "status": "historical-bytes-only-no-executable-authority",
+  "files": [
+    {
+      "path": "release/authority/specification-schema-tool-closure.json",
+      "bytes": 508,
+      "gitBlob": "fe83242c72f85b6ace9cd14fbf42fc75999d3139",
+      "sha256": "sha256:d03a7e56a7cc459d8d07d24fc480d00d50b53ded6d807f5ded9faac88f4e0866"
+    },
+    {
+      "path": "release/authority/specification-writer-closure.json",
+      "bytes": 818,
+      "gitBlob": "06b067b06fa056ec1fee5b65b4408f866680f2c9",
+      "sha256": "sha256:34c54ba7f2c3a5ded3da7bc364b2d366227850b393b944bff2b202312c0ac8d1"
+    },
+    {
+      "path": "release/authority/specification-writer-rotations.json",
+      "bytes": 1341,
+      "gitBlob": "8cfec8e13c00f7d043686063601a759a5239a438",
+      "sha256": "sha256:00fbbb0658e8ffc9ea547ca0188961ca10cbdab7fa34616c6dfe4255c52b9419"
+    },
+    {
+      "path": "release/specification-authority.json",
+      "bytes": 1097,
+      "gitBlob": "3cf9e28c3ad3d7353c4e819d5023f148919a0f71",
+      "sha256": "sha256:6e0a9d4a08e5004aa882a5c5b945bd4b60265e6ddfaca83c3042d1c19750821c"
+    },
+    {
+      "path": "release/specification-release-policy.md",
+      "bytes": 14320,
+      "gitBlob": "b7246c715e71003a20ad2c3464eaa2291aeef587",
+      "sha256": "sha256:ffd21ab759bfd95dd04589239690522d5a257553582b8c798facef7dc8123474"
+    },
+    {
+      "path": "scripts/specification-release-adapter.mjs",
+      "bytes": 133861,
+      "gitBlob": "5d7a2c271bf6d2a7764e80fb7986ab67fc989b3d",
+      "sha256": "sha256:915c984c8cd48a610cd58cc32ae1328afd68eeee77293165dc741beab996e6c0"
+    },
+    {
+      "path": "scripts/specification-release-adapter.test.mjs",
+      "bytes": 73505,
+      "gitBlob": "d4d473228ba27068986a96b06cacf02bce7fc443",
+      "sha256": "sha256:b93a854e5a28a47cc3081cd4572328d49374e04f0ce4c76920090e1c8a71a397"
+    },
+    {
+      "path": "scripts/specification-release.mjs",
+      "bytes": 109709,
+      "gitBlob": "6bb653cbbb5b19612ec8ac10e76eeb66ecf8de5d",
+      "sha256": "sha256:b339975244a27bbc0cf539d4eff0e57ab69bf8e8cf2af1467adfd10a48978e8b"
+    },
+    {
+      "path": "scripts/specification-release.test.mjs",
+      "bytes": 66462,
+      "gitBlob": "232e7b49561d84ece376fdb10088f770975ca4e5",
+      "sha256": "sha256:6d1d442d5d2429c90632996ebcad8cde02a524a43c9ebe42d6c826794a272794"
+    }
+  ]
+}

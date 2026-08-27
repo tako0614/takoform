@@ -53,20 +53,19 @@ and is consumed by host/provider conformance rather than embedded in the
 data-only package verifier. `go test ./spec` compiles every schema and proves
 every implementation copy is byte-identical to its normative source.
 
-Every schema `$id` is also a retrieval URL. The files in this directory are the
-only current source. `bun run check:records` requires every active and
-verify-only file, `$id`, raw SHA-256 digest, and ledger entry to agree. A public
-projection is generated only from this closed set after schema publication
-authority has moved to this repository; the extraction does not grant a second
-writer during the handoff.
+Every schema `$id` is a logical URI and may be used as a retrieval URL by an
+external publisher or operator. The files in this directory are the only
+current Core source. `bun run check:records` requires every active and
+verify-only file, `$id`, raw SHA-256 digest, and ledger entry to agree. Core
+contains no hosting projection, platform configuration, credential, or deploy
+path for those URLs.
 
-Once a `$id` URL resolves, its bytes are an immutable published identity while
-they are served. [`release/public-schema-identities.json`](../../release/public-schema-identities.json)
-is the append-only ledger of every such identity, its exact digest, normative
-source, and public projection; a withdrawn identity moves to the ledger's
-`retired` list with the bytes it had and the reason, and can never be reused
-for different bytes. The repository gate requires the complete schema set to
-equal that ledger. Publication additionally reads back every retained URL and
-refuses to overwrite a differing or unavailable identity. The one-way writer
-handoff and rollback/fork boundary are recorded in
+[`release/public-schema-identities.json`](../../release/public-schema-identities.json)
+is the append-only identity ledger: it preserves each exact digest, normative
+source, and historical public path without asserting that Core operates a
+server. A withdrawn identity moves to the ledger's `retired` list with the
+bytes it had and the reason, and can never be reused for different bytes. The
+repository gate requires the complete schema source set to equal that ledger;
+availability and hosted-byte readback belong to the external publisher or
+operator. The one-way writer handoff is recorded in
 [`docs/extraction/w10-core-cutover.md`](../../docs/extraction/w10-core-cutover.md).

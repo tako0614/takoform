@@ -3,6 +3,13 @@
 - Status: Accepted
 - Date: 2026-08-22
 
+> Current applicability (2026-08-27): the measured history and continuity rule
+> remain valid. The open version-model question is now resolved by
+> [`../versioning.md`](../versioning.md): only an incompatible Host protocol
+> requirement can propose a new API major, while Form compatibility advances
+> through that Form's `definitionVersion`. Family channels, package formats,
+> and client releases are not additional Takoform domain axes.
+
 ## Context
 
 The move that produced the current generation was measured after the fact,

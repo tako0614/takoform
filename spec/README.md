@@ -7,8 +7,9 @@ define an official Form roster, a Terraform Provider, a Host implementation,
 backend placement, credentials, activation, billing, or a catalog.
 
 Requirement keywords and conformance classes are defined in
-[`conformance.md`](conformance.md). Independent version axes and compatibility
-rules are defined in [`versioning.md`](versioning.md). Form maturity and the
+[`conformance.md`](conformance.md). The two domain versions, artifact
+identities, and compatibility rules are defined in
+[`versioning.md`](versioning.md). Form maturity and the
 separate authored, published, installed, supported, activated, provisioned,
 client-supported, and offered facts are defined in
 [`project-lifecycle.md`](project-lifecycle.md).
@@ -22,12 +23,13 @@ snapshot digest, and asset digest remain in the imported append-only
 [`Specification release ledger`](../release/specification-releases.json).
 Identity 1.0 was never published, is withdrawn, and is never reused.
 
-The current repository tree is an unreleased post-1.1 draft. A source change in
-this tree does not alter the published 1.1 snapshot and does not itself publish
-any protocol, Form, package, SDK, Provider, support, activation, or Offering
-fact. The current publication and writer boundary is
-[`publication-freeze.md`](publication-freeze.md); the one-way authority record
-is [`release/specification-authority.json`](../release/specification-authority.json).
+The current repository tree is an unreleased draft after the historical
+Specification 1.1 snapshot. A source change in this tree does not alter that
+published snapshot and does not itself publish any protocol, Form, package,
+SDK, Provider, support, activation, or Offering fact. The current publication
+and writer boundary is
+[`publication-freeze.md`](publication-freeze.md). Core owns schema source and
+logical identities, not the platform that may host those identities.
 
 The literal Host API `forms.takoform.com/v1` is a separate unpublished
 candidate. Specification 1.1 did not publish it. There is no `/v1.1` Host lane,
@@ -63,7 +65,7 @@ Takoform has five independent contract areas.
    [`trust/`](trust/) defines caller-supplied publisher provenance and offline
    verification inputs. [`schemas/`](schemas/) carries active authoring schemas
    and byte-exact verify-only history. The append-only release ledgers bind
-   published identities without advancing another version axis.
+   published identities without creating another domain version axis.
 
 ## Publisher equality
 
