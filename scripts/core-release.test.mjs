@@ -67,17 +67,17 @@ function fixture({ published = false, tag = published, tagCommit = COMMIT } = {}
   };
   const request = async () => ({
     status: releaseCreated ? 200 : 404,
-    body: releaseCreated ? releaseBody("v0.1.0") : "Not Found",
+    body: releaseCreated ? releaseBody("v1.0.0") : "Not Found",
   });
   return { calls, run, request };
 }
 
 describe("minimal Core release", () => {
-  test("accepts only one exact stable SemVer tag and one optional read-only mode", () => {
-    expect(parseCoreReleaseArgs(["v0.1.0"])).toEqual({ version: "v0.1.0", mode: "publish" });
-    expect(parseCoreReleaseArgs(["v12.3.4", "--dry-run"])).toEqual({ version: "v12.3.4", mode: "dry-run" });
-    expect(parseCoreReleaseArgs(["v12.3.4", "--verify"])).toEqual({ version: "v12.3.4", mode: "verify" });
-    for (const args of [[], ["1.0.0"], ["v01.0.0"], ["v1.0.0-rc.1"], ["v1.0.0", "--force"], ["v1.0.0", "--verify", "extra"]]) {
+  test("accepts only the API and Go module v1 release line", () => {
+    expect(parseCoreReleaseArgs(["v1.0.0"])).toEqual({ version: "v1.0.0", mode: "publish" });
+    expect(parseCoreReleaseArgs(["v1.2.3", "--dry-run"])).toEqual({ version: "v1.2.3", mode: "dry-run" });
+    expect(parseCoreReleaseArgs(["v1.2.3", "--verify"])).toEqual({ version: "v1.2.3", mode: "verify" });
+    for (const args of [[], ["1.0.0"], ["v0.1.0"], ["v2.0.0"], ["v01.0.0"], ["v1.0.0-rc.1"], ["v1.0.0", "--force"], ["v1.0.0", "--verify", "extra"]]) {
       expect(() => parseCoreReleaseArgs(args)).toThrow();
     }
   });
@@ -85,12 +85,12 @@ describe("minimal Core release", () => {
   test("dry-run is read-only and runs the complete portable gate", async () => {
     const f = fixture();
     expect(
-      await runCoreRelease(parseCoreReleaseArgs(["v0.1.0", "--dry-run"]), {
+      await runCoreRelease(parseCoreReleaseArgs(["v1.0.0", "--dry-run"]), {
         root: ROOT,
         run: f.run,
         request: f.request,
       }),
-    ).toEqual({ mode: "dry-run", version: "v0.1.0", commit: COMMIT, tag: "missing", ready: true });
+    ).toEqual({ mode: "dry-run", version: "v1.0.0", commit: COMMIT, tag: "missing", ready: true });
     expect(f.calls.filter((call) => call.command === "bun").map((call) => call.args)).toEqual([["run", "check"]]);
     expect(f.calls.some((call) => call.command === "gh")).toBe(false);
     expect(f.calls.some((call) => ["tag", "push"].includes(call.args[0]))).toBe(false);
@@ -98,42 +98,42 @@ describe("minimal Core release", () => {
 
   test("publishes through one create-only GitHub Release call and verifies public readback", async () => {
     const f = fixture();
-    const result = await runCoreRelease(parseCoreReleaseArgs(["v0.1.0"]), {
+    const result = await runCoreRelease(parseCoreReleaseArgs(["v1.0.0"]), {
       root: ROOT,
       run: f.run,
       request: f.request,
     });
     expect(result).toEqual({
       mode: "verify",
-      version: "v0.1.0",
+      version: "v1.0.0",
       tagCommit: COMMIT,
-      releaseURL: "https://github.com/tako0614/takoform/releases/tag/v0.1.0",
-      sourceTarballURL: "https://api.github.com/repos/tako0614/takoform/tarball/v0.1.0",
-      sourceZipballURL: "https://api.github.com/repos/tako0614/takoform/zipball/v0.1.0",
+      releaseURL: "https://github.com/tako0614/takoform/releases/tag/v1.0.0",
+      sourceTarballURL: "https://api.github.com/repos/tako0614/takoform/tarball/v1.0.0",
+      sourceZipballURL: "https://api.github.com/repos/tako0614/takoform/zipball/v1.0.0",
     });
     const ghCalls = f.calls.filter((call) => call.command === "gh");
     expect(ghCalls).toHaveLength(1);
     expect(ghCalls[0].args).toEqual([
       "release",
       "create",
-      "v0.1.0",
+      "v1.0.0",
       "--repo",
       "tako0614/takoform",
       "--title",
-      "Takoform Core v0.1.0",
+      "Takoform API 1.0.0",
       "--generate-notes",
       "--verify-tag",
     ]);
     expect(ghCalls[0].args.some((arg) => /(?:edit|delete|upload|force)/u.test(arg))).toBe(false);
     expect(
       f.calls.filter((call) => call.command === "git" && call.args[0] === "push").map((call) => call.args),
-    ).toEqual([["push", "origin", `${COMMIT}:refs/tags/v0.1.0`]]);
+    ).toEqual([["push", "origin", `${COMMIT}:refs/tags/v1.0.0`]]);
   });
 
   test("refuses an existing public tag before the gate or publication", async () => {
     const f = fixture({ published: true });
     await expect(
-      runCoreRelease(parseCoreReleaseArgs(["v0.1.0", "--dry-run"]), {
+      runCoreRelease(parseCoreReleaseArgs(["v1.0.0", "--dry-run"]), {
         root: ROOT,
         run: f.run,
         request: f.request,
@@ -144,7 +144,7 @@ describe("minimal Core release", () => {
 
   test("completes a missing Release for an exact existing tag without pushing it again", async () => {
     const f = fixture({ tag: true });
-    const result = await runCoreRelease(parseCoreReleaseArgs(["v0.1.0"]), {
+    const result = await runCoreRelease(parseCoreReleaseArgs(["v1.0.0"]), {
       root: ROOT,
       run: f.run,
       request: f.request,
@@ -160,7 +160,7 @@ describe("minimal Core release", () => {
       tagCommit: "fedcba9876543210fedcba9876543210fedcba98",
     });
     await expect(
-      runCoreRelease(parseCoreReleaseArgs(["v0.1.0", "--dry-run"]), {
+      runCoreRelease(parseCoreReleaseArgs(["v1.0.0", "--dry-run"]), {
         root: ROOT,
         run: f.run,
         request: f.request,
@@ -178,13 +178,13 @@ describe("minimal Core release", () => {
         f.calls.push({ command, args: [...args], options: { ...options } });
         return {
           status: 0,
-          stdout: `${tagObject}\trefs/tags/v0.1.0\n${COMMIT}\trefs/tags/v0.1.0^{}\n`,
+          stdout: `${tagObject}\trefs/tags/v1.0.0\n${COMMIT}\trefs/tags/v1.0.0^{}\n`,
           stderr: "",
         };
       }
       return defaultFixtureRun(command, args, options);
     };
-    const result = await verifyCoreRelease("v0.1.0", { root: ROOT, run: f.run, request: f.request });
+    const result = await verifyCoreRelease("v1.0.0", { root: ROOT, run: f.run, request: f.request });
     expect(result.tagCommit).toBe(COMMIT);
     expect(f.calls.some((call) => call.command === "bun" || call.command === "gh")).toBe(false);
   });
@@ -192,8 +192,8 @@ describe("minimal Core release", () => {
   test("verify rejects draft releases and missing source archive readback", async () => {
     const f = fixture({ published: true });
     for (const overrides of [{ draft: true }, { tarball_url: null }, { zipball_url: null }]) {
-      const request = async () => ({ status: 200, body: releaseBody("v0.1.0", overrides) });
-      await expect(verifyCoreRelease("v0.1.0", { root: ROOT, run: f.run, request })).rejects.toThrow(
+      const request = async () => ({ status: 200, body: releaseBody("v1.0.0", overrides) });
+      await expect(verifyCoreRelease("v1.0.0", { root: ROOT, run: f.run, request })).rejects.toThrow(
         "not one stable source release",
       );
     }

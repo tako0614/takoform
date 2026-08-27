@@ -23,18 +23,18 @@ snapshot digest, and asset digest remain in the imported append-only
 [`Specification release ledger`](../release/specification-releases.json).
 Identity 1.0 was never published, is withdrawn, and is never reused.
 
-The current repository tree is an unreleased draft after the historical
-Specification 1.1 snapshot. A source change in this tree does not alter that
-published snapshot and does not itself publish any protocol, Form, package,
-SDK, Provider, support, activation, or Offering fact. The current publication
-and writer boundary is
+The current repository tree is the source for **Takoform API 1.0.0** and the
+matching Go module tag `v1.0.0`. A source change does not alter the historical
+Specification snapshot and does not itself create that tag or publish any
+protocol, Form, package, SDK, Provider, support, activation, or Offering fact.
+The current publication and writer boundary is
 [`publication-freeze.md`](publication-freeze.md). Core owns schema source and
 logical identities, not the platform that may host those identities.
 
-The literal Host API `forms.takoform.com/v1` is a separate unpublished
-candidate. Specification 1.1 did not publish it. There is no `/v1.1` Host lane,
-and API v2 remains proposal-only: no v2 route, schema, tag, or receipt is minted
-by this tree.
+The API 1.0 wire identity is the literal Host API
+`forms.takoform.com/v1`. Specification 1.1 did not publish it. There is no
+`/v1.1` Host lane, and API v2 remains proposal-only: no v2 route, schema, tag,
+or receipt is minted by this tree.
 
 ## Contract map
 

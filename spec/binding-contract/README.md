@@ -1,10 +1,10 @@
 # Typed Binding contracts (`bindings.takoform.com/v1alpha2`)
 
-This document is the current unreleased draft after the historical
-Specification 1.1 snapshot, for the exact Binding identity and transport
+This document is the API 1.0.0 source after the historical Specification 1.1
+snapshot, for the exact Binding identity and transport
 relationships. The immutable [Specification 1.1 predecessor release evidence](../../release/specification-releases.json)
-remains unchanged; this draft does not amend or attribute its rewritten text
-to that release. A Binding is a digest-bound, data-only contract that grants
+remains unchanged; this current source is not attributed to that release. A
+Binding is a digest-bound, data-only contract that grants
 one consumer resource a typed capability on one target resource. The runtime
 API and permission arrive together; credentials do not cross the contract
 boundary.

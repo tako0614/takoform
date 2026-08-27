@@ -5,56 +5,17 @@ import (
 	"testing"
 )
 
-// TestGroupPathRoundTripsEveryShape pins the encoder and the decoder to each
-// other. They are separate functions used by separate parties — this client
-// builds URLs, a host reads them — and the shape they disagree about is the
-// one decision 0049 introduced: a group that carries no version. A decoder
-// that counted segments read the versionless shape as a group plus a kind and
-// answered 404, which is indistinguishable to a caller from a resource that
-// does not exist.
-func TestGroupPathRoundTripsEveryShape(t *testing.T) {
+func TestGroupPathSegmentCarriesTheVersionlessGroupAsOneSegment(t *testing.T) {
 	t.Parallel()
-	for _, group := range []string{
-		"queue.example.net",
-		"queue.example.net/v1beta1",
-		"forms.example.com",
-		"forms.example.com/v1alpha1",
-		"a.b.c.d.example.com/v2beta3",
-	} {
-		group := group
-		t.Run(group, func(t *testing.T) {
-			t.Parallel()
-			encoded := groupPathSegments(group) + "/Widget/app"
-			decoded, tail, ok := SplitGroupPath(strings.Split(encoded, "/"))
-			if !ok {
-				t.Fatalf("SplitGroupPath refused the path this client built: %q", encoded)
-			}
-			if decoded != group {
-				t.Fatalf("round trip of %q produced %q", group, decoded)
-			}
-			if len(tail) != 2 || tail[0] != "Widget" || tail[1] != "app" {
-				t.Fatalf("tail after the group is %v, want [Widget app]", tail)
-			}
-		})
+	if got := groupPathSegment("queue.example.net"); got != "queue.example.net" {
+		t.Fatalf("groupPathSegment() = %q, want one unchanged path segment", got)
 	}
 }
 
-// TestSplitGroupPathRefusesPathsWithNoGroup keeps the decoder from inventing an
-// empty group for a path that never carried one.
-func TestSplitGroupPathRefusesPathsWithNoGroup(t *testing.T) {
+func TestGroupPathSegmentNeverRevivesTheRetiredTwoSegmentShape(t *testing.T) {
 	t.Parallel()
-	for name, parts := range map[string][]string{
-		"kind first":       {"Widget", "app"},
-		"no kind at all":   {"queue.example.net", "v1beta1"},
-		"nothing":          {},
-		"only a separator": {""},
-	} {
-		parts := parts
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			if group, _, ok := SplitGroupPath(parts); ok {
-				t.Fatalf("SplitGroupPath(%v) accepted with group %q", parts, group)
-			}
-		})
+	got := groupPathSegment("queue.example.net/retired")
+	if strings.Contains(got, "/") || !strings.Contains(strings.ToLower(got), "%2f") {
+		t.Fatalf("groupPathSegment() = %q, want the invalid slash contained in one escaped segment", got)
 	}
 }

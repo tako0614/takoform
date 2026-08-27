@@ -209,7 +209,7 @@ func incarnationResourceName(parts []string) (string, bool) {
 	if parts[nameIndex] == "observe" {
 		nameIndex--
 	}
-	if nameIndex < 2 || !KindSegmentPattern.MatchString(parts[nameIndex-1]) || parts[nameIndex] == "" {
+	if nameIndex < 2 || parts[nameIndex-1] != incarnationKind || parts[nameIndex] == "" {
 		return "", false
 	}
 	return parts[nameIndex], true

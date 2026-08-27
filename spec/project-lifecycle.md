@@ -38,8 +38,9 @@ MUST NOT describe its support decision as Takoform approval or certification.
 Specification 1.1 is recorded in the append-only
 [`release/specification-releases.json`](../release/specification-releases.json)
 ledger. Its release is independent of Form, package, client, and Host
-adoption. The current Core tree may contain a later draft; changing that draft
-does not rewrite the immutable predecessor receipt.
+adoption. The current API 1.0.0 source and matching Go module tag are a separate
+release line; changing current source does not rewrite the immutable predecessor
+receipt.
 
 ## Form families
 
@@ -104,10 +105,10 @@ explicit per-Form decision that mints its own `1.0.0` identity.
 
 That decision MUST bind the exact predecessor FormRef, compatibility analysis,
 portable positive and negative evidence, migration or no-migration guidance,
-replacement/import/delete/recovery analysis, and known limitations. Independent
-Hosts and production consumers MAY strengthen the adoption record, but their
-existence does not grant normative authority over Core or another publisher's
-Form.
+replacement/import/delete/recovery analysis, and known limitations. Host or
+consumer adoption is optional supporting evidence, never a Form or API release
+prerequisite, and grants no normative authority over Core or another
+publisher's Form.
 
 Stable does not guarantee that every Host supports the Form or that any
 commercial platform offers it. A historical Specification receipt or Host

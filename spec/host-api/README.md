@@ -1,10 +1,10 @@
 # Portable Form Host APIs
 
-## Current unreleased Host API v1 draft
+## Current Host API v1 — Takoform API 1.0.0
 
-This is the current unreleased draft of the literal, provider-neutral Host API
-v1 candidate ([`v1.md`](v1.md)), authored after the separate historical
-Specification 1.1 snapshot:
+This is the current literal, provider-neutral Host API v1 contract
+([`v1.md`](v1.md)) for Takoform API 1.0.0, authored after the separate
+historical Specification 1.1 snapshot:
 
 - discovery: `GET /.well-known/takoform/v1`;
 - API root: `/apis/forms.takoform.com/v1`;
@@ -12,9 +12,12 @@ Specification 1.1 snapshot:
 - operation table: [`operations-v1.json`](operations-v1.json).
 
 The lane is a protocol identity, not a Form catalog or publisher allowlist.
+Its operation table and wire/discovery/support schemas are byte-identical to
+the W09 compatibility pin; the current records gate verifies that equality.
 The immutable [Specification 1.1 predecessor release evidence](../../release/specification-releases.json)
-records that its publication did not publish this Host lane. This draft does
-not amend or attribute its rewritten text to that predecessor release.
+records that its publication did not publish this Host lane. This document does
+not amend that receipt or attribute current API 1.0.0 source to the predecessor
+release.
 
 ## Retained predecessor lanes
 

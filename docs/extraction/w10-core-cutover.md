@@ -132,11 +132,16 @@ compatibility inputs. They do not authorize new publication or Host support.
    Specification writer and every platform-specific schema hosting surface,
    dependency, credential lane, and authority record from Core.
 5. Remove old workflow/OIDC/tag-creation authority.
-6. When separately requested, publish the first Core SDK/CLI release through
-   the ordinary stable SemVer tag and GitHub Release path, then perform its
-   public tag and source-archive readback.
+6. When separately requested, publish Takoform API 1.0.0 and the matching Core
+   SDK/CLI module tag `v1.0.0` as one release through
+   `bun run deploy -- core v1.0.0`, then perform its public tag and
+   source-archive readback. There is no preceding Core `v0.1.0` or independent
+   Core version line.
 
 A permanent zero-writer state for numbered Specifications is intentional. A
 dual-writer interval is forbidden. Published Provider and Specification
 identities are never rewritten. Core carries logical schema identities, not a
 hosting or cutover claim, and there is no activation-only A between P and C.
+The ordinary release entrypoint is a small facade over the create-only release
+helper; the extracted broker, ledger, and numbered Specification machinery do
+not return.

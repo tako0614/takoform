@@ -1,6 +1,6 @@
 # Takoform
 
-Takoform is the independent home of the **Takoform Specification and Core**:
+Takoform is the independent home of the **Takoform API and Core**:
 the normative desired-state contract, neutral schemas, data-only Form Package
 verification, immutable Snapshot compilation, the Host API client, offline
 trust verification, and generic conformance.
@@ -11,11 +11,12 @@ service semantics can be made portable by renaming fields.
 
 ## Version model
 
-Takoform has exactly two domain version axes:
+The first current release line is **Takoform API 1.0.0**. Takoform has exactly
+two domain version axes:
 
 | Axis | Current identity | Meaning |
 | --- | --- | --- |
-| Host API major | `forms.takoform.com/v1` | wire envelope, discovery, and lifecycle compatibility |
+| Takoform API release | `1.0.0` (wire major `forms.takoform.com/v1`) | compatible API/Core checkpoint; only the major selects a wire lane |
 | Form definition | each Form's `definitionVersion` | compatibility of that Form's portable desired-state contract |
 
 A reverse-DNS Form group is a namespace, not a version. A Form-owned Interface
@@ -23,16 +24,19 @@ or Binding changes compatibly only with that Form's `definitionVersion`; an
 external protocol keeps the version owned by its external standard.
 
 Everything else is an artifact, parser, evidence, or distribution identity.
-Specification 1.1 is an immutable historical source snapshot. Core SDK/CLI
-SemVer, Provider SemVer, package envelope `$id`, schema `$id`, package digest,
-trust format, and record generation identify their own bytes or readers; they
-are not Takoform versions a user selects. Specification 1.1 did not publish a
-Form, package, Provider, Host support, activation, or Offering. Core `v0.1.0`
-will not mint an API v2 identity.
+Specification 1.1 is an immutable historical source snapshot. The Go module
+`github.com/tako0614/takoform` uses tag `v1.0.0` for the same API 1.0.0 release;
+there is no planned Core `v0.1.0` and no separate public Core version stream.
+Provider and other client SemVer, package envelope `$id`, schema `$id`, package
+digest, trust format, and record generation identify their own bytes or
+readers; they are not Takoform versions a user selects. Specification 1.1 did
+not publish a Form, package, Provider, Host support, activation, or Offering.
 
-Host API v1 is the only current source lane. Its publication and each Host's
-adoption remain separately evidenced facts; the historical Specification
-snapshot does not establish either one.
+Host API v1 is the only current wire lane. Its discovery and API roots remain
+`/.well-known/takoform/v1` and `/apis/forms.takoform.com/v1`. The current
+machine contract is byte-identical to the W09 compatibility pin. Creating the
+`v1.0.0` tag and GitHub Release is a separate operator action; editing this
+tree and a Host's later adoption do not establish that publication or support.
 
 Specification 1.1 remains bound to its original immutable release:
 
@@ -119,20 +123,34 @@ ownership boundary, schema and release records, Go formatting/static analysis,
 all portable tests, generic conformance, and standalone builds. No sibling
 Provider checkout or `replace` directive is allowed.
 
-Core itself has no production hosting or deploy target. Its ordinary Git tag
-and GitHub Release path is documented in
-[`release/core-release-policy.md`](release/core-release-policy.md); the same
-single command supports read-only dry-run and public verification.
+Core has no production hosting target. Its one published-identity deploy
+surface creates the matching Git tag and GitHub Release through the ordinary
+repository entrypoint documented in
+[`release/core-release-policy.md`](release/core-release-policy.md):
+
+```console
+bun run deploy -- core v1.0.0 --dry-run
+bun run deploy -- core v1.0.0
+bun run deploy -- core v1.0.0 --verify
+```
+
+`bun run deploy -- --contract` describes that surface without mutating it.
 
 ## Version cadence
 
-A Host API major is considered at most annually and only for an evidenced
-incompatible requirement. Compatible API-v1 source revisions accumulate in
-deliberate batches identified by exact commit, tree, and digest; they do not
-mint a synthetic Specification minor. Each Form advances its own
-`definitionVersion` only when that Form's evidence requires it, with no empty
-calendar release. Packages, Core, Hosts, clients, and Providers release their
-artifacts on their own evidence and cadence without becoming domain axes.
+A new Takoform API major is considered only for an evidenced incompatible protocol
+requirement. `v1.0.x` is a compatible correction on the API 1.0 baseline; a
+future `v1.y.0` is a deliberate, proven-compatible API checkpoint on the same
+wire lane. Because v1 envelopes, errors, and endpoint objects are closed, an
+optional field, error, or endpoint is not compatible merely because a new
+client could ignore it. Old-client-safe behavior or an explicit capability
+gate must be proved first. Core uses the matching Go module tag instead of a
+third version stream.
+
+Each Form advances its own `definitionVersion` only when that Form's evidence
+requires it, with no empty calendar release. Packages, Hosts, other clients,
+and Providers release their artifacts on their own evidence and cadence
+without becoming domain axes.
 
 API v2 remains proposal-only until a later explicit decision and release. This
 repository does not publish or route it as part of W09-W19.

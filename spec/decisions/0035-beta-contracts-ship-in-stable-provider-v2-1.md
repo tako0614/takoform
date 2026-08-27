@@ -6,10 +6,11 @@
 
 > Current applicability (2026-08-27): this record remains the immutable account
 > of Provider v2.1 and its occupied Beta identities. Its list of "version axes"
-> is historical. Current authoring has exactly the Host API major and each
-> Form's `definitionVersion` as domain axes; Provider/package/schema/family and
-> Interface/Binding identities below remain retained artifact or namespace
-> identities. See [`../versioning.md`](../versioning.md).
+> is historical. Current authoring has exactly the Takoform API release SemVer
+> (with only its major on the wire) and each Form's `definitionVersion` as
+> domain axes; Provider/package/schema/family and Interface/Binding identities
+> below remain retained artifact or namespace identities. See
+> [`../versioning.md`](../versioning.md).
 
 ## Context
 

@@ -63,9 +63,9 @@ Cryptographic verification is not publication. Publication is not Host
 installation. Installation is not support. Support is not activation.
 Activation is not provisioning, client support, or a commercial Offering.
 
-Host-side policy persistence and mutation ordering are W11 concerns. Core
-provides only the deterministic formats and offline verification primitives
-required before a Host may make those decisions.
+Host-side policy persistence and mutation ordering belong to the Host, outside
+Core. Core provides only deterministic formats and offline verification
+primitives; no roadmap work package is a current trust requirement.
 
 Provider signing keys, Registry identities, Provider provenance, and official
 or third-party publication workflows belong to their owning repositories and

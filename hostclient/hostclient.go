@@ -1,29 +1,23 @@
-// Package hostclient is the stable Host API v1 client lane
-// (forms.takoform.com/v1, spec/host-api/v1.md, decisions 0039,
-// 0046, 0047 and 0048). It is deliberately
-// transport-only: it speaks the v1beta1 resource envelope
+// Package hostclient implements the Takoform API v1 client
+// (forms.takoform.com/v1 and spec/host-api/v1.md). It is deliberately
+// transport-only: it speaks the closed v1 resource envelope
 // (apiVersion/kind/form/metadata/spec/status) over I-JSON, carries the
 // UID/generation/revision identity fences of spec/decisions/0011, polls
 // long-running Operations, uploads content-addressed artifacts, and reads
 // Host Support Profiles. It never selects a backend and never manages
 // credentials.
 //
-// # Namespaced groups travel as two ordinary path segments
+// # Form groups travel as one ordinary path segment
 //
-// Form groups are namespaced apiVersions. A group carries a version only
-// while it has published generations to keep apart (decision 0049), so a group
-// travels as one path segment or as two, and this client sends whichever the
-// apiVersion actually has:
+// API v1 Form groups are versionless reverse-DNS names. The complete group is
+// one segment in every resource and support path:
 //
-//	/apis/forms.takoform.com/v1/resources/queue.example.net/v1beta1/Worker/app
+//	/apis/forms.takoform.com/v1/resources/queue.example.net/Worker/app
 //
-// No path segment this client builds ever percent-encodes a slash. Proxies,
-// gateways, and web frameworks disagree about whether %2F inside a path
-// segment is passed through, decoded, rejected, or normalized, so a lane that
-// required it could not be deployed behind ordinary infrastructure
-// (spec/decisions/0018). The exact FormRef apiVersion string is unchanged
-// everywhere else: request bodies, responses, and the "group" query key still
-// carry the caller's exact group value verbatim.
+// FormRef validation rejects a slash before network traffic. Path escaping is
+// still applied defensively so no invalid caller input can revive a retired
+// two-segment family shape. The exact group string is unchanged in request
+// bodies, responses, and the "group" query key.
 //
 // The lane shares proven transport mechanics (strict I-JSON decoding,
 // same-origin endpoint negotiation, one-shot request bodies, retry only on
@@ -43,7 +37,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strings"
 	"time"
 
@@ -219,7 +212,8 @@ func (c *Client) validAdvertisedEndpoint(raw, expectedPath string) (string, erro
 	// segment, so a host advertising an escaped one — most of all a
 	// percent-encoded slash — is describing a shape this lane does not have and
 	// that intermediaries would not agree on (spec/decisions/0018). Comparing the
-	// decoded path instead would let "%2Fv1beta1" pass as "/v1beta1".
+	// decoded path instead would let an encoded slash pass as a second path
+	// segment.
 	if strings.Contains(advertised.EscapedPath(), "%") {
 		return "", errors.New(
 			"endpoint path must not percent-encode any character; stable v1 paths are ordinary segments",
@@ -295,54 +289,10 @@ func (c *Client) requireReady() error {
 	return nil
 }
 
-// groupPathSegments renders a namespaced Form group as the ordinary path
-// segments the lane's URL templates declare — {formGroup}, optionally followed
-// by {formVersion} — so the slash inside a versioned apiVersion is a real path
-// separator and never a percent-encoded character inside one segment (see
-// package comment and spec/decisions/0018). Since decision 0049 a group may
-// carry no version at all, and then it is simply one segment; the host tells
-// the two shapes apart by grammar rather than by counting.
-func groupPathSegments(group string) string {
-	name, version, split := strings.Cut(group, "/")
-	if !split {
-		return url.PathEscape(group)
-	}
-	return url.PathEscape(name) + "/" + url.PathEscape(version)
-}
-
-// KindSegmentPattern is the Kind grammar the lane states. No segment of a Form
-// group can match it — a DNS-like label is lowercase and a version segment
-// begins with a lowercase "v" — which is what lets a reader tell a group's own
-// path segments from the kind that follows them without counting segments.
-var KindSegmentPattern = regexp.MustCompile(`^[A-Z][A-Za-z0-9]{0,63}$`)
-
-// SplitGroupPath is the exact inverse of groupPathSegments: it consumes the
-// leading segments a Form group travelled as and rejoins them into the FormRef
-// apiVersion string, returning the segments that follow. It decides by grammar
-// rather than by arity, because since decision 0049 a group is one segment or
-// two and counting would silently mis-read whichever shape it was not written
-// for. It is exported so a reader of this client's URLs shares the encoder's
-// own rule instead of reimplementing it.
-func SplitGroupPath(parts []string) (string, []string, bool) {
-	for index, part := range parts {
-		if !KindSegmentPattern.MatchString(part) {
-			continue
-		}
-		if index == 0 {
-			return "", nil, false
-		}
-		group := make([]string, 0, index)
-		for _, segment := range parts[:index] {
-			decoded, err := url.PathUnescape(segment)
-			if err != nil {
-				return "", nil, false
-			}
-			group = append(group, decoded)
-		}
-		return strings.Join(group, "/"), parts[index:], true
-	}
-	return "", nil, false
-}
+// groupPathSegment renders the complete versionless Form group as exactly one
+// URL segment. ValidateFormRef rejects slashes before callers reach a request;
+// escaping here is a final containment boundary for any internal misuse.
+func groupPathSegment(group string) string { return url.PathEscape(group) }
 
 // exactFormQuery carries the exact FormRef and Space on read/lifecycle URLs.
 // The group travels under the query key "group"; the packageDigest is
@@ -350,8 +300,8 @@ func SplitGroupPath(parts []string) (string, []string, bool) {
 // exactFormQuery is the exact-identity query, used both as the /forms
 // availability probe and as the exact-ref qualifier on resource routes.
 //
-// The group travels as ONE value here because that is what a resource route
-// qualifies on. The availability route splits it; see formsAvailabilityQuery.
+// The group travels as one value on every query because API v1 groups are
+// versionless and the filter vocabulary has no separate family-version key.
 func exactFormQuery(space string, ref FormRef) url.Values {
 	query := url.Values{}
 	query.Set("space", space)
@@ -365,13 +315,8 @@ func exactFormQuery(space string, ref FormRef) url.Values {
 // formsAvailabilityQuery is the five-key exact-availability probe of the
 // enumerating /forms route. On this lane `group` is the WHOLE apiVersion, so
 // the probe is the same five keys the resource routes qualify on and there is
-// no separate `version` key to send.
-//
-// The earlier shape split the apiVersion into `group` and `version` to mirror
-// two path segments. Once a group could carry no version (decision 0049) that
-// split had no second half to send, and sending an empty one is not the same
-// request as not sending it: the lane's filter vocabulary is closed, so an
-// empty-valued key is refused rather than ignored.
+// no separate `version` key to send. An extra or empty-valued key is refused
+// rather than ignored because the filter vocabulary is closed.
 func formsAvailabilityQuery(space string, ref FormRef) url.Values {
 	query := url.Values{}
 	query.Set("space", space)
@@ -386,7 +331,7 @@ func (c *Client) resourceURL(ref FormRef, name, suffix string, query url.Values)
 	u := fmt.Sprintf(
 		"%s/resources/%s/%s/%s",
 		c.apiBase,
-		groupPathSegments(ref.APIVersion),
+		groupPathSegment(ref.APIVersion),
 		url.PathEscape(ref.Kind),
 		url.PathEscape(name),
 	)
@@ -556,7 +501,7 @@ func waitForRetry(ctx context.Context, attempt int, retryAfter time.Duration) er
 // mutationKey derives the deterministic Idempotency-Key for one lifecycle
 // mutation from the values it is given. The host namespaces the key by tenant,
 // principal, and space, so equal keys from different principals never collide
-// (spec/host-api/operations-v1beta1.json: idempotency.namespace).
+// (spec/host-api/operations-v1.json: idempotency.namespace).
 func mutationKey(values ...any) string {
 	raw, _ := json.Marshal(values)
 	digest := sha256.Sum256(raw)

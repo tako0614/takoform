@@ -94,18 +94,17 @@ Endpoints, credentials, authorization, and protocol compatibility remain
 host-owned; S3-compatible access to an `ObjectBucket` is adapter material,
 not a desired field.
 
-## Current-candidate authoring rule
+## New Form authoring rule
 
-The v1alpha1 Legacy catalog and the v1alpha2 provider-v2 candidate line are
-prior art only. A current candidate MUST be authored from its Proposal and
-this boundary. A generator MUST NOT copy a Legacy or retained Definition or
-fixture tree and change only API version, status, or SemVer. Reusing the
-shared schema vocabulary and retaining a semantic field after explicit review
-are allowed; inheriting an old field set is not.
+The v1alpha1 Legacy catalog and the withdrawn v1alpha2 provider-v2 line are
+prior art only. A new Form MUST be authored from its Proposal and this
+boundary. A generator MUST NOT copy a Legacy or retained Definition or fixture
+tree and change only API version, status, or SemVer. Reusing the shared schema
+vocabulary and retaining a semantic field after explicit review are allowed;
+inheriting an old field set is not.
 
-Family-based candidates are generated from their family catalog sources into
-family-scoped candidate trees; the catalog tests pin every reviewed field set,
-reject known substrate and operator fields, and reject open semantic tokens.
-Reproducibility checks prove the tracked package bytes still come from that
-source. The withdrawn v1alpha2 candidate tree and its catalog are readable in
+Publisher source and package generation live outside neutral Core. A publisher
+may keep reproducible family-scoped authoring inputs, but its tests must pin
+every reviewed field set, reject substrate and operator fields, and reject open
+semantic tokens. The withdrawn v1alpha2 tree and catalog remain readable in
 git history (decision 0042); they are prior art, not a source to copy from.
