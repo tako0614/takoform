@@ -1,11 +1,11 @@
 # Takoform neutral Core and compiled Snapshot
 
-This document is the current unreleased draft after the historical
-Specification 1.1 snapshot, for the family-neutral compiler boundary. The
+This document is the API 1.0.0 family-neutral compiler boundary after the
+historical Specification 1.1 snapshot. The
 immutable [Specification 1.1 predecessor release evidence](../../release/specification-releases.json)
-remains unchanged; this draft does not amend or attribute its rewritten text
-to that release. It does not publish a Core SDK, select a publisher, mint a
-Host API lane, install a Form, or decide Host support.
+remains unchanged; this current source is not attributed to that historical
+release. It does not by itself publish the Go SDK/CLI tag, select a publisher,
+mint another Host API lane, install a Form, or decide Host support.
 
 ## Purpose
 

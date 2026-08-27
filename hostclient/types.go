@@ -31,7 +31,7 @@ type FormReference struct {
 	PackageDigest string  `json:"packageDigest,omitempty"`
 }
 
-// Metadata is the v1beta1 resource metadata block. Name and Space are
+// Metadata is the API v1 resource metadata block. Name and Space are
 // client-owned; UID, Generation, and Revision are host-owned identity
 // (spec/decisions/0011) and required on every response.
 type Metadata struct {
@@ -62,7 +62,7 @@ type Status struct {
 	Outputs            map[string]any `json:"outputs,omitempty"`
 }
 
-// Resource is the v1beta1 resource envelope. Spec is kept generic so the
+// Resource is the API v1 resource envelope. Spec is kept generic so the
 // same transport carries every Service Form; the caller's resource layer owns
 // the per-shape spec contents.
 type Resource struct {
@@ -135,9 +135,9 @@ var (
 )
 
 // ValidateFormRef enforces the stable v1 exact FormRef grammar. Stable v1
-// accepts only a versionless reverse-DNS group; the Host API apex, retained
-// Form epochs, versioned family groups, and package/trust envelope namespaces
-// are separate identities and fail closed. The structural fields then use
+// accepts only a versionless reverse-DNS group; the Host API apex, any group
+// containing a slash, and package/trust envelope namespaces are separate
+// identities and fail closed. The structural fields then use
 // formpackage's current-neutral validator so this client does not drift from
 // the public Form Package contract.
 func ValidateFormRef(ref FormRef) error {
@@ -262,10 +262,10 @@ func sameFormRef(left, right FormRef) bool {
 }
 
 // validateRequestResource fails closed before any wire traffic when the
-// caller-supplied resource does not carry a coherent v1beta1 identity.
+// caller-supplied resource does not carry a coherent API v1 identity.
 func validateRequestResource(resource *Resource) error {
 	if resource == nil || resource.Form == nil {
-		return errors.New("takoform: v1beta1 resource requires an exact FormRef")
+		return errors.New("takoform: API v1 resource requires an exact FormRef")
 	}
 	if err := ValidateFormRef(resource.Form.FormRef); err != nil {
 		return err

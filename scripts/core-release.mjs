@@ -17,9 +17,12 @@ export const CORE_RELEASE = Object.freeze({
 });
 
 const ROOT = realpathSync(resolve(dirname(fileURLToPath(import.meta.url)), ".."));
-const STABLE_SEMVER_TAG = /^v(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)$/u;
+// API 1 and the Go module share one release line. A v0 tag would recreate the
+// abandoned pre-release Core stream; a v2 tag would be invalid until the wire
+// protocol and Go module both move through an explicit incompatible release.
+const CURRENT_API_SEMVER_TAG = /^v1\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)$/u;
 const COMMIT = /^[0-9a-f]{40}$/u;
-const USAGE = "usage: bun run release:core -- vMAJOR.MINOR.PATCH [--dry-run|--verify]";
+const USAGE = "usage: bun run deploy -- core v1.MINOR.PATCH [--dry-run|--verify]";
 
 function text(value) {
   if (value === undefined || value === null) return "";
@@ -29,8 +32,8 @@ function text(value) {
 export function parseCoreReleaseArgs(args) {
   if (args.length < 1 || args.length > 2) throw new Error(USAGE);
   const [version, option] = args;
-  if (!STABLE_SEMVER_TAG.test(version)) {
-    throw new Error(`Core release tag must be exact stable SemVer: ${version}`);
+  if (!CURRENT_API_SEMVER_TAG.test(version)) {
+    throw new Error(`Core release tag must be exact SemVer on the current API v1 line: ${version}`);
   }
   if (option !== undefined && option !== "--dry-run" && option !== "--verify") {
     throw new Error(USAGE);
@@ -178,8 +181,8 @@ function parseReleaseReadback(raw, version) {
 }
 
 export async function verifyCoreRelease(version, options = {}) {
-  if (!STABLE_SEMVER_TAG.test(version)) {
-    throw new Error(`Core release tag must be exact stable SemVer: ${version}`);
+  if (!CURRENT_API_SEMVER_TAG.test(version)) {
+    throw new Error(`Core release tag must be exact SemVer on the current API v1 line: ${version}`);
   }
   const root = realpathSync(options.root ?? ROOT);
   const run = options.run ?? defaultRun;
@@ -260,7 +263,7 @@ export async function runCoreRelease(parsed, options = {}) {
       "--repo",
       CORE_RELEASE.githubRepository,
       "--title",
-      `Takoform Core ${parsed.version}`,
+      `Takoform API ${parsed.version.slice(1)}`,
       "--generate-notes",
       "--verify-tag",
     ],

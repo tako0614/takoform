@@ -1,26 +1,31 @@
-# Takoform Core release
+# Takoform API and Core release
 
-Takoform Core is the Go module `github.com/tako0614/takoform`. Its ordinary
-release identity is one stable SemVer Git tag and the GitHub Release with the
-same name. GitHub supplies the source tarball and zip archive for that tag.
-There is no separate Specification release stream, release ledger, signing
-bundle, credential broker, deploy facade, or schema-hosting release in Core.
+Takoform API 1.0.0 and the Go module
+`github.com/tako0614/takoform@v1.0.0` are one release. The ordinary release
+identity is one API-v1 SemVer Git tag and the GitHub Release with the same
+name. GitHub supplies the source tarball and zip archive for that tag. There is
+no Core `v0.1.0`, separate Core version stream, future numbered Specification
+stream, release ledger, signing bundle, credential broker, or schema-hosting
+release.
 
-The repository exposes one explicit command:
+The repository exposes one public entrypoint and one surface:
 
 ```text
-bun run release:core -- vMAJOR.MINOR.PATCH --dry-run
-bun run release:core -- vMAJOR.MINOR.PATCH
-bun run release:core -- vMAJOR.MINOR.PATCH --verify
+bun run deploy -- --contract
+bun run deploy -- core v1.MINOR.PATCH --dry-run
+bun run deploy -- core v1.MINOR.PATCH
+bun run deploy -- core v1.MINOR.PATCH --verify
 ```
 
-`--dry-run` is read-only. It requires an exact stable SemVer tag, the owning
-Git remote, a clean worktree, a missing public tag and Release, and a successful
-`bun run check`. The publish form repeats the public absence check after the
-gate, creates a missing lightweight tag with one ordinary non-force Git push,
-reads that public tag back at the exact candidate commit, and invokes
-`gh release create --verify-tag` for the asset-free Release. If an exact tag
-already exists at the candidate commit but its Release does not, the same
+`--contract` is side-effect-free. The tiny deploy entrypoint delegates only
+the `core` surface to the create-only internal release implementation.
+`--dry-run` is read-only. It requires an exact stable SemVer tag on the API v1
+line, the owning Git remote, a clean worktree, a missing public tag and Release,
+and a successful `bun run check`. The publish form repeats the public absence
+check after the gate, creates a missing lightweight tag with one ordinary
+non-force Git push, reads that public tag back at the exact source commit, and
+invokes `gh release create --verify-tag` for the asset-free Release. If an exact tag
+already exists at the source commit but its Release does not, the same
 command may complete that ordinary two-step publication. The script contains
 no edit, delete, retag, force-push, asset-upload, private recovery state, or
 alternate authority path. A name that points elsewhere or a Release that
@@ -32,7 +37,9 @@ necessary, and requires a non-draft, non-prerelease Release with public source
 tarball and zip URLs. Publication authentication is the ordinary local `gh`
 configuration of the operator who deliberately runs the publish form; the
 script accepts no credential, key, ruleset ID, review record, or private state
-argument.
+argument. The first publishable identity is exactly `v1.0.0`; both the public
+entrypoint and internal helper reject `v0.x` and reject `v2.x` until an
+evidenced incompatible API release moves both the wire and Go module major.
 
 The checked-in Quality workflow runs the same portable gate for changes on
 `main`. Neither CI nor `bun run check` publishes a release. No production host,

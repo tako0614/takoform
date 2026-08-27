@@ -16,6 +16,8 @@ const paths = Object.freeze({
   retiredWriterHistory:
     "docs/extraction/history/w10-retired-specification-writer.json",
   trustProfile: "spec/trust/profile.json",
+  specificationCompatibility:
+    "docs/extraction/history/specification-compatibility.json",
 });
 
 const immutableRawDigests = Object.freeze({
@@ -39,7 +41,7 @@ const immutableRawDigests = Object.freeze({
     "sha256:6f2ba3d51261f2559d0738ed2b22f51d7066d4d5b9f9bf0213694f352b677a84",
   "docs/extraction/history/specification-1.1-publication-policy.md":
     "sha256:1828286b630758980a1a36c85321f7759c7134aeb05df0bba7953edfd942002c",
-  "docs/extraction/history/specification-compatibility.json":
+  [paths.specificationCompatibility]:
     "sha256:2d65b2c0fe9d6ddfb8aa8866fb2e4946be5984402c7cbcf7a6a8f55b12d00faa",
   "docs/extraction/history/w08-source-boundary-inventory.md":
     "sha256:f279a967a2d4435f8452fc2db548af93417a0a641f02fa2f68e8979550a95c70",
@@ -57,6 +59,12 @@ const importedSchemaPrefixes = Object.freeze({
     sha256: "32e6a5c2daaa9b03ff0c2f9b4a0a75da43b183afda2d964525695c514ce26201",
   }),
 });
+const hostAPIV1MachinePaths = Object.freeze([
+  "spec/host-api/operations-v1.json",
+  "spec/schemas/host-api-wire-v1.schema.json",
+  "spec/schemas/host-discovery-v1.schema.json",
+  "spec/schemas/host-support-profile-v1.schema.json",
+]);
 const retiredWriterSource = Object.freeze({
   commit: "94d22e4325695b4ffb215629f4bb937e35a6fed0",
   tree: "f6a3ba75d8f2f84d4d0d4e23ddcb5ac3431071bc",
@@ -167,6 +175,34 @@ export function validateSpecificationLedger(ledger) {
   const serialized = JSON.stringify(ledger);
   if (/forms\.takoform\.com\/v2|specification\/(?:v)?2|"version":"(?:1\.[2-9]|[2-9])/u.test(serialized)) {
     problem(problems, "Specification history contains a future numbered or API v2 identity");
+  }
+  return problems;
+}
+
+export function validateHostAPIV1MachinePin(compatibility, sources) {
+  const problems = [];
+  const pin = compatibility?.hostApiV1Pin;
+  if (
+    pin?.lane !== "forms.takoform.com/v1" ||
+    !Array.isArray(pin?.sources)
+  ) {
+    problem(problems, "W09 Host API v1 compatibility pin is missing or malformed");
+    return problems;
+  }
+  const pinsByPath = new Map(
+    pin.sources.map((entry) => [entry?.path, entry?.sha256]),
+  );
+  for (const path of hostAPIV1MachinePaths) {
+    const expected = pinsByPath.get(path);
+    const raw = sources instanceof Map ? sources.get(path) : sources?.[path];
+    if (!/^sha256:[0-9a-f]{64}$/u.test(expected ?? "")) {
+      problem(problems, `W09 Host API v1 compatibility pin omits ${path}`);
+    } else if (raw === undefined || raw === null || sha256(raw) !== expected) {
+      problem(
+        problems,
+        `current API 1.0.0 machine bytes differ from the W09 pin at ${path}`,
+      );
+    }
   }
   return problems;
 }
@@ -451,6 +487,11 @@ export async function validateRepositoryRecords(
   const combinedHeadSignature = parseJSON(raw[paths.combinedHeadSignature], paths.combinedHeadSignature, problems);
   const writerHistory = parseJSON(raw[paths.retiredWriterHistory], paths.retiredWriterHistory, problems);
   const trustProfile = parseJSON(raw[paths.trustProfile], paths.trustProfile, problems);
+  const specificationCompatibility = parseJSON(
+    raw[paths.specificationCompatibility],
+    paths.specificationCompatibility,
+    problems,
+  );
 
   if (specification) problems.push(...validateSpecificationLedger(specification));
   if (schemas) problems.push(...validateSchemaLedgerShape(schemas));
@@ -477,6 +518,16 @@ export async function validateRepositoryRecords(
     }));
   }
   if (trustProfile) problems.push(...validateTrustProfile(trustProfile));
+  if (specificationCompatibility) {
+    const machineSources = new Map();
+    for (const path of hostAPIV1MachinePaths) {
+      machineSources.set(path, await readRequired(root, path, problems));
+    }
+    problems.push(...validateHostAPIV1MachinePin(
+      specificationCompatibility,
+      machineSources,
+    ));
+  }
 
   if (schemas) {
     for (const entry of [...schemas.identities, ...schemas.retired]) {

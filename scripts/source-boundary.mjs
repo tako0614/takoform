@@ -30,8 +30,6 @@ const retiredReleaseAuthorityPaths = new Set([
   "release/authority/core-release-continuation-review.pub",
   "release/authority/core-tag-allowed-signers",
   "release/core-releases.json",
-  "scripts/deploy.mjs",
-  "scripts/deploy.test.mjs",
   "scripts/sealed-deploy-bootstrap.mjs",
   "scripts/sealed-deploy-launcher.mjs",
   "scripts/sealed-deploy-runner.mjs",
@@ -78,6 +76,11 @@ const forbiddenTopLevelPrefixes = [
   "internal/edgeformcatalog/",
   "internal/provider/",
   "providerdiagnostics/",
+];
+
+const retiredPublicHostClientTokens = [
+  /\bv1beta[0-9]+\b/u,
+  /\bSplitGroupPath\b/u,
 ];
 
 function isRuntimeGoSource(path) {
@@ -178,6 +181,16 @@ export function inspectSource(entries) {
     for (const token of forbiddenSchemaHostingTokens) {
       if (content.toLowerCase().includes(token.toLowerCase())) {
         problems.push(`${path} retains platform-specific schema hosting token ${token}`);
+      }
+    }
+  }
+
+  for (const path of paths) {
+    if (!path.startsWith("hostclient/") || !isRuntimeGoSource(path)) continue;
+    const content = entries.get(path) ?? "";
+    for (const token of retiredPublicHostClientTokens) {
+      if (token.test(content)) {
+        problems.push(`${path} retains a retired Host API or versioned-group client surface`);
       }
     }
   }

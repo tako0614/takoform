@@ -32,6 +32,9 @@ describe("current documentation boundary", () => {
     ["invented Host API v1.1", "Hosts serve Host API v1.1 today."],
     ["invented v1.1 route", "Hosts serve forms.takoform.com/v1.1 today."],
     ["ambiguous 1.1 shorthand", "This is the current post-1.1 draft."],
+    ["unpublished current API", "Host API v1 is the current unpublished candidate."],
+    ["unreleased current API", "This is the current unreleased Host API v1 draft."],
+    ["unreleased successor draft", "This tree is an unreleased draft after the historical Specification 1.1 snapshot."],
     ["Provider implementation authority", "Core owns the Provider projection and Terraform resource schema."],
     ["future numbered writer", "Core owns the future Specification writer."],
     ["schema hosting platform", "Core deploys the schema-origin with Wrangler."],
@@ -46,6 +49,15 @@ describe("current documentation boundary", () => {
     entries.set(
       "spec/versioning.md",
       "The retained predecessor documents mention `edge.forms.takoform.com/v1beta1` and `cmd/form-package-release/` for historical reading only.\n",
+    );
+    expect(inspectDocs(entries)).toEqual([]);
+  });
+
+  test("allows a compatible Takoform API 1.1.0 checkpoint without inventing a Host route", () => {
+    const entries = baseEntries();
+    entries.set(
+      "spec/versioning.md",
+      "Takoform API 1.1.0 is a proven-compatible checkpoint on the unchanged Host API v1 route.\n",
     );
     expect(inspectDocs(entries)).toEqual([]);
   });

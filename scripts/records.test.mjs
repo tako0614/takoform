@@ -3,12 +3,20 @@ import { readFileSync } from "node:fs";
 
 import {
   classifySpecificationPublicationSource,
+  validateHostAPIV1MachinePin,
   validateRecordHead,
   validateRepositoryRecords,
   validateRetiredWriterHistory,
   validateSchemaLedgerShape,
   validateSpecificationLedger,
 } from "./records.mjs";
+
+const hostAPIV1MachinePaths = [
+  "spec/host-api/operations-v1.json",
+  "spec/schemas/host-api-wire-v1.schema.json",
+  "spec/schemas/host-discovery-v1.schema.json",
+  "spec/schemas/host-support-profile-v1.schema.json",
+];
 
 const specification = JSON.parse(
   readFileSync(new URL("../release/specification-releases.json", import.meta.url)),
@@ -36,6 +44,20 @@ const retiredWriter = JSON.parse(
     ),
   ),
 );
+const specificationCompatibility = JSON.parse(
+  readFileSync(
+    new URL(
+      "../docs/extraction/history/specification-compatibility.json",
+      import.meta.url,
+    ),
+  ),
+);
+const hostAPIV1MachineSources = new Map(
+  hostAPIV1MachinePaths.map((path) => [
+    path,
+    readFileSync(new URL(`../${path}`, import.meta.url)),
+  ]),
+);
 
 describe("sealed W09 history and platform-neutral schema records", () => {
   test("the pure Core record closure is complete", async () => {
@@ -53,6 +75,22 @@ describe("sealed W09 history and platform-neutral schema records", () => {
     rewritten.releases[0].tagObject = "0".repeat(40);
     expect(validateSpecificationLedger(rewritten)).toContain(
       "Specification 1.1 immutable receipt changed",
+    );
+  });
+
+  test("API 1.0.0 machine wire bytes remain identical to the W09 compatibility pin", () => {
+    expect(
+      validateHostAPIV1MachinePin(
+        specificationCompatibility,
+        hostAPIV1MachineSources,
+      ),
+    ).toEqual([]);
+    const changed = new Map(hostAPIV1MachineSources);
+    changed.set(hostAPIV1MachinePaths[0], Buffer.from("changed\n"));
+    expect(
+      validateHostAPIV1MachinePin(specificationCompatibility, changed),
+    ).toContain(
+      `current API 1.0.0 machine bytes differ from the W09 pin at ${hostAPIV1MachinePaths[0]}`,
     );
   });
 

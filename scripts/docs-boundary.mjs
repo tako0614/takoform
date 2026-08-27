@@ -59,9 +59,15 @@ const providerAuthorityTokens = Object.freeze([
 const hostApiV2Token = /\bforms\.takoform\.com\/v2(?:[^A-Za-z0-9_]|$)/iu;
 
 const hostApi11Token =
-  /(?:\b(?:Host API|API)\s+(?:v)?1\.1\b|\bforms\.takoform\.com\/v1\.1\b)/iu;
+  /(?:\bHost API\s+(?:v)?1\.1\b|\bforms\.takoform\.com\/v1\.1\b)/iu;
 
 const ambiguousPostSpecificationToken = /\bpost-1\.1\b/iu;
+const unreleasedDraftToken = /\bunreleased\s+draft\b/iu;
+
+const unreleasedCurrentAPITokens = Object.freeze([
+  /\b(?:Host API|API)\s+(?:v)?1\b[^\n.!?]{0,100}\b(?:candidate|unpublished|unreleased)\b/iu,
+  /\b(?:candidate|unpublished|unreleased)\b[^\n.!?]{0,100}\b(?:Host API|API)\s+(?:v)?1\b/iu,
+]);
 
 const futureSpecificationWriterToken =
   /\b(?:current|future|continuing|new)\s+(?:numbered\s+)?Specification(?:\s+1\.x)?\s+(?:writer|release|stream)\b/iu;
@@ -158,6 +164,14 @@ function checkVocabulary(path, content, problems) {
     }
     for (const ambiguous of matchesInLine(line, ambiguousPostSpecificationToken)) {
       problems.push(`${path}:${index + 1} uses ambiguous 1.1 shorthand instead of naming the historical Specification snapshot: ${ambiguous[0]}`);
+    }
+    for (const unreleased of matchesInLine(line, unreleasedDraftToken)) {
+      problems.push(`${path}:${index + 1} retains an unreleased-draft label after API 1.0 convergence: ${unreleased[0]}`);
+    }
+    for (const token of unreleasedCurrentAPITokens) {
+      for (const stalled of matchesInLine(line, token)) {
+        problems.push(`${path}:${index + 1} describes the current API 1.0 release as an unpublished candidate: ${stalled[0]}`);
+      }
     }
     for (const writer of matchesInLine(line, futureSpecificationWriterToken)) {
       const absoluteWriter = { ...writer, index: absoluteOffset + (writer.index ?? 0) };

@@ -14,7 +14,7 @@ import (
 func getResourceResponseError(t *testing.T, mutate func(map[string]any)) error {
 	t.Helper()
 	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) bool {
-		if r.Method != http.MethodGet || r.URL.EscapedPath() != splitGroupResourcePath("app", "") {
+		if r.Method != http.MethodGet || r.URL.EscapedPath() != groupResourcePath("app", "") {
 			return false
 		}
 		body := wireResource("app", "uid-1", "1", "7", map[string]any{"image": "example"})

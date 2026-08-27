@@ -28,7 +28,7 @@ func TestValidateFormRefAcceptsVersionlessExternalGroups(t *testing.T) {
 func TestValidateFormRefRejectsNonNeutralGroups(t *testing.T) {
 	t.Parallel()
 	for _, group := range []string{
-		"queue.example.net/v1beta1",
+		"queue.example.net/retired",
 		"queue.example.net/v1",
 		"forms.takoform.com",
 		"forms.takoform.com/v1",
@@ -70,7 +70,7 @@ func TestValidateFormRefEnforcesTheStableGroupLength(t *testing.T) {
 func TestOperationResultResourceRejectsNonNeutralFormRef(t *testing.T) {
 	t.Parallel()
 	ref := testRef
-	ref.APIVersion = "queue.example.net/v1beta1"
+	ref.APIVersion = "queue.example.net/retired"
 	resource := wireResource("app", "uid-1", "1", "1", map[string]any{})
 	resource["apiVersion"] = ref.APIVersion
 	resource["form"].(map[string]any)["formRef"].(map[string]any)["apiVersion"] = ref.APIVersion

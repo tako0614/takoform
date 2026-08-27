@@ -10,7 +10,7 @@ func TestResolveUsesVanillaModuleVersionAndSumWithoutInventingCommit(t *testing.
 	got := resolve("form-package", &debug.BuildInfo{
 		Main: debug.Module{
 			Path:    Module,
-			Version: "v0.1.0",
+			Version: "v1.0.0",
 			Sum:     "h1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
 		},
 	}, true, "devel", "unknown")
@@ -18,7 +18,7 @@ func TestResolveUsesVanillaModuleVersionAndSumWithoutInventingCommit(t *testing.
 	want := Info{
 		Command: "form-package",
 		Module:  Module,
-		Version: "v0.1.0",
+		Version: "v1.0.0",
 		Sum:     "h1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
 	}
 	if got != want {
@@ -28,7 +28,7 @@ func TestResolveUsesVanillaModuleVersionAndSumWithoutInventingCommit(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	if string(raw) != `{"command":"form-package","module":"github.com/tako0614/takoform","version":"v0.1.0","sum":"h1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="}` {
+	if string(raw) != `{"command":"form-package","module":"github.com/tako0614/takoform","version":"v1.0.0","sum":"h1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="}` {
 		t.Fatalf("JSON = %s", raw)
 	}
 }

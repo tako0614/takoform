@@ -43,7 +43,7 @@ func TestListFormSupport(t *testing.T) {
 }
 
 func TestGetFormSupportUsesTheNeutralGroupPath(t *testing.T) {
-	wantPath := APIRootPath + "/support/forms/" + groupPathSegments(testGroup) + "/" + testKind + "/1.0.0"
+	wantPath := APIRootPath + "/support/forms/" + groupPathSegment(testGroup) + "/" + testKind + "/1.0.0"
 	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) bool {
 		if r.Method == http.MethodGet && r.URL.EscapedPath() == wantPath {
 			writeJSON(t, w, http.StatusOK, wireSupportProfile())

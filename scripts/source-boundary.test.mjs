@@ -54,6 +54,15 @@ describe("Core source boundary", () => {
   });
 
   test.each([
+    ["retired Host envelope vocabulary", "// transport uses the v1beta1 resource envelope\npackage hostclient\n"],
+    ["retired versioned-group decoder", "package hostclient\nfunc SplitGroupPath(parts []string) {}\n"],
+  ])("rejects public hostclient %s", (_name, content) => {
+    const entries = validEntries();
+    entries.set("hostclient/hostclient.go", content);
+    expect(inspectSource(entries)).not.toEqual([]);
+  });
+
+  test.each([
     ["retired deploy route", "scripts/deploy.mjs", 'const surface = "takoform-specification-release";'],
     ["retired writer import", "scripts/release.mjs", 'import "./specification-release.mjs";'],
     ["retired credential lane", "scripts/launcher.mjs", 'const key = "TAKOFORM_SPECIFICATION_REF_WRITE_TOKEN";'],
@@ -91,8 +100,6 @@ describe("Core source boundary", () => {
       "release/authority/core-tag-allowed-signers",
       "release/core-releases.json",
       "release/broker/main.go",
-      "scripts/deploy.mjs",
-      "scripts/deploy.test.mjs",
       "scripts/sealed-deploy-bootstrap.mjs",
       "scripts/sealed-deploy-launcher.mjs",
       "scripts/sealed-deploy-runner.mjs",
