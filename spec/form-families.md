@@ -72,7 +72,7 @@ that points at the activated resource. A Form publisher may define additional
 relationships through the closed relation and Binding vocabulary, but a family
 does not turn those relationships into a universal graph language.
 
-## Family and host boundaries
+## Host support
 
 The publisher owns a Form Definition and its portable semantics. A host
 chooses which exact Forms, Interfaces, and Bindings it has installed and which
@@ -85,31 +85,13 @@ contract documents. This is intentional: compiling an empty family set proves
 that Core has no hidden family roster. Generic artifact conformance uses
 synthetic reverse-DNS groups and is independent of any publisher's catalog.
 
-## Retained predecessor identities
+## Compatibility
 
-Versioned groups such as `edge.forms.takoform.com/v1beta1` are retained
-pre-v1 identities. They are readable only as the exact predecessor contracts
-that were published at the time; they are not current family namespaces and
-must never be reused for new semantics. The predecessor repository's
-[immutable W09 source](https://github.com/tako0614/terraform-provider-takoform/tree/1fa34160a4ed152443b4ea424a324f7677716e36/spec)
-contains the historical Edge-family definitions and their artifact rules.
-Those concrete worker, asset, and migration details are compatibility history,
-not a Core-owned current roster or authority.
+Occupied versioned groups remain readable only under their exact historical
+identities. They are not current family namespaces and MUST NOT be reused for
+new semantics. [`versioning.md`](versioning.md) defines the shared retention
+and non-reuse rules.
 
-The withdrawn `forms.takoform.com/v1alpha1`, `/v1alpha2`, and `/v1alpha3`
-identities likewise remain non-reusable predecessor history. Their bytes and
-lane declarations are recorded by the
-[extracted W09 ledger](../docs/extraction/history/published-document-lanes.json),
-which is excluded from current family selection.
-
-## What a family does not do
-
-- It does not combine multiple Form Definitions into one package.
-- It does not promote a Form to Stable or publish a Specification.
-- It does not choose credentials, placement, capacity, pricing, or a backend.
-- It does not create a Provider or client schema, a Host implementation, or a
-  central catalog.
-
-Publisher source, package production, family-specific corpora, Host adapters,
-and client projections live outside neutral Core. They consume the same public
-contracts and remain independently versioned and attributable.
+A family groups related Form contracts; it does not combine them into one
+package or select maturity, Host implementation, client schema, credentials,
+placement, capacity, pricing, or a backend.

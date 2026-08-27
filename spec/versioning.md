@@ -11,17 +11,17 @@ aligned to imply one release or maturity level. Form lifecycle vocabulary is in
 
 | Concern | Identifier | Meaning |
 | --- | --- | --- |
-| Takoform API release | SemVer such as `1.0.0`; only its major is projected onto a wire lane such as `forms.takoform.com/v1` | Compatible API/Core release checkpoint and wire-major compatibility |
+| Takoform API release | SemVer such as `1.0.1`; only its major is projected onto a wire lane such as `forms.takoform.com/v1` | Compatible API/Core release checkpoint and wire-major compatibility |
 | Form definition | SemVer in one exact FormRef's `definitionVersion` | Compatibility of that Form's portable desired-state contract |
 
-The current release identity is **Takoform API 1.0.0** and its wire lane is
-Host API v1. The Go module `github.com/tako0614/takoform` uses the matching
-`v1.0.0` tag; Core has no independent `v0.1.0` or third public version stream.
-At runtime the API release axis exposes only its major. API minor and patch
-numbers identify published compatibility checkpoints on that same lane, not
-new discovery or route identities. A Form group is a versionless namespace.
-`requiresHostApi` is a lower bound on the API wire major, not a negotiation or
-a third version.
+The current release identity is **Takoform API/Core 1.0.1**. Its unchanged wire
+lane is Host API v1, and the Go module
+`github.com/tako0614/takoform` uses the matching `v1.0.1` tag. Core has no
+independent public version stream. At runtime the API release axis exposes only
+its major. API minor and patch numbers identify compatible checkpoints on that
+same lane, not new discovery or route identities. A Form group is a versionless
+namespace. `requiresHostApi` is a lower bound on the API wire major, not a
+negotiation or a third version.
 
 ## Artifact and evidence identities
 
@@ -30,11 +30,11 @@ but are not user-selectable Takoform version axes:
 
 | Concern | Identity | What it identifies |
 | --- | --- | --- |
-| Historical Specification | the sealed `1.1` receipt | one immutable Specification source snapshot; it minted no Host API lane and has no continuing 1.x stream |
+| Specification release | an immutable release receipt | one exact Specification source snapshot |
 | Form Package | envelope `$id` plus content digest | manifest parser and immutable distribution bytes |
 | Interface / Binding | exact ref plus schema digest | digest-bound contract data; Form-owned compatibility follows the Form's `definitionVersion` |
 | External standard | the standard owner's protocol identity | compatibility governed by that external standard |
-| Core Go module | the matching API tag, beginning with `v1.0.0` | the Go distribution of that API checkpoint; never a separate Core version line |
+| Core Go module | the matching API tag, beginning with `v1.0.1` | the Go distribution of that API checkpoint; never a separate Core version line |
 | Other client / Provider | the artifact's own release identity | local behavior, schema, state, and migration support |
 | Publisher trust | policy, root, bundle, lineage, and checkpoint identities | which exact provenance and revocation evidence an operator accepts |
 | Schema / record | `$id`, format, generation, sequence, and digest | parser and append-only evidence bytes |
@@ -43,63 +43,38 @@ No `admissionVersion` exists or is needed. A stable admission report binds its
 exact fields, digests, trust evidence, and capability without minting another
 domain version.
 
-### Absolute names
+## Absolute names
 
 An absolute name identifies the lane or artifact it describes. A relative name
 such as `current` or `v3` only describes a position and becomes false when the
 sequence changes. New artifacts MUST use absolute names; already-published
 relative names remain immutable history.
 
-The predecessor repository once moved a conformance corpus between relative
-paths. That incident is retained as a history lesson, not as a current path or
-runner. The immutable source is available at the
-[W09 commit](https://github.com/tako0614/terraform-provider-takoform/tree/1fa34160a4ed152443b4ea424a324f7677716e36),
-and the extracted ledger records the old lane declarations in
-[`docs/extraction/history/published-document-lanes.json`](../docs/extraction/history/published-document-lanes.json).
+## Current wire and package identities
 
-## Current and retained identities
-
-The current Core source carries Takoform API 1.0.0 at literal Host API v1
-`forms.takoform.com/v1` and the versionless family-group grammar. Its operation
-table, wire schema, discovery schema, and support-profile schema remain
-byte-identical to the W09 compatibility pin. It does not carry a fixed family
-roster or a numbered Specification writer. The sealed historical receipt did
-not publish a Host lane or promote a Form.
+The current Core source carries API/Core 1.0.1 at the literal Host API v1 lane:
+`forms.takoform.com/v1`. Its operation table, wire schema, discovery schema,
+and support-profile schema are unchanged from the established v1 contract.
+There is no fixed family roster or publisher allowlist.
 
 The current package profile is
 [`package-index-v1alpha5.schema.json`](schemas/package-index-v1alpha5.schema.json).
 It is a manifest format that can carry any publisher's exact FormRef; it is not
 a Form generation or a maturity channel.
 
-The following are retained predecessor identities. They remain readable only
-for the exact bytes and contracts that were published at the time and MUST NOT
-be relabelled or reused:
-
-- the Host API `forms.takoform.com/v1beta1` lane;
-- versioned family groups such as `edge.forms.takoform.com/v1beta1`;
-- the withdrawn pre-Beta Host lanes and their package profiles; and
-- any predecessor conformance or publication path named by those documents.
-
-The old repository's [immutable specification tree](https://github.com/tako0614/terraform-provider-takoform/tree/1fa34160a4ed152443b4ea424a324f7677716e36/spec)
-and the local extracted history preserve those facts. They are not current
-Core inputs or publisher authority.
-
 ## What freezes a value
 
-A domain axis says what its compatibility number means; an append-only identity
-ledger says whether an occupied domain or artifact identity may move.
+An axis says what a number means; an append-only identity ledger says whether
+that value may move.
 
 | Value | Current authority |
 | --- | --- |
-| Historical Specification 1.1 receipt | [`release/specification-releases.json`](../release/specification-releases.json) and its signed immutable record head |
+| Specification release receipt | [`release/specification-releases.json`](../release/specification-releases.json) |
 | Active and verify-only schema `$id` and path | [`release/public-schema-identities.json`](../release/public-schema-identities.json) |
-| Pre-extraction served-document declarations | [`docs/extraction/history/published-document-lanes.json`](../docs/extraction/history/published-document-lanes.json) |
-| Retained predecessor bytes | Immutable git history and the predecessor release identity |
 
 Withdrawal is recorded, never silent. An occupied address or digest moves to a
-retired/verify-only record, keeps its bytes, and cannot be reused for another
-contract. The schema ledger is append-only; the extracted W09 ledger is a
-historical receipt and is not regenerated.
+retired or verify-only record, keeps its bytes, and cannot be reused for another
+contract. Release and schema ledgers are append-only.
 
 ## Form groups
 
@@ -126,21 +101,21 @@ publisher's package release cadence is independent of Specification, Form,
 Host, and client releases. A package digest does not carry an implicit SemVer;
 the Form's `definitionVersion` is the compatibility version for desired state.
 
-The predecessor package profiles and locator grammars remain verify-only
-history. Their bytes are accepted only to read or recover an occupied identity;
-they are not aliases for the current profile.
+Predecessor package profiles and locator grammars remain verify-only history.
+Their bytes are accepted only to read or recover an occupied identity; they are
+not aliases for the current profile.
 
 ## Core and client release identities
 
-Core is the Go implementation distributed with the Takoform API checkpoint.
-API 1.0.0 and Go tag `v1.0.0` therefore name the same release, not two aligned
+Core is the Go implementation distributed with the Takoform API checkpoint. API
+1.0.1 and Go tag `v1.0.1` therefore name the same release, not two aligned
 products. A later v1 API checkpoint and its Go tag move together. There is no
 Core-only public version number to select.
 
-A client release identity describes only that client's protocol handling,
-local schema, persisted state, import behavior, and exact-identity
-compatibility. It does not describe Form maturity, package publication, Host
-Support, Activation, or a Service Offering.
+A client release identity describes only that client's protocol handling, local
+schema, persisted state, import behavior, and exact-identity compatibility. It
+does not describe Form maturity, package publication, Host Support, Activation,
+or a Service Offering.
 
 Within a stable client major, a release MUST NOT silently reinterpret persisted
 state as a different FormRef, discard a supported migration, or make an
@@ -208,17 +183,16 @@ current Stable Form, and no current tooling may renumber it.
 
 ## Host API releases and lanes
 
-Takoform API 1.0.0 uses the exact Host API v1 lane, discovered at
+Takoform API/Core 1.0.1 uses the exact Host API v1 lane, discovered at
 `/.well-known/takoform/v1` with API base `/apis/forms.takoform.com/v1`. Its
-wire contract is [`host-api/v1.md`](host-api/v1.md). No `/v1.1` route exists:
-the release number never becomes another path segment. The API release does
-not advance Form maturity, package publication, another client's release, or
-publisher trust.
+wire contract is [`host-api/v1.md`](host-api/v1.md), unchanged by the 1.0.1
+checkpoint. The API release does not advance Form maturity, package
+publication, another client's release, or publisher trust.
 
-`v1.0.x` is reserved for a compatible correction to the 1.0 baseline. A
-future `v1.y.0` is a meaningful compatible checkpoint, not a calendar bump.
-It requires exact old-client/old-Host evidence and remains on the same v1
-discovery and API roots.
+`v1.0.x` is reserved for a compatible correction to the 1.0 baseline. A future
+`v1.y.0` is a meaningful compatible checkpoint, not a calendar bump. It
+requires exact old-client/old-Host evidence and remains on the same v1 discovery
+and API roots.
 
 API v1 uses closed request, response, error, and endpoint envelopes. Adding an
 optional field can make an old decoder reject a document; adding an error can
@@ -229,17 +203,24 @@ send the new shape, normally through an already-safe explicit capability and
 positive/negative old-client witnesses. If that proof cannot be made, the
 change is incompatible.
 
-An incompatible protocol may become API `v2.0.0` only through a later accepted
-decision that moves the Go module to suffix `/v2` and the discovery/wire route
-to suffix `/v2` together. A new API major is a new exact identity, never a
-relabeling of an occupied address. Maturity language, a Form or family change,
-elapsed time, or a client release does not mint a Host lane. W19 is currently
-an inert proposal and creates none of those identities.
+An incompatible protocol requires a new API major and a new exact wire and Go
+module identity together. A new API major is never a relabeling of an occupied
+address. Maturity language, a Form or family change, elapsed time, or a client
+release does not mint a Host lane.
 
-The predecessor Host lanes, their discovery paths, and their operation tables
-remain retained history. They are identified in the extracted W09 ledger and
-the [immutable predecessor source](https://github.com/tako0614/terraform-provider-takoform/tree/1fa34160a4ed152443b4ea424a324f7677716e36/spec/host-api);
-they do not authorize a new lane or a current runner.
+## Historical Specification 1.1 and retained predecessors
+
+Specification 1.1 is an immutable historical source receipt recorded in
+[`release/specification-releases.json`](../release/specification-releases.json).
+It created no Host API, Form, package, Provider, or client release.
+Specification 1.0 was never published, is withdrawn, and its identity cannot
+be reused.
+
+Predecessor Host lanes, versioned family groups, package profiles, and locator
+grammars remain readable only under their exact occupied identities. They MUST
+NOT be relabelled, reused, or treated as current Core inputs. Repository and
+release provenance stays in the append-only receipt instead of the normative
+compatibility rules.
 
 ## Deprecation and revocation
 

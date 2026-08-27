@@ -1,11 +1,11 @@
 # Core trust profile
 
 Takoform Core defines package identity, publisher-policy data, offline
-signature verification, and append-only revocation verification. It does not
-choose a publisher for an operator and does not install, support, or activate a
-Form.
+signature verification, and append-only revocation verification. The
+machine-readable contract is [`profile.json`](profile.json).
 
-The machine-readable contract is [`profile.json`](profile.json).
+Publisher choice, installation, support, and activation remain caller or Host
+decisions; Core consumes their exact policy and verification inputs.
 
 ## Package identity
 
@@ -19,7 +19,7 @@ numbers, negative zero, unlisted files, traversal, links, devices, executable
 files, credentials, operator configuration, target/capacity/pricing data, and
 executable validation or adapter code.
 
-## Caller-supplied publisher policy
+## Publisher policy
 
 A publisher policy supplies exact values for:
 
@@ -57,16 +57,14 @@ package bytes or erase existing Resources: referenced bytes remain available
 for observe, delete, or an explicit operator evacuation path. Deprecation is a
 different lifecycle fact.
 
-## Lifecycle boundary
+## Use of verification results
 
-Cryptographic verification is not publication. Publication is not Host
-installation. Installation is not support. Support is not activation.
-Activation is not provisioning, client support, or a commercial Offering.
+Verification supplies caller and Host inputs; publication, Host installation,
+support, activation, provisioning, client support, and a commercial Offering
+remain separate decisions.
 
 Host-side policy persistence and mutation ordering belong to the Host, outside
-Core. Core provides only deterministic formats and offline verification
-primitives; no roadmap work package is a current trust requirement.
+Core. Core provides deterministic formats and offline verification primitives.
 
-Provider signing keys, Registry identities, Provider provenance, and official
-or third-party publication workflows belong to their owning repositories and
-are not Core trust defaults.
+Provider signing keys, Registry identities, provenance, and publication
+workflows are external trust inputs, not Core defaults.

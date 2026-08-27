@@ -2,14 +2,12 @@
 
 Takoform is a portable desired-state specification and tooling project. Core
 defines data formats, exact identities, deterministic compilation, and the
-protocol documents; it is not a standards body, certification authority,
-universal cloud API, catalog, or promise that a resource can move between
-backends without migration.
+protocol documents. This document defines the lifecycle vocabulary for Forms
+published under those contracts.
 
-This document defines the lifecycle vocabulary for a Form. Exact compatibility
-rules are in [`versioning.md`](versioning.md), package and artifact checks are
-in [`conformance.md`](conformance.md), and the portable field boundary is in
-[`portability-boundary.md`](portability-boundary.md).
+Exact compatibility rules are in [`versioning.md`](versioning.md), package and
+artifact checks are in [`conformance.md`](conformance.md), and portable field
+selection is in [`portability-boundary.md`](portability-boundary.md).
 
 Core has no built-in Form roster or preferred family. A publisher supplies a
 package and its exact contracts; an operator decides which publisher policy to
@@ -22,7 +20,7 @@ These facts MUST remain separate:
 
 | Fact | Owning authority | Meaning |
 | --- | --- | --- |
-| Historical Specification receipt | Immutable W09 ledger and signed record head | The sealed 1.1 source snapshot; there is no current numbered writer |
+| Specification release | Core release ledger | One exact committed snapshot of normative specification source |
 | Form maturity | A scoped lifecycle record | Confidence in one portable contract |
 | Package publication | The publisher's release evidence | Exact bytes can be retrieved and authenticated |
 | Publisher trust | Operator-selected policy | Which provenance and signatures are accepted |
@@ -31,16 +29,13 @@ These facts MUST remain separate:
 | Service Offering | A commercial platform | Capacity, price, availability, and support |
 | Client projection | The client that provides it | Local schema, state, and migration behavior |
 
-No historical receipt, package, trust policy, generated index, Host report,
+No Specification release, package, trust policy, generated index, Host report,
 activation, or Service Offering MAY by itself promote Form maturity. A Host
 MUST NOT describe its support decision as Takoform approval or certification.
 
-Specification 1.1 is recorded in the append-only
-[`release/specification-releases.json`](../release/specification-releases.json)
-ledger. Its release is independent of Form, package, client, and Host
-adoption. The current API 1.0.0 source and matching Go module tag are a separate
-release line; changing current source does not rewrite the immutable predecessor
-receipt.
+The current API/Core 1.0.1 source and matching Go module tag are a separate
+release line from Form, package, client, and Host adoption. Changing current
+source does not rewrite retained release records.
 
 ## Form families
 
@@ -111,8 +106,8 @@ prerequisite, and grants no normative authority over Core or another
 publisher's Form.
 
 Stable does not guarantee that every Host supports the Form or that any
-commercial platform offers it. A historical Specification receipt or Host
-protocol release does not trigger a Form transition.
+commercial platform offers it. A Specification or Host protocol release does
+not trigger a Form transition.
 
 ### Legacy
 
@@ -125,18 +120,12 @@ delete, and recovery behavior.
 Moving a Form to Legacy MUST NOT delete or overwrite its Definition, package,
 tag, signature, revocation evidence, or migration material.
 
-## Retained predecessor line
+## Compatibility history
 
-Forms and admission documents published by the predecessor repository remain
-immutable history. Their historical status fields and lane names describe the
-documents at that time; they do not define a current official subset or Core
-catalog. The byte-exact predecessor source is available at the
-[W09 commit](https://github.com/tako0614/terraform-provider-takoform/tree/1fa34160a4ed152443b4ea424a324f7677716e36/spec).
-
-The extracted W09 records under
-[`docs/extraction/history/`](../docs/extraction/history/README.md) explain that
-lineage and are not current lifecycle inputs. New lifecycle data MUST NOT
-rewrite those retained bytes merely to change their historical labels.
+Historical lifecycle records describe their exact occupied identities and are
+not current maturity evidence. They remain immutable and MUST NOT be rewritten
+or relabelled; [`versioning.md`](versioning.md) defines how retained identities
+are read and deprecated.
 
 ## Change authority
 
@@ -166,3 +155,7 @@ Security revocation is separate and append-only as defined by
 [`trust/`](../trust/). It may block new creation, update, or activation while
 the referenced bytes remain available for observation, deletion, recovery, or
 an explicit operator evacuation path.
+
+Retained release identities and their exact source records are documented in
+[`versioning.md`](versioning.md); this lifecycle record does not reinterpret
+those bytes as current maturity evidence.

@@ -1,17 +1,12 @@
 # Takoform neutral Core and compiled Snapshot
 
-This document is the API 1.0.0 family-neutral compiler boundary after the
-historical Specification 1.1 snapshot. The
-immutable [Specification 1.1 predecessor release evidence](../../release/specification-releases.json)
-remains unchanged; this current source is not attributed to that historical
-release. It does not by itself publish the Go SDK/CLI tag, select a publisher,
-mint another Host API lane, install a Form, or decide Host support.
+Core is the family-neutral compiler boundary for Takoform API 1.0.1. It turns
+already acquired, data-only contract artifacts into one closed, immutable graph
+that a client, Host adapter, or artifact conformance tool can consume.
 
-## Purpose
+## Core model
 
-Core turns already acquired, data-only contract artifacts into one closed,
-immutable graph that a client, Host adapter, or artifact conformance tool can
-consume. The portable meaning shared by those consumers includes:
+The portable meaning shared by Core consumers includes:
 
 - RFC 8785 and I-JSON canonicalization;
 - complete Form Package closure and exact identity checks;
@@ -23,12 +18,12 @@ consume. The portable meaning shared by those consumers includes:
 - deterministic ordering and diagnostics; and
 - Snapshot identity.
 
-Core owns none of the following: a Form or family roster, publisher admission,
-trust selection, a client-specific resource schema, a Host implementation,
-Resource state, credentials, targets, activation, availability, price, or
-capacity.
+Core handles contract data only. Form rosters, publisher admission and trust
+selection, client projections, Host implementations and Resource state,
+credentials, targets, activation, availability, price, and capacity remain
+outside this boundary.
 
-## Boundary before compilation
+## Acquisition and admission
 
 An acquisition adapter first obtains an immutable package closure. The Core
 package verifier proves that its index names every payload, byte sizes and
@@ -51,7 +46,7 @@ Origin and publisher identity never participate in exact contract equality.
 Directory, embedded, OCI, and HTTP-by-digest acquisition are adapters, not
 alternate compiler semantics.
 
-## Compile input
+## Input model
 
 One input contains:
 
@@ -67,7 +62,7 @@ are always group-first. Core has no Kind-only, newest, or built-in publisher
 fallback. Zero packages and zero default pins are valid and are required to
 prove that Core has no hidden family roster.
 
-## Exact graph compilation
+## Compilation and diagnostics
 
 Compilation validates the selected Host API lane, verifies each package
 capability and digest pin, validates exact Interface and Binding definitions,
@@ -82,7 +77,7 @@ The stable diagnostic codes are `invalid_input`, `invalid_artifact`,
 Diagnostics sort by subject, JSON Pointer, code, then message. Reordering input
 MUST produce byte-identical Snapshot identity and diagnostics.
 
-## Immutable Snapshot
+## Snapshot contents and operations
 
 A successful Snapshot owns copies of all input bytes and exposes only copied
 views. It contains exact FormRefs and package digests, canonical Definitions,
@@ -97,7 +92,7 @@ group/kind; and validate and default materialize desired I-JSON for an exact
 FormRef. A wrong group, version, or digest is a miss. No operation falls back
 to another identity.
 
-## Downstream boundaries
+## Snapshot consumers
 
 A client adapter consumes a Snapshot and may build its own typed projection,
 state, imports, codecs, or migration policy. Those are client-owned facts and
@@ -108,19 +103,10 @@ Snapshot together with explicitly selected corpora; family-specific semantics
 remain outside neutral Core.
 
 Project-maintained and independent publishers use the same compile path. A
-publisher policy may distinguish their provenance, but Core has no official
-publisher enum, trust bypass, or namespace shortcut.
+publisher policy may distinguish provenance, but Core has no official publisher
+enum, trust bypass, or namespace shortcut.
 
-## Compatibility boundary
-
-This contract is a compatible API-v1/Core source revision because it fixes how
-existing exact packages and Definitions compile without rewriting their bytes
-or the Host API v1 wire. It is identified by exact commit, tree, and digest, not
-by a synthetic Specification minor. Adding a required envelope field, changing
-FormRef equality, adding an executable family hook, or requiring independently
-installable Interface/Binding package kinds is a new identity decision.
-
-## Conformance witnesses
+## Conformance
 
 The neutral artifact corpus is
 [`../../conformance/takoform-v1/generic.json`](../../conformance/takoform-v1/generic.json).
@@ -140,6 +126,5 @@ Core-level witnesses include:
 - unknown and insufficient Host API refusal; and
 - exact Interface/Binding closure and immutable Definition views.
 
-The [pre-extraction source inventory](../../docs/extraction/history/w08-source-boundary-inventory.md)
-is retained history only. It is not a current Core catalog or implementation
-input.
+Version and retained-history rules are centralized in
+[`../versioning.md`](../versioning.md).

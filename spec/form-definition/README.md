@@ -11,16 +11,11 @@ versionless reverse-DNS Form Family group and an exact four-field FormRef. The
 profile moves independently from the Host API lane and from package or client
 release identities.
 
-The retained [`form-definition-v1beta1.schema.json`](../schemas/form-definition-v1beta1.schema.json)
-and [`form-ref-v1beta1.schema.json`](../schemas/form-ref-v1beta1.schema.json)
-are verify-only predecessor profiles. The retained v1alpha2 and v1alpha1
-profiles under [`../../formpackage/schemas/`](../../formpackage/schemas/) keep
-their original bytes and identity; no published identity is rewritten.
-
-Across the current and retained profiles, a Definition declares a closed role,
-exact Interface and Binding references, and portable desired/observed/output
-schemas. A desired schema does not contain a resource `name`: the Host wire
-envelope owns `metadata.name` ([decision 0011](../decisions/0011-resource-identity-generation-and-revision.md)).
+Across the current profile, a Definition declares a closed role, exact
+Interface and Binding references, and portable desired/observed/output schemas.
+A desired schema does not contain a resource `name`: the Host wire envelope owns
+`metadata.name`
+([decision 0011](../decisions/0011-resource-identity-generation-and-revision.md)).
 Free semantic tokens are prohibited by
 [decision 0008](../decisions/0008-forms-preserve-service-shape.md).
 
@@ -58,19 +53,15 @@ A Definition contains:
 - optional references to data-only positive desired/observed/output fixtures and
   negative schema fixtures in the same package.
 
-The current profile does not admit predecessor-only `refresh`, `drift`, or open
-connection descriptors. Those fields remain readable only in the retained
-predecessor profiles. A Definition's `requiresHostApi` lower bound is checked
-against the selected Host API lane and the mechanisms the Definition actually
-declares, never against a kind or family name.
+The current profile admits an explicit subset of the listed operations; it does
+not admit `refresh`, `drift`, or open connection descriptors. A Definition's
+`requiresHostApi` lower bound is checked against the selected Host API lane and
+the mechanisms the Definition actually declares, never against a kind or family
+name.
 
 The current family structure has no maturity or deprecation field. Proposal,
 Experimental, Stable, and Legacy state is owned outside immutable Definition
 bytes by [`../project-lifecycle.md`](../project-lifecycle.md).
-
-Published predecessor Definitions may retain document-local status fields. A
-verifier preserves those bytes, but current tooling MUST NOT infer maturity
-from them or copy them into a current Definition.
 
 Fixture stages are package data, not Host Support claims. A package verifier
 checks their structure and stage vocabulary; lifecycle or runtime execution
@@ -133,15 +124,13 @@ universal graph DSL.
 ## Relations and artifact references
 
 Current relations use exact digest-bound Interface and Binding contracts and
-UID-pinned resource references. The withdrawn predecessor `connections` map and
-its open permission tokens remain in the predecessor profile only
+UID-pinned resource references
 ([`binding-contract/`](../binding-contract/),
 [decision 0015](../decisions/0015-cross-resource-references-are-uid-pinned-relations.md)).
 
 An artifact-backed Definition carries one content-addressed manifest digest,
 not a URL. A Host resolves and validates that digest before mutation; transport
-and storage remain outside Definition identity. The predecessor URL-based
-source shape is retained only in its immutable profile.
+and storage remain outside Definition identity.
 
 ## Closed recursive schemas
 
@@ -167,7 +156,7 @@ usable only when every branch or target proves a closed or non-object shape.
 Arrays declare `items` (a safe schema or `false`) even when they use
 `prefixItems`.
 
-## Portable data boundary
+## Portable data
 
 Definitions and JSON payloads are recursively checked for credentials, secrets,
 tokens, account and operator configuration, target or pool selection,
@@ -188,7 +177,5 @@ annotation, or a discriminator-selected closed `oneOf` of such objects. These
 proofs are consumed equally by every verifier and do not grant any client or
 Host authority to widen Form semantics.
 
-The predecessor repository's [immutable Definition material](https://github.com/tako0614/terraform-provider-takoform/tree/1fa34160a4ed152443b4ea424a324f7677716e36/spec)
-is retained for historical compatibility only. Historical status fields and
-family-specific examples in that tree are not a current roster or authoring
-source.
+Version and retained-profile rules are centralized in
+[`../versioning.md`](../versioning.md).

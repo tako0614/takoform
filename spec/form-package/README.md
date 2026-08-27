@@ -7,11 +7,6 @@ as described in [`../conformance.md`](../conformance.md). The current Draft
 [`package-index-v1alpha5.schema.json`](../schemas/package-index-v1alpha5.schema.json);
 it carries one exact FormRef whose group may belong to any publisher.
 
-The occupied predecessor package profiles remain verify-only schemas. Their
-bytes and identities are retained so an exact old package can be read or
-recovered; they are not aliases for the current profile and do not grant a
-publisher or client any current authority.
-
 One package MUST contain exactly one Form Definition and therefore exactly one
 FormRef. There is no `packageId` and no multi-Form `definitions` collection. A
 catalog or compatibility set is an external mapping of exact
@@ -40,7 +35,7 @@ input; it is not a self-referential field in the index. A content-addressed
 package has no independent SemVer: the Form's `definitionVersion` is the
 compatibility version and the package digest identifies distribution bytes.
 
-## Local verifier
+## Verification rules
 
 [`../../formpackage/`](../../formpackage/) and
 [`../../cmd/form-package/`](../../cmd/form-package/) provide the offline
@@ -91,23 +86,20 @@ go run ./cmd/form-package validate-revocation STATEMENT.json
 go run ./cmd/form-package validate-revocation-checkpoint CHECKPOINT.json
 ```
 
-## Release and trust boundary
+## Publication
 
-Verification is not publication. A publisher that elects to distribute a
-package chooses its own release cadence, provenance, signature, transparency,
-and revocation policy. Project-maintained and independent publishers use the
-same checks; the only difference is the provenance and trust policy selected
-by the operator. No package is publishable merely because this local verifier
-accepts it.
+The local report covers package bytes. A publisher that distributes a package
+chooses its release cadence, provenance, signature, transparency, and revocation
+policy. Project-maintained and independent publishers use the same checks; the
+operator selects the provenance and trust policy. Acceptance by this verifier
+alone does not publish a package.
 
-Historical predecessor publication workflows and package locator grammars are
-retained at the [immutable W09 source](https://github.com/tako0614/terraform-provider-takoform/tree/1fa34160a4ed152443b4ea424a324f7677716e36)
-for compatibility reading only. They are not current Core release commands or
-authority.
-
-## Deliberate non-goals
+## Verifier scope
 
 The local verifier does not extract untrusted archives, fetch or install remote
 packages, choose a publisher, verify an operator's trust policy, activate a
 Form, implement a Host, build a client projection, or execute adapters. Those
 decisions belong to the caller that owns the corresponding boundary.
+
+Version and retained-profile rules are centralized in
+[`../versioning.md`](../versioning.md).

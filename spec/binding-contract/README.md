@@ -1,13 +1,9 @@
 # Typed Binding contracts (`bindings.takoform.com/v1alpha2`)
 
-This document is the API 1.0.0 source after the historical Specification 1.1
-snapshot, for the exact Binding identity and transport
-relationships. The immutable [Specification 1.1 predecessor release evidence](../../release/specification-releases.json)
-remains unchanged; this current source is not attributed to that release. A
-Binding is a digest-bound, data-only contract that grants
-one consumer resource a typed capability on one target resource. The runtime
-API and permission arrive together; credentials do not cross the contract
-boundary.
+This document defines exact Binding identity and transport relationships. A
+Binding is a digest-bound, data-only contract that grants one consumer resource
+a typed capability on one target resource. The runtime API and permission
+arrive together; credentials do not cross the contract.
 
 Project-maintained and independent publishers use the same authoring,
 canonicalization, and admission mechanism. Publisher provenance is evaluated
@@ -100,7 +96,7 @@ reference may additionally carry `x-takoform-required-interface`, which MUST
 equal the Binding Definition's `targetInterface`
 ([decision 0022](../decisions/0022-relations-pin-the-target-contract.md)).
 
-## Host verification boundary
+## Host verification before mutation
 
 A Host that implements a Binding verifies it before mutation:
 
@@ -120,7 +116,7 @@ Deleting a resource with a live Binding or other stored relation fails
 fencing checks belong to a Host's own conformance evidence; the neutral Core
 artifact corpus does not execute them.
 
-## Distribution and ownership
+## Artifact acquisition and digest scope
 
 Core defines the BindingRef and Definition schemas and verifies caller-supplied
 exact artifacts. It does not require a repository-wide Binding catalog or a
@@ -133,11 +129,3 @@ An opaque external standard service is separate: a sealed
 `standards.takoform.com/v1` slot carries an opaque protocol identifier and no
 target Form or Binding Definition. It grants no portable lifecycle authority
 over that service.
-
-## Retained predecessor identity
-
-The withdrawn Host API lanes used open connection/projection maps. Those
-predecessor semantics are retained as immutable history and are not aliases
-for this digest-bound Binding contract. The predecessor repository's
-[W09 specification tree](https://github.com/tako0614/terraform-provider-takoform/tree/1fa34160a4ed152443b4ea424a324f7677716e36/spec)
-is the immutable source for any historical example.

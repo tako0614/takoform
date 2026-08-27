@@ -1,8 +1,9 @@
 # Takoform decisions
 
-These records explain normative Takoform product decisions. Current behavior
-and requirements remain in the owning specification documents; a decision
-record does not replace them.
+These records preserve design rationale and decision history. They are
+non-normative: current behavior and requirements are defined only by the owning
+specification documents. A decision title or outcome may describe a superseded
+state and does not override the current specification.
 
 - [0001 — Provider v1 keeps Form versions independent](0001-provider-v1-keeps-form-versions-independent.md)
 - [0002 — Artifact URLs are credential-free persisted state](0002-artifact-urls-are-credential-free-state.md)

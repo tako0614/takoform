@@ -1,14 +1,10 @@
 # Exact Interface contracts (`interfaces.takoform.com/v1alpha1`)
 
 An Interface is a digest-bound, data-only contract for one portable operation
-surface. It replaces the open `(name, version, operations)` descriptors of a
-withdrawn predecessor lane ([decision 0010](../decisions/0010-exact-interface-and-binding-contracts.md)).
-The predecessor bytes remain immutable history; this document describes the
-current exact contract shape.
-
-Project-maintained and independent publishers use the same public contract
-path. Core verifies caller-supplied Interface artifacts and does not maintain a
-preferred Interface catalog or import a client implementation.
+surface. Its exact reference identifies a Definition containing the operations
+and behavior that implementations support. The rationale for this shape is
+recorded in
+[decision 0010](../decisions/0010-exact-interface-and-binding-contracts.md).
 
 ## InterfaceRef
 
@@ -97,13 +93,14 @@ is known about length, absence, backpressure, cancellation, and truncation;
 the bytes travel beside the document rather than inside it. A Definition's
 descriptions are authoritative for the details the meta-schema cannot express.
 
-## Distribution and ownership
+## Artifact distribution
 
 Core defines the Interface schemas and verifies exact artifacts supplied by a
-caller. An Interface Definition is not an executable package and does not
-grant Host support. A `schemaDigest` binds only canonical Definition bytes; it
-does not encode package digest, publisher identity, signature, revocation feed,
-or installation location. A publisher or operator may distribute the document
+caller. Project-maintained and independent publishers use the same contract
+path. An Interface Definition is not an executable package and does not grant
+Host support. A `schemaDigest` binds only canonical Definition bytes; it does
+not encode package digest, publisher identity, signature, revocation feed, or
+installation location. A publisher or operator may distribute the document
 through any transport that preserves those bytes.
 
 ## Relationship to Forms and Bindings
@@ -113,7 +110,3 @@ through any transport that preserves those bytes.
 - A Binding names the Interface its target must provide as an exact reference.
 - A Host or client that claims support advertises limits and implementation
   evidence separately from the Interface Definition.
-
-The old repository's [immutable W09 Interface material](https://github.com/tako0614/terraform-provider-takoform/tree/1fa34160a4ed152443b4ea424a324f7677716e36/spec)
-is retained for historical examples only; it does not define a current
-publisher roster or runtime runner.

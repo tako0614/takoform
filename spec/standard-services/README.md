@@ -3,9 +3,8 @@
 Some service categories already have a portable protocol: S3-compatible object
 storage, PostgreSQL, Redis, SMTP, and others. Takoform does not restate those
 protocols as Forms. A Form runtime asks its Host for one through a sealed
-standard-service slot. This v1 contract is part of the stable
-`forms.takoform.com/v1` lane; the occupied beta4 lane retains its published
-v1alpha1 standard-service wire unchanged.
+standard-service slot. This contract participates in the
+`forms.takoform.com/v1` Host API lane.
 
 Requirement keywords are used as described in
 [`../conformance.md`](../conformance.md).
@@ -44,6 +43,11 @@ The protocol grammar is deliberately open. A protocol unknown to Takoform is
 schema-valid and needs no Takoform registry entry or release. Schema validity
 does not certify that a service conforms to the named protocol.
 
+Current `v1` slots do not accept the closed `v1alpha1` values
+(`s3-compatible`, `postgresql`, `redis`, and `smtp`). The verify-only
+[`standard-service-ref-v1alpha1.schema.json`](../schemas/standard-service-ref-v1alpha1.schema.json)
+remains unchanged rather than being widened in place.
+
 ## Exact Host support
 
 A Host integration plugin owns whether it supports an identifier and how it
@@ -75,7 +79,7 @@ credentials, and integration-private entries MUST NOT appear in desired state,
 observed state, outputs, provider state, diagnostics, or Host-returned logs.
 Observed state MAY report whether a slot is satisfied, but never with what.
 
-## Boundary
+## Service ownership and sealed scope
 
 - A slot grants no portable lifecycle authority over a service instance and
   carries no Resource/Form selector. Provisioning, placement, readiness,
@@ -85,13 +89,6 @@ Observed state MAY report whether a slot is satisfied, but never with what.
   readiness rules.
 - A call-only or externally managed service needs no Form merely to be used by
   a runtime.
-
-## Retained v1alpha1 history
-
-[`standard-service-ref-v1alpha1.schema.json`](../schemas/standard-service-ref-v1alpha1.schema.json)
-is immutable published history. Its bare closed values (`s3-compatible`,
-`postgresql`, `redis`, `smtp`) and protocol-specific projection table are not
-accepted by current `v1` slots and are not widened in place.
 
 ## Conformance
 

@@ -48,7 +48,7 @@ returns the still-missing set, and committing an already committed manifest is
 idempotent. An abandoned handle MAY be collected; a committed manifest and
 its blobs MUST remain readable while an addressed resource references them.
 
-## Validation boundary
+## Commit validation
 
 A Host MUST reject before commit:
 
@@ -86,7 +86,7 @@ A committed manifest and each referenced blob MUST stay readable while any
 resource references them. Garbage-collecting an unrelated upload or abandoning
 an upload handle MUST NOT make a committed reference unresolvable.
 
-## Boundary
+## Artifact guarantees and Host responsibilities
 
 - Manifests are data-only and contain no credentials, endpoints, or Host
   identities.
@@ -94,11 +94,3 @@ an upload handle MUST NOT make a committed reference unresolvable.
   bytes on every conforming Host that holds it.
 - Blob storage, deduplication, retention, and tenant policy are Host-owned.
 - A transport digest does not grant lifecycle authority over a resource.
-
-## Retained predecessor identity
-
-The predecessor Host lanes carried the same content-addressed principles but
-used different route prefixes and kind-specific examples. Those concrete
-identities are retained as immutable history at the
-[W09 specification source](https://github.com/tako0614/terraform-provider-takoform/tree/1fa34160a4ed152443b4ea424a324f7677716e36/spec/artifact-transport)
-and are not current Core publisher or family authority.
