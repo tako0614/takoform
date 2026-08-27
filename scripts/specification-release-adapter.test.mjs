@@ -658,10 +658,7 @@ function rulesetDocument(overrides = {}) {
     },
     rules: [
       { type: "deletion" },
-      {
-        type: "update",
-        parameters: { update_allows_fetch_and_merge: false },
-      },
+      { type: "update" },
     ],
     ...overrides,
   };
@@ -1879,6 +1876,54 @@ describe("Specification release production adapter", () => {
       expect(request.headers.Authorization).not.toContain("github-token");
     }
     context.operations.cleanup();
+  });
+
+  test("accepts only a type-only raw update rule while keeping the normalized receipt closed", async () => {
+    const context = await credentialedOperations();
+    const auditToken = await context.operations.acquireTagProtectionAuditToken({
+      surface: "takoform-specification-tag-ruleset",
+      version: VERSION,
+      phase: "publish",
+    });
+    await expect(context.operations.verifyTagProtectionRuleset({
+      tag: TAG,
+      expectedPattern: "refs/tags/specification/*",
+      auditToken,
+    })).resolves.toEqual({
+      id: RULESET_ID,
+      target: "tag",
+      enforcement: "active",
+      bypassActors: [],
+      include: ["refs/tags/specification/*"],
+      exclude: [],
+      rules: ["deletion", "update"],
+    });
+    context.operations.cleanup();
+
+    for (const update of [
+      {
+        type: "update",
+        parameters: { update_allows_fetch_and_merge: false },
+      },
+      { type: "update", unexpected: false },
+    ]) {
+      const rejected = await credentialedOperations();
+      rejected.state.ruleset = rulesetDocument({
+        rules: [{ type: "deletion" }, update],
+      });
+      const rejectedAuditToken =
+        await rejected.operations.acquireTagProtectionAuditToken({
+          surface: "takoform-specification-tag-ruleset",
+          version: VERSION,
+          phase: "publish",
+        });
+      await expect(rejected.operations.verifyTagProtectionRuleset({
+        tag: TAG,
+        expectedPattern: "refs/tags/specification/*",
+        auditToken: rejectedAuditToken,
+      })).rejects.toThrow(/broader|missing|extra/u);
+      rejected.operations.cleanup();
+    }
   });
 
   test("creates one direct asset-free immutable Release and verifies it publicly without credentials", async () => {

@@ -6,33 +6,54 @@ its production adapter. It defines a possible future writer; it does not say
 that the writer is active, that the first schema-origin authority cutover has
 happened, or that a release after Specification 1.1 exists.
 
-## Authority and the immutable P0 program
+## Authority and immutable P0/P generations
 
 [`specification-authority.json`](specification-authority.json) is the sole
-writer-authority record. P0 is the reviewed commit containing the disabled
-program. Its direct authority-only child P records P0 as
-`successorPreparedCommit`; the predecessor tombstone T pins P; and the direct
-authority-only child A of P records the first transition to
-`successor-active`. A also retains the separate, already completed first
-schema-origin authority-cutover evidence. Commit identities are derived from
-first-parent Git history, never self-recorded in the commit they identify.
-Authority cannot return to prepared state after A.
+writer-authority record. Each P0 generation is a reviewed commit containing a
+disabled program, and its direct authority-only child P records that P0 as
+`successorPreparedCommit`. Before activation, a correction may append one new
+generation: P0_i is the direct child of P_(i-1), preserves the same dormant
+authority while resetting only `successorPreparedCommit` to null, and P_i is
+its direct authority-only receipt child. The predecessor tombstone T and the
+external route-cutover evidence must pin only the latest P; the sole direct
+authority-only child A of that latest P records the first transition to
+`successor-active`. Commit identities are derived from first-parent Git
+history, never self-recorded in the commit they identify. Authority cannot
+return to prepared state and no further rotation is allowed after A.
 
-P0 is the immutable execution root. The exact ordered transitive closure is
+Once a P receipt exists, its `successorPreparedCommit` selects that
+generation's immutable P0 execution root. The exact ordered transitive closure is
 [`authority/specification-writer-closure.json`](authority/specification-writer-closure.json).
 It includes the deploy interface, Specification writer and adapter, shared
 record validator, still-transitive Core and schema-origin modules, package and
 lock files, Wrangler configuration, policy, public keys, and the installed-tool
-authority manifest. Before a credential, signer, package/source script, or
-network-capable callback, the adapter compares the exact P0 Git blobs with the
+authority manifest. The closure now also contains the append-only
+[`authority/specification-writer-rotations.json`](authority/specification-writer-rotations.json)
+ledger. The original P0 retains its exact historical legacy manifest without
+that not-yet-created path; every later P0 uses the current manifest and is
+validated independently from its committed blobs.
+
+Every rotation ledger entry pins the superseded P0/P pair, a closed reason and
+evidence record, and the exact paths the next P0 may change. The next P0 must
+change exactly that path set, append exactly one entry without rewriting the
+prefix, and contain no self-reference to its own unknowable commit. Rotation 1
+supersedes P0 `9bf48fd913a5b87332e4bee415945b19f898080f` and P
+`0b2b88940a13acf1a2fb8b8309b4d0bd323fd041` for the observed GitHub tag-ruleset
+update response. Its evidence pins ruleset `21645768`, the Core API version
+`2022-11-28`, the Specification adapter API version `2026-03-10`, and the
+reviewed request and provisioning-evidence digests. This append-only record
+authorizes P0 prime only; it neither activates the writer nor authorizes a
+remote mutation.
+
+Before a credential, signer, package/source script, or network-capable
+callback, the adapter compares the exact receipt-pinned P0 Git blobs with the
 loaded checkout at D, N, E, and current HEAD. Only after that local closure is
 proved may it fetch a fresh canonical `main` and repeat the P0/D/N/E/current
 blob and first-parent checks. `reserve`, `publish`, `recover`, receipt
-preparation, receipt CAS, and verification all use this root.
-
-A later executable change requires an explicit new authority rotation. D, N,
-E, a later `main`, a recovery, or a receipt commit cannot update any file in
-the P0 closure. This policy does not authorize such a rotation.
+preparation, receipt CAS, and verification all use this root. D, N, E, a later
+ordinary `main`, a recovery, or a receipt commit cannot update any file in the
+P0 closure; only the alternating preactivation rotation described above can
+replace it.
 
 While authority is `prepared-writer-disabled`, every mutation entrypoint
 (`reserve`, `apply-reservation`, `seal`, `prepare`, `publish`, `recover`,
@@ -169,6 +190,14 @@ the tag and Release absent, audits the one exact active no-bypass tag ruleset,
 creates a signed annotated `specification/1.x` tag at E, re-audits, and makes
 one direct create-only immutable, non-draft, non-prerelease GitHub Release with
 an exact body and no assets. It never PATCHes or deletes an identity.
+
+For the current GitHub response, the sole applicable active tag ruleset has no
+bypass actors, the exact include `refs/tags/specification/*`, no exclusions,
+and raw rules exactly `[ { "type": "deletion" }, { "type": "update" } ]`.
+The raw update object has only `type`; `parameters`, including branch-only
+`update_allows_fetch_and_merge`, and every extra raw rule key are rejected.
+Only after that raw closure succeeds is the receipt normalized to the stable
+string rules `["deletion", "update"]`.
 
 Receipt recording is three explicit operations. `prepare-receipt` re-reads the
 exact live publication and emits unsigned ledger/prefix/head bytes without a

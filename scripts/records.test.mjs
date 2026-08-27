@@ -13,6 +13,7 @@ import { dirname, join } from "node:path";
 import {
   classifySpecificationPublicationSource,
   deriveSuccessorActivationCommit,
+  firstSpecificationWriterRotationPermittedPaths,
   schemaRouteCutoverClosureSha256,
   validateRepositoryAuthorityHistory,
   validateRepositoryRecords,
@@ -23,6 +24,7 @@ import {
   validateRecordPrefixChain,
   validateSpecificationLedger,
   validateSpecificationWriterClosureManifest,
+  validateSpecificationWriterRotations,
   validateSpecificationWriterSurface,
   specificationWriterClosurePaths,
   validateTrustProfile,
@@ -36,8 +38,20 @@ const recordHead = JSON.parse(new TextDecoder().decode(recordHeadRaw));
 const recordHeadSignature = await Bun.file("release/record-head.sig.json").json();
 const recordHeadPublicKey = await Bun.file("release/authority/record-head-ed25519.pub.pem").text();
 const authority = await Bun.file("release/specification-authority.json").json();
+const writerRotations = await Bun.file(
+  "release/authority/specification-writer-rotations.json",
+).json();
 const trustProfile = await Bun.file("spec/trust/profile.json").json();
 const authorityPath = "release/specification-authority.json";
+const writerRotationsPath =
+  "release/authority/specification-writer-rotations.json";
+
+function emptyWriterRotations() {
+  return {
+    format: "takoform.specification-writer-rotations@v1",
+    rotations: [],
+  };
+}
 
 function dormantAuthority() {
   return {
@@ -55,6 +69,12 @@ const p0 = "1".repeat(40);
 const p = "2".repeat(40);
 const tombstone = "4".repeat(40);
 const activation = "5".repeat(40);
+const legacyP0 = "9bf48fd913a5b87332e4bee415945b19f898080f";
+const legacyP = "0b2b88940a13acf1a2fb8b8309b4d0bd323fd041";
+const rotatedP0 = "6".repeat(40);
+const rotatedP = "7".repeat(40);
+const secondRotatedP0 = "8".repeat(40);
+const secondRotatedP = "9".repeat(40);
 
 function git(root, args) {
   return execFileSync("git", args, {
@@ -109,6 +129,7 @@ function writeDormantWriterSurface(root) {
     format: "takoform.specification-writer-closure@v1",
     paths: specificationWriterClosurePaths,
   }, null, 2)}\n`;
+  const rotations = `${JSON.stringify(emptyWriterRotations(), null, 2)}\n`;
   const files = new Map([
     ...specificationWriterClosurePaths.map((path) => [path, "// P0 closure\n"]),
     ["scripts/specification-release.mjs", writer],
@@ -118,6 +139,7 @@ function writeDormantWriterSurface(root) {
     ["scripts/deploy.mjs", deploy],
     ["release/specification-release-policy.md", "# committed P0 policy\n"],
     ["release/authority/specification-writer-closure.json", manifest],
+    [writerRotationsPath, rotations],
   ]);
   for (const [path, source] of files) {
     mkdirSync(dirname(join(root, path)), { recursive: true });
@@ -181,20 +203,131 @@ function authorityHistory() {
         "release/specification-release-policy.md",
       ],
       authority: prepared,
+      rotations: null,
     },
     {
       commit: p,
       parents: [p0],
       changedPaths: [authorityPath],
       authority: receipt,
+      rotations: null,
     },
     {
       commit: activation,
       parents: [p],
       changedPaths: [authorityPath],
       authority: active,
+      rotations: null,
     },
   ];
+}
+
+function secondWriterRotation() {
+  return {
+    sequence: 2,
+    supersededP0Commit: rotatedP0,
+    supersededPCommit: rotatedP,
+    reasonCode: "second-reviewed-correction",
+    githubTagRuleset: {
+      id: 21645768,
+      coreApiVersion: "2022-11-28",
+      specificationApiVersion: "2026-03-10",
+      requestSha256: `sha256:${"a".repeat(64)}`,
+      provisioningEvidenceSha256: `sha256:${"b".repeat(64)}`,
+    },
+    permittedPaths: [
+      "release/authority/specification-writer-closure.json",
+      "release/authority/specification-writer-rotations.json",
+      authorityPath,
+    ],
+  };
+}
+
+function rotatedAuthorityHistory({ secondRotation = false, active = false } = {}) {
+  const dormant = dormantAuthority();
+  const firstLedger = structuredClone(writerRotations);
+  const history = [
+    {
+      commit: legacyP0,
+      parents: ["0".repeat(40)],
+      changedPaths: [authorityPath],
+      authority: structuredClone(dormant),
+      rotations: null,
+    },
+    {
+      commit: legacyP,
+      parents: [legacyP0],
+      changedPaths: [authorityPath],
+      authority: {
+        ...structuredClone(dormant),
+        successorPreparedCommit: legacyP0,
+      },
+      rotations: null,
+    },
+    {
+      commit: rotatedP0,
+      parents: [legacyP],
+      changedPaths: [...firstSpecificationWriterRotationPermittedPaths],
+      authority: structuredClone(dormant),
+      rotations: firstLedger,
+    },
+    {
+      commit: rotatedP,
+      parents: [rotatedP0],
+      changedPaths: [authorityPath],
+      authority: {
+        ...structuredClone(dormant),
+        successorPreparedCommit: rotatedP0,
+      },
+      rotations: structuredClone(firstLedger),
+    },
+  ];
+  let latestP0 = rotatedP0;
+  let latestP = rotatedP;
+  let latestLedger = firstLedger;
+  if (secondRotation) {
+    latestLedger = {
+      ...structuredClone(firstLedger),
+      rotations: [
+        ...structuredClone(firstLedger.rotations),
+        secondWriterRotation(),
+      ],
+    };
+    history.push(
+      {
+        commit: secondRotatedP0,
+        parents: [rotatedP],
+        changedPaths: [...secondWriterRotation().permittedPaths],
+        authority: structuredClone(dormant),
+        rotations: structuredClone(latestLedger),
+      },
+      {
+        commit: secondRotatedP,
+        parents: [secondRotatedP0],
+        changedPaths: [authorityPath],
+        authority: {
+          ...structuredClone(dormant),
+          successorPreparedCommit: secondRotatedP0,
+        },
+        rotations: structuredClone(latestLedger),
+      },
+    );
+    latestP0 = secondRotatedP0;
+    latestP = secondRotatedP;
+  }
+  if (active) {
+    history.push({
+      commit: activation,
+      parents: [latestP],
+      changedPaths: [authorityPath],
+      authority: activeAuthority({
+        p0Commit: latestP0,
+        pCommit: latestP,
+      }),
+      rotations: structuredClone(latestLedger),
+    });
+  }
+  return history;
 }
 
 describe("append-only Core records", () => {
@@ -586,6 +719,130 @@ describe("append-only Core records", () => {
     );
   });
 
+  test("the first writer rotation ledger entry is exact, closed, and has no P0 prime self-reference", () => {
+    expect(validateSpecificationWriterRotations(writerRotations)).toEqual([]);
+    expect(writerRotations.rotations[0]).toMatchObject({
+      sequence: 1,
+      supersededP0Commit: legacyP0,
+      supersededPCommit: legacyP,
+      reasonCode: "github-tag-ruleset-update-response-type-only",
+      githubTagRuleset: {
+        id: 21645768,
+        coreApiVersion: "2022-11-28",
+        specificationApiVersion: "2026-03-10",
+      },
+      permittedPaths: firstSpecificationWriterRotationPermittedPaths,
+    });
+    expect(Object.keys(writerRotations.rotations[0]).some((key) =>
+      /successor|replacement|newP0/iu.test(key)
+    )).toBe(false);
+
+    expect(validateSpecificationWriterRotations(emptyWriterRotations())).toContain(
+      "Specification writer rotations ledger must retain rotation 1",
+    );
+
+    const selfClaim = structuredClone(writerRotations);
+    selfClaim.rotations[0].successorP0Commit = rotatedP0;
+    expect(validateSpecificationWriterRotations(selfClaim)).toEqual(
+      expect.arrayContaining([
+        "Specification writer rotation 1 is not one closed preactivation rotation",
+        "Specification writer rotation 1 changed its pinned correction evidence",
+      ]),
+    );
+
+    const rewrittenEvidence = structuredClone(writerRotations);
+    rewrittenEvidence.rotations[0].githubTagRuleset.requestSha256 =
+      `sha256:${"0".repeat(64)}`;
+    expect(validateSpecificationWriterRotations(rewrittenEvidence)).toContain(
+      "Specification writer rotation 1 changed its pinned correction evidence",
+    );
+
+    const broaderPermit = structuredClone(writerRotations);
+    broaderPermit.rotations[0].permittedPaths.push("README.md");
+    expect(validateSpecificationWriterRotations(broaderPermit)).toContain(
+      "Specification writer rotation 1 is not one closed preactivation rotation",
+    );
+  });
+
+  test("authority history accepts alternating P0/P rotations and activates only the latest pair", () => {
+    const firstP0 = rotatedAuthorityHistory().slice(0, 3);
+    expect(validateAuthorityTransferHistory(firstP0)).toEqual([]);
+    const firstP = rotatedAuthorityHistory();
+    expect(validateAuthorityTransferHistory(firstP)).toEqual([]);
+
+    const history = rotatedAuthorityHistory({ secondRotation: true, active: true });
+    const active = history.at(-1);
+    expect(validateAuthorityTransferHistory(history, {
+      predecessorTombstone: {
+        commit: tombstone,
+        pinsSuccessorCommit: secondRotatedP,
+        readbackSha256:
+          active.authority.schemaRouteCutover.predecessorReadbackSha256,
+      },
+    })).toEqual([]);
+    expect(deriveSuccessorActivationCommit(history)).toBe(activation);
+    expect(active.authority.successorPreparedCommit).toBe(secondRotatedP0);
+    expect(active.authority.schemaRouteCutover.sourceCommit).toBe(secondRotatedP);
+  });
+
+  test("writer rotations reject ledger rewrites, path drift, authority drift, stale activation, and post-active rotation", () => {
+    const wrongPaths = rotatedAuthorityHistory();
+    wrongPaths[2].changedPaths.push("README.md");
+    expect(validateAuthorityTransferHistory(wrongPaths)).toContain(
+      "rotated dormant implementation P0 changed paths outside its latest rotation permit",
+    );
+
+    const rewrittenPrefix = rotatedAuthorityHistory({ secondRotation: true });
+    rewrittenPrefix[4].rotations.rotations[0].reasonCode = "rewritten";
+    expect(validateAuthorityTransferHistory(rewrittenPrefix)).toEqual(
+      expect.arrayContaining([
+        "Specification writer rotation 1 changed its pinned correction evidence",
+        "rotated dormant implementation P0 must append exactly one rotation",
+      ]),
+    );
+
+    const authorityDrift = rotatedAuthorityHistory();
+    authorityDrift[2].authority.rollback = "reopen predecessor";
+    expect(validateAuthorityTransferHistory(authorityDrift)).toContain(
+      "rotated dormant implementation P0 must directly follow P and reset only successorPreparedCommit",
+    );
+
+    const staleActivation = rotatedAuthorityHistory({
+      secondRotation: true,
+      active: true,
+    });
+    staleActivation.at(-1).parents = [rotatedP];
+    staleActivation.at(-1).authority.successorPreparedCommit = rotatedP0;
+    staleActivation.at(-1).authority.schemaRouteCutover.sourceCommit = rotatedP;
+    expect(validateAuthorityTransferHistory(staleActivation, {
+      predecessorTombstone: {
+        commit: tombstone,
+        pinsSuccessorCommit: rotatedP,
+        readbackSha256:
+          staleActivation.at(-1).authority.schemaRouteCutover.predecessorReadbackSha256,
+      },
+    })).toEqual(expect.arrayContaining([
+      "successor activation A must be the direct authority-only child of P",
+      "successor activation must preserve P's exact P0 preparation pin",
+      "schema-route cutover must name the exact prepared receipt P as its source",
+    ]));
+
+    const postActive = rotatedAuthorityHistory({ active: true });
+    postActive.push({
+      commit: secondRotatedP0,
+      parents: [activation],
+      changedPaths: [...firstSpecificationWriterRotationPermittedPaths],
+      authority: dormantAuthority(),
+      rotations: structuredClone(writerRotations),
+    });
+    expect(validateAuthorityTransferHistory(postActive)).toEqual(
+      expect.arrayContaining([
+        "Specification writer authority must never reopen after successor activation",
+        "Specification writer rotation is forbidden after successor activation",
+      ]),
+    );
+  });
+
   test("repository validation derives committed P0, P and A instead of trusting a fixture", () => {
     const root = mkdtempSync(join(tmpdir(), "takoform-authority-history-"));
     try {
@@ -622,6 +879,112 @@ describe("append-only Core records", () => {
       );
       expect(validateRepositoryAuthorityHistory(root, active)).toContain(
         "working-tree Specification authority differs from committed HEAD",
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("repository validation closes the manifest and writer surface at every rotated P0", () => {
+    const root = mkdtempSync(join(tmpdir(), "takoform-rotated-p0-history-"));
+    const clone = join(root, "repository");
+    try {
+      execFileSync(
+        "git",
+        ["clone", "--no-local", "--quiet", process.cwd(), clone],
+        {
+          encoding: "utf8",
+          env: { PATH: process.env.PATH, LANG: "C", LC_ALL: "C" },
+        },
+      );
+      git(clone, ["checkout", "--quiet", "-b", "rotation-test", legacyP]);
+      git(clone, ["config", "user.name", "Takoform Rotation Test"]);
+      git(clone, ["config", "user.email", "rotation@example.invalid"]);
+
+      for (const path of firstSpecificationWriterRotationPermittedPaths) {
+        mkdirSync(dirname(join(clone, path)), { recursive: true });
+        if (path === authorityPath) {
+          writeAuthority(clone, dormantAuthority());
+        } else if (path === writerRotationsPath) {
+          writeFileSync(
+            join(clone, path),
+            `${JSON.stringify(writerRotations, null, 2)}\n`,
+          );
+        } else {
+          writeFileSync(join(clone, path), readFileSync(join(process.cwd(), path)));
+        }
+      }
+      git(clone, [
+        "add",
+        "--",
+        ...firstSpecificationWriterRotationPermittedPaths,
+      ]);
+      const prospectivePaths = git(clone, [
+        "diff",
+        "--cached",
+        "--name-only",
+      ]).split("\n").sort();
+      expect(prospectivePaths).toEqual(
+        [...firstSpecificationWriterRotationPermittedPaths].sort(),
+      );
+      git(clone, ["commit", "--no-gpg-sign", "-m", "P0 prime correction"]);
+      const p0Prime = git(clone, ["rev-parse", "HEAD"]);
+      expect(validateRepositoryAuthorityHistory(clone, dormantAuthority())).toEqual([]);
+
+      const receipt = {
+        ...dormantAuthority(),
+        successorPreparedCommit: p0Prime,
+      };
+      writeAuthority(clone, receipt);
+      const pPrime = commitAuthority(clone, "P prime pins corrected P0");
+      expect(validateRepositoryAuthorityHistory(clone, receipt)).toEqual([]);
+
+      const secondPaths = [
+        "release/authority/specification-writer-closure.json",
+        writerRotationsPath,
+        authorityPath,
+        "scripts/specification-release-adapter.mjs",
+      ].sort();
+      const secondLedger = structuredClone(writerRotations);
+      secondLedger.rotations.push({
+        sequence: 2,
+        supersededP0Commit: p0Prime,
+        supersededPCommit: pPrime,
+        reasonCode: "adversarial-surface-check",
+        githubTagRuleset: {
+          id: 21645768,
+          coreApiVersion: "2022-11-28",
+          specificationApiVersion: "2026-03-10",
+          requestSha256: `sha256:${"c".repeat(64)}`,
+          provisioningEvidenceSha256: `sha256:${"d".repeat(64)}`,
+        },
+        permittedPaths: secondPaths,
+      });
+      writeAuthority(clone, dormantAuthority());
+      writeFileSync(
+        join(clone, writerRotationsPath),
+        `${JSON.stringify(secondLedger, null, 2)}\n`,
+      );
+      const manifest = JSON.parse(readFileSync(
+        join(clone, "release/authority/specification-writer-closure.json"),
+        "utf8",
+      ));
+      writeFileSync(
+        join(clone, "release/authority/specification-writer-closure.json"),
+        `${JSON.stringify(manifest)}\n`,
+      );
+      const adapterPath = join(clone, "scripts/specification-release-adapter.mjs");
+      writeFileSync(
+        adapterPath,
+        readFileSync(adapterPath, "utf8").replace(
+          "createSpecificationReleaseOperations",
+          "createBrokenSpecificationReleaseOperations",
+        ),
+      );
+      git(clone, ["add", "--", ...secondPaths]);
+      git(clone, ["commit", "--no-gpg-sign", "-m", "malformed second P0"]);
+      expect(validateRepositoryAuthorityHistory(clone, dormantAuthority())).toContain(
+        "committed P0: dormant Specification production adapter lacks its complete reviewed operation surface",
       );
     } finally {
       rmSync(root, { recursive: true, force: true });
@@ -734,6 +1097,25 @@ describe("append-only Core records", () => {
       format: "takoform.specification-writer-closure@v1",
       paths: [...specificationWriterClosurePaths],
     })).toEqual([]);
+    const historicalLegacyPaths = specificationWriterClosurePaths.filter(
+      (path) => path !== writerRotationsPath,
+    );
+    expect(validateSpecificationWriterClosureManifest({
+      format: "takoform.specification-writer-closure@v1",
+      paths: historicalLegacyPaths,
+    }, { commit: legacyP0 })).toEqual([]);
+    expect(validateSpecificationWriterClosureManifest({
+      format: "takoform.specification-writer-closure@v1",
+      paths: historicalLegacyPaths,
+    })).toContain(
+      "Specification writer closure manifest must name the exact ordered P0 transitive closure",
+    );
+    expect(validateSpecificationWriterClosureManifest({
+      format: "takoform.specification-writer-closure@v1",
+      paths: [...specificationWriterClosurePaths],
+    }, { commit: legacyP0 })).toContain(
+      "Specification writer closure manifest must name the exact ordered P0 transitive closure",
+    );
     expect(validateSpecificationWriterClosureManifest({
       format: "takoform.specification-writer-closure@v1",
       paths: specificationWriterClosurePaths.filter(

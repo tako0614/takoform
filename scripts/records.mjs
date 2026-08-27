@@ -15,6 +15,10 @@ const recordHeadSignaturePath = "release/record-head.sig.json";
 const recordHeadPublicKeyPath = "release/authority/record-head-ed25519.pub.pem";
 const writerClosureManifestPath =
   "release/authority/specification-writer-closure.json";
+const writerRotationsPath =
+  "release/authority/specification-writer-rotations.json";
+const legacySpecificationWriterP0Commit =
+  "9bf48fd913a5b87332e4bee415945b19f898080f";
 const recordHeadPublicKeySha256 =
   "sha256:a4f2a0811b8d9432a8d5ecea246f768470d78d0ed53214a587ba2f7c238e8cbb";
 const trustProfilePath = "spec/trust/profile.json";
@@ -97,6 +101,7 @@ export const specificationWriterClosurePaths = Object.freeze([
   recordHeadPublicKeyPath,
   "release/authority/specification-schema-tool-closure.json",
   writerClosureManifestPath,
+  writerRotationsPath,
   "release/core-release-policy.md",
   "release/schema-origin-policy.md",
   "release/specification-release-policy.md",
@@ -108,6 +113,54 @@ export const specificationWriterClosurePaths = Object.freeze([
   "scripts/schema-origin-projection.mjs",
   "scripts/specification-release-adapter.mjs",
   "scripts/specification-release.mjs",
+]);
+
+const legacySpecificationWriterClosurePaths = Object.freeze(
+  specificationWriterClosurePaths.filter((path) => path !== writerRotationsPath),
+);
+
+export const firstSpecificationWriterRotationPermittedPaths = Object.freeze([
+  writerClosureManifestPath,
+  writerRotationsPath,
+  "release/core-release-policy.md",
+  authorityPath,
+  "release/specification-release-policy.md",
+  "scripts/core-release.mjs",
+  "scripts/core-release.test.mjs",
+  "scripts/records.mjs",
+  "scripts/records.test.mjs",
+  "scripts/specification-release-adapter.mjs",
+  "scripts/specification-release-adapter.test.mjs",
+  "scripts/specification-release.mjs",
+  "scripts/specification-release.test.mjs",
+]);
+
+const specificationWriterRotationAllowedPaths = new Set([
+  ...specificationWriterClosurePaths,
+  authorityPath,
+  "scripts/core-release.test.mjs",
+  "scripts/deploy.test.mjs",
+  "scripts/records.test.mjs",
+  "scripts/schema-origin-deploy.test.mjs",
+  "scripts/schema-origin-projection.test.mjs",
+  "scripts/specification-release-adapter.test.mjs",
+  "scripts/specification-release.test.mjs",
+]);
+
+const writerRotationKeys = Object.freeze([
+  "sequence",
+  "supersededP0Commit",
+  "supersededPCommit",
+  "reasonCode",
+  "githubTagRuleset",
+  "permittedPaths",
+]);
+const writerRotationRulesetKeys = Object.freeze([
+  "id",
+  "coreApiVersion",
+  "specificationApiVersion",
+  "requestSha256",
+  "provisioningEvidenceSha256",
 ]);
 
 const authorityKeys = Object.freeze([
@@ -773,6 +826,85 @@ function authorityWithPreparedCommit(authority, successorPreparedCommit) {
   return { ...structuredClone(authority), successorPreparedCommit };
 }
 
+const firstSpecificationWriterRotation = Object.freeze({
+  sequence: 1,
+  supersededP0Commit: legacySpecificationWriterP0Commit,
+  supersededPCommit: "0b2b88940a13acf1a2fb8b8309b4d0bd323fd041",
+  reasonCode: "github-tag-ruleset-update-response-type-only",
+  githubTagRuleset: Object.freeze({
+    id: 21645768,
+    coreApiVersion: "2022-11-28",
+    specificationApiVersion: "2026-03-10",
+    requestSha256:
+      "sha256:3e5e36527277ebe5d08ca99f90f16a33cc77ffe7ad116906237ebfb56b8716f1",
+    provisioningEvidenceSha256:
+      "sha256:41ddeaf9c995b3f17fe112b4a55db2b8d4dfe3279df53fbf178cd068f501bcab",
+  }),
+  permittedPaths: firstSpecificationWriterRotationPermittedPaths,
+});
+
+export function validateSpecificationWriterRotations(
+  document,
+  { allowEmpty = false } = {},
+) {
+  const problems = [];
+  if (!exactKeys(document, ["format", "rotations"]) ||
+      document?.format !== "takoform.specification-writer-rotations@v1" ||
+      !Array.isArray(document?.rotations)) {
+    problem(problems, "Specification writer rotations ledger has an unknown shape");
+    return problems;
+  }
+  const seenP0 = new Set();
+  const seenP = new Set();
+  if (!allowEmpty && document.rotations.length === 0) {
+    problem(problems, "Specification writer rotations ledger must retain rotation 1");
+  }
+  for (const [index, rotation] of document.rotations.entries()) {
+    const ruleset = rotation?.githubTagRuleset;
+    const paths = rotation?.permittedPaths;
+    if (!exactKeys(rotation, writerRotationKeys) ||
+        rotation?.sequence !== index + 1 ||
+        !fullCommit.test(rotation?.supersededP0Commit ?? "") ||
+        !fullCommit.test(rotation?.supersededPCommit ?? "") ||
+        rotation?.supersededP0Commit === rotation?.supersededPCommit ||
+        typeof rotation?.reasonCode !== "string" ||
+        !/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(rotation.reasonCode) ||
+        !exactKeys(ruleset, writerRotationRulesetKeys) ||
+        !Number.isSafeInteger(ruleset?.id) || ruleset.id < 1 ||
+        typeof ruleset?.coreApiVersion !== "string" ||
+        !/^\d{4}-\d{2}-\d{2}$/u.test(ruleset.coreApiVersion) ||
+        typeof ruleset?.specificationApiVersion !== "string" ||
+        !/^\d{4}-\d{2}-\d{2}$/u.test(ruleset.specificationApiVersion) ||
+        !sha256Digest.test(ruleset?.requestSha256 ?? "") ||
+        !sha256Digest.test(ruleset?.provisioningEvidenceSha256 ?? "") ||
+        !Array.isArray(paths) || paths.length === 0 ||
+        new Set(paths).size !== paths.length ||
+        !sameJSON(paths, [...paths].sort()) ||
+        paths.some((path) => !specificationWriterRotationAllowedPaths.has(path)) ||
+        !paths.includes(authorityPath) ||
+        !paths.includes(writerClosureManifestPath) ||
+        !paths.includes(writerRotationsPath)) {
+      problem(
+        problems,
+        `Specification writer rotation ${index + 1} is not one closed preactivation rotation`,
+      );
+    }
+    if (seenP0.has(rotation?.supersededP0Commit)) {
+      problem(problems, "Specification writer rotations ledger repeats a superseded P0");
+    }
+    if (seenP.has(rotation?.supersededPCommit)) {
+      problem(problems, "Specification writer rotations ledger repeats a superseded P");
+    }
+    seenP0.add(rotation?.supersededP0Commit);
+    seenP.add(rotation?.supersededPCommit);
+  }
+  if (document.rotations.length > 0 &&
+      !sameJSON(document.rotations[0], firstSpecificationWriterRotation)) {
+    problem(problems, "Specification writer rotation 1 changed its pinned correction evidence");
+  }
+  return [...new Set(problems)];
+}
+
 export function deriveSuccessorActivationCommit(history) {
   if (!Array.isArray(history)) return null;
   let previousState = null;
@@ -786,11 +918,10 @@ export function deriveSuccessorActivationCommit(history) {
   return null;
 }
 
-// Pure validation of the local P0 -> P -> A history. P0 contains the reviewed
-// dormant implementation and null preparation/cutover receipts. Its direct
-// authority-only child P records P0, avoiding any self-referential commit. The
-// route cutover is external evidence, not a fake Git commit. Direct
-// authority-only child A is the first prepared-to-active transition.
+// Pure validation of alternating P0_i -> P_i preactivation generations plus
+// an optional sole A. A rotation P0_i is a direct child of P_(i-1), appends
+// one ledger entry that authorizes its exact path set, and resets only the
+// prepared-commit receipt. The route cutover remains external evidence.
 export function validateAuthorityTransferHistory(
   history,
   { predecessorTombstone = null } = {},
@@ -805,95 +936,154 @@ export function validateAuthorityTransferHistory(
     problems.push(...validateAuthorityTransfer(entry.authority));
   }
 
-  const p0 = history[0];
-  if (p0?.authority?.state !== "prepared-writer-disabled" ||
-      p0?.authority?.successorPreparedCommit !== null ||
-      p0?.authority?.schemaRouteCutover !== null) {
+  let latestP0 = history[0];
+  let latestP = null;
+  if (latestP0?.authority?.state !== "prepared-writer-disabled" ||
+      latestP0?.authority?.successorPreparedCommit !== null ||
+      latestP0?.authority?.schemaRouteCutover !== null) {
     problem(problems, "authority history must begin with one dormant implementation P0");
   }
-  if (history.length >= 2) {
-    const p = history[1];
-    if (p?.authority?.state !== "prepared-writer-disabled" ||
-        !Array.isArray(p?.parents) || p.parents.length !== 1 ||
-        p.parents[0] !== p0?.commit ||
-        p?.authority?.successorPreparedCommit !== p0?.commit) {
-      problem(problems, "prepared authority receipt must pin its direct P0 parent");
-    }
-    if (!exactPathSet(p?.changedPaths, [authorityPath])) {
-      problem(problems, "prepared authority receipt P must change only release/specification-authority.json");
-    }
-    if (!sameJSON(
-      p?.authority,
-      authorityWithPreparedCommit(p0?.authority, p0?.commit),
-    )) {
-      problem(problems, "prepared authority receipt P may change only successorPreparedCommit");
+  if (latestP0?.rotations !== null && latestP0?.rotations !== undefined) {
+    problems.push(...validateSpecificationWriterRotations(latestP0.rotations, {
+      allowEmpty: true,
+    }));
+    if (latestP0.rotations?.rotations?.length !== 0) {
+      problem(problems, "initial Specification writer P0 must predate every rotation");
     }
   }
-  if (history.length >= 3) {
-    const p = history[1];
-    const activation = history[2];
-    const cutover = activation?.authority?.schemaRouteCutover;
-    if (activation?.authority?.state !== "successor-active" ||
-        !Array.isArray(activation?.parents) || activation.parents.length !== 1 ||
-        activation.parents[0] !== p?.commit) {
-      problem(problems, "successor activation A must be the direct authority-only child of P");
+
+  for (let index = 1; index < history.length; index += 1) {
+    const entry = history[index];
+    if (latestP === null) {
+      if (entry?.authority?.state !== "prepared-writer-disabled" ||
+          !Array.isArray(entry?.parents) || entry.parents.length !== 1 ||
+          entry.parents[0] !== latestP0?.commit ||
+          entry?.authority?.successorPreparedCommit !== latestP0?.commit) {
+        problem(problems, "prepared authority receipt must pin its direct P0 parent");
+      }
+      if (!exactPathSet(entry?.changedPaths, [authorityPath])) {
+        problem(problems, "prepared authority receipt P must change only release/specification-authority.json");
+      }
+      if (!sameJSON(
+        entry?.authority,
+        authorityWithPreparedCommit(latestP0?.authority, latestP0?.commit),
+      )) {
+        problem(problems, "prepared authority receipt P may change only successorPreparedCommit");
+      }
+      if (!sameJSON(entry?.rotations ?? null, latestP0?.rotations ?? null)) {
+        problem(problems, "prepared authority receipt P must preserve its P0 rotations ledger");
+      }
+      latestP = entry;
+      continue;
     }
-    if (!exactPathSet(activation?.changedPaths, [authorityPath])) {
-      problem(problems, "successor activation A must change only release/specification-authority.json");
+
+    if (entry?.authority?.state === "successor-active") {
+      const cutover = entry.authority.schemaRouteCutover;
+      if (!Array.isArray(entry.parents) || entry.parents.length !== 1 ||
+          entry.parents[0] !== latestP.commit) {
+        problem(problems, "successor activation A must be the direct authority-only child of P");
+      }
+      if (!exactPathSet(entry.changedPaths, [authorityPath])) {
+        problem(problems, "successor activation A must change only release/specification-authority.json");
+      }
+      if (entry.authority.successorPreparedCommit !== latestP0.commit) {
+        problem(problems, "successor activation must preserve P's exact P0 preparation pin");
+      }
+      if (!sameJSON(entry?.rotations ?? null, latestP?.rotations ?? null)) {
+        problem(problems, "successor activation A must preserve the latest rotations ledger");
+      }
+      if (cutover?.sourceCommit !== latestP.commit) {
+        problem(problems, "schema-route cutover must name the exact prepared receipt P as its source");
+      }
+      if (predecessorTombstone === null) {
+        problem(problems, "successor activation history requires exact predecessor tombstone evidence");
+      } else {
+        if (predecessorTombstone?.commit !==
+            entry.authority.predecessorTombstoneCommit) {
+          problem(problems, "active authority receipt must name the exact predecessor tombstone");
+        }
+        if (predecessorTombstone?.pinsSuccessorCommit !== latestP.commit) {
+          problem(problems, "predecessor tombstone must pin the exact prepared receipt P");
+        }
+        if (predecessorTombstone?.readbackSha256 !==
+            cutover?.predecessorReadbackSha256) {
+          problem(problems, "schema-route cutover must pin the exact predecessor tombstone readback");
+        }
+      }
+      const expectedActive = {
+        ...structuredClone(latestP.authority),
+        state: "successor-active",
+        predecessorTombstoneCommit: entry.authority.predecessorTombstoneCommit,
+        schemaRouteCutover: structuredClone(cutover),
+        predecessorWriterDisabledAt: entry.authority.predecessorWriterDisabledAt,
+        successorWriterEnabledAt: entry.authority.successorWriterEnabledAt,
+      };
+      if (!sameJSON(entry.authority, expectedActive)) {
+        problem(problems, "successor activation A may change only the exact cutover authority fields");
+      }
+      if (index !== history.length - 1) {
+        if (history.slice(index + 1).some((later) =>
+          later?.authority?.state === "prepared-writer-disabled")) {
+          problem(problems, "Specification writer authority must never reopen after successor activation");
+        }
+        problem(problems, "Specification writer rotation is forbidden after successor activation");
+      }
+      break;
     }
-    if (activation?.authority?.successorPreparedCommit !== p0?.commit) {
-      problem(problems, "successor activation must preserve P's exact P0 preparation pin");
+
+    const previousRotations = latestP?.rotations?.rotations ?? [];
+    const nextRotations = entry?.rotations?.rotations;
+    if (entry?.authority?.state !== "prepared-writer-disabled" ||
+        entry?.authority?.successorPreparedCommit !== null ||
+        !Array.isArray(entry?.parents) || entry.parents.length !== 1 ||
+        entry.parents[0] !== latestP.commit ||
+        !sameJSON(
+          entry?.authority,
+          authorityWithPreparedCommit(latestP.authority, null),
+        )) {
+      problem(
+        problems,
+        "rotated dormant implementation P0 must directly follow P and reset only successorPreparedCommit",
+      );
     }
-    if (cutover?.sourceCommit !== p?.commit) {
-      problem(problems, "schema-route cutover must name the exact prepared receipt P as its source");
-    }
-    if (predecessorTombstone === null) {
-      problem(problems, "successor activation history requires exact predecessor tombstone evidence");
+    if (entry?.rotations === null || entry?.rotations === undefined) {
+      problem(problems, "rotated dormant implementation P0 requires its rotations ledger");
     } else {
-      if (predecessorTombstone?.commit !==
-          activation?.authority?.predecessorTombstoneCommit) {
-        problem(problems, "active authority receipt must name the exact predecessor tombstone");
-      }
-      if (predecessorTombstone?.pinsSuccessorCommit !== p?.commit) {
-        problem(problems, "predecessor tombstone must pin the exact prepared receipt P");
-      }
-      if (predecessorTombstone?.readbackSha256 !==
-          cutover?.predecessorReadbackSha256) {
-        problem(problems, "schema-route cutover must pin the exact predecessor tombstone readback");
-      }
+      problems.push(...validateSpecificationWriterRotations(entry.rotations));
     }
-    const expectedActive = {
-      ...structuredClone(p?.authority),
-      state: "successor-active",
-      predecessorTombstoneCommit:
-        activation?.authority?.predecessorTombstoneCommit,
-      schemaRouteCutover: structuredClone(cutover),
-      predecessorWriterDisabledAt:
-        activation?.authority?.predecessorWriterDisabledAt,
-      successorWriterEnabledAt:
-        activation?.authority?.successorWriterEnabledAt,
-    };
-    if (!sameJSON(activation?.authority, expectedActive)) {
-      problem(problems, "successor activation A may change only the exact cutover authority fields");
+    const appended = Array.isArray(nextRotations) &&
+      nextRotations.length === previousRotations.length + 1 &&
+      sameJSON(nextRotations.slice(0, -1), previousRotations);
+    if (!appended) {
+      problem(problems, "rotated dormant implementation P0 must append exactly one rotation");
     }
-  }
-  if (history.length > 3) {
-    if (history.slice(3).some((entry) =>
-      entry?.authority?.state === "prepared-writer-disabled")) {
-      problem(problems, "Specification writer authority must never reopen after successor activation");
+    const newest = appended ? nextRotations.at(-1) : null;
+    if (newest?.supersededP0Commit !== latestP0.commit ||
+        newest?.supersededPCommit !== latestP.commit) {
+      problem(problems, "latest rotation must pin the superseded P0/P generation");
     }
-    problem(problems, "Specification authority history must contain only P0, P, and A");
+    if (!exactPathSet(entry?.changedPaths, newest?.permittedPaths ?? [])) {
+      problem(problems, "rotated dormant implementation P0 changed paths outside its latest rotation permit");
+    }
+    latestP0 = entry;
+    latestP = null;
   }
   return [...new Set(problems)];
 }
 
 export function validateSpecificationWriterSurface(
   authority,
-  { files, source, adapterSource, deploySource },
+  {
+    files,
+    source,
+    adapterSource,
+    deploySource,
+    closurePaths = specificationWriterClosurePaths,
+  },
 ) {
   const problems = [];
   const required = [
-    ...specificationWriterClosurePaths,
+    ...closurePaths,
     "scripts/specification-release.test.mjs",
     "scripts/specification-release-adapter.test.mjs",
   ];
@@ -973,13 +1163,19 @@ export function validateSpecificationWriterSurface(
   return problems;
 }
 
-export function validateSpecificationWriterClosureManifest(manifest) {
+export function validateSpecificationWriterClosureManifest(
+  manifest,
+  { commit = null } = {},
+) {
   const problems = [];
+  const expectedPaths = commit === legacySpecificationWriterP0Commit
+    ? legacySpecificationWriterClosurePaths
+    : specificationWriterClosurePaths;
   if (!exactKeys(manifest, ["format", "paths"]) ||
       manifest?.format !== "takoform.specification-writer-closure@v1" ||
       !Array.isArray(manifest?.paths) ||
       new Set(manifest.paths).size !== manifest.paths.length ||
-      !sameJSON(manifest.paths, specificationWriterClosurePaths)) {
+      !sameJSON(manifest.paths, expectedPaths)) {
     problem(
       problems,
       "Specification writer closure manifest must name the exact ordered P0 transitive closure",
@@ -1065,8 +1261,11 @@ function validateCommittedSpecificationWriterSurface(
   authority,
 ) {
   const problems = [];
+  const closurePaths = commit === legacySpecificationWriterP0Commit
+    ? legacySpecificationWriterClosurePaths
+    : specificationWriterClosurePaths;
   const inspected = [
-    ...specificationWriterClosurePaths,
+    ...closurePaths,
     "scripts/specification-release.test.mjs",
     "scripts/specification-release-adapter.test.mjs",
     ".github/workflows/specification-release.yml",
@@ -1098,7 +1297,9 @@ function validateCommittedSpecificationWriterSurface(
       "show",
       `${commit}:${writerClosureManifestPath}`,
     ]));
-    problems.push(...validateSpecificationWriterClosureManifest(manifest).map(
+    problems.push(...validateSpecificationWriterClosureManifest(manifest, {
+      commit,
+    }).map(
       (message) => `committed P0: ${message}`,
     ));
     source = readGit(repositoryRoot, [
@@ -1124,6 +1325,7 @@ function validateCommittedSpecificationWriterSurface(
     source,
     adapterSource,
     deploySource,
+    closurePaths,
   }).map((message) => `committed P0: ${message}`));
   return problems;
 }
@@ -1152,6 +1354,7 @@ export function validateRepositoryAuthorityHistory(root, currentAuthority) {
     "--untracked-files=all",
     "--",
     authorityPath,
+    writerRotationsPath,
   ]).trim();
   if (status !== "") {
     problem(problems, "working-tree Specification authority differs from committed HEAD");
@@ -1175,6 +1378,7 @@ export function validateRepositoryAuthorityHistory(root, currentAuthority) {
       "--format=%H",
       "--",
       authorityPath,
+      writerRotationsPath,
     ]));
   } catch (error) {
     problem(
@@ -1226,22 +1430,40 @@ export function validateRepositoryAuthorityHistory(root, currentAuthority) {
         repositoryRoot,
         ["show", `${commit}:${authorityPath}`],
       ));
+      const rotationsEntry = readGit(repositoryRoot, [
+        "ls-tree",
+        commit,
+        "--",
+        writerRotationsPath,
+      ]).trim();
+      const rotations = rotationsEntry === ""
+        ? null
+        : JSON.parse(readGit(
+          repositoryRoot,
+          ["show", `${commit}:${writerRotationsPath}`],
+        ));
       history.push({
         commit,
         parents: parentLine.slice(1),
         changedPaths,
         authority,
+        rotations,
       });
     } catch (error) {
       problem(problems, `cannot close authority commit ${commit}: ${error.message}`);
     }
   }
   if (history.length !== commits.length) return [...new Set(problems)];
-  problems.push(...validateCommittedSpecificationWriterSurface(
-    repositoryRoot,
-    history[0].commit,
-    history[0].authority,
-  ));
+  for (const entry of history) {
+    if (entry.authority?.state === "prepared-writer-disabled" &&
+        entry.authority?.successorPreparedCommit === null) {
+      problems.push(...validateCommittedSpecificationWriterSurface(
+        repositoryRoot,
+        entry.commit,
+        entry.authority,
+      ));
+    }
+  }
   const latest = history.at(-1);
   if (!sameJSON(latest.authority, committedHeadAuthority)) {
     problem(problems, "committed HEAD authority differs from the latest authority history entry");
@@ -1283,6 +1505,10 @@ export async function validateRepositoryRecords(
     resolve(absoluteRoot, writerClosureManifestPath),
     "utf8",
   ));
+  const writerRotations = JSON.parse(await readFile(
+    resolve(absoluteRoot, writerRotationsPath),
+    "utf8",
+  ));
   const trustProfile = JSON.parse(await readFile(resolve(absoluteRoot, trustProfilePath), "utf8"));
   problems.push(...validateSpecificationLedger(specificationLedger));
   problems.push(...validateSchemaLedgerShape(schemaLedger));
@@ -1292,6 +1518,7 @@ export async function validateRepositoryRecords(
   problems.push(...validateSpecificationWriterClosureManifest(
     writerClosureManifest,
   ));
+  problems.push(...validateSpecificationWriterRotations(writerRotations));
   problems.push(...authorityHistoryValidator(absoluteRoot, authority));
   problems.push(...validateTrustProfile(trustProfile));
   try {

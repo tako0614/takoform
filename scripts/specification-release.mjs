@@ -96,6 +96,7 @@ export const WRITER_EXECUTION_PATHS = Object.freeze([
   RECORD_HEAD_PUBLIC_KEY_PATH,
   WRITER_TOOL_CLOSURE_POLICY_PATH,
   WRITER_CLOSURE_MANIFEST_PATH,
+  "release/authority/specification-writer-rotations.json",
   "release/core-release-policy.md",
   "release/schema-origin-policy.md",
   POLICY_PATH,

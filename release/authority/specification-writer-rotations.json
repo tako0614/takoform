@@ -1,0 +1,33 @@
+{
+  "format": "takoform.specification-writer-rotations@v1",
+  "rotations": [
+    {
+      "sequence": 1,
+      "supersededP0Commit": "9bf48fd913a5b87332e4bee415945b19f898080f",
+      "supersededPCommit": "0b2b88940a13acf1a2fb8b8309b4d0bd323fd041",
+      "reasonCode": "github-tag-ruleset-update-response-type-only",
+      "githubTagRuleset": {
+        "id": 21645768,
+        "coreApiVersion": "2022-11-28",
+        "specificationApiVersion": "2026-03-10",
+        "requestSha256": "sha256:3e5e36527277ebe5d08ca99f90f16a33cc77ffe7ad116906237ebfb56b8716f1",
+        "provisioningEvidenceSha256": "sha256:41ddeaf9c995b3f17fe112b4a55db2b8d4dfe3279df53fbf178cd068f501bcab"
+      },
+      "permittedPaths": [
+        "release/authority/specification-writer-closure.json",
+        "release/authority/specification-writer-rotations.json",
+        "release/core-release-policy.md",
+        "release/specification-authority.json",
+        "release/specification-release-policy.md",
+        "scripts/core-release.mjs",
+        "scripts/core-release.test.mjs",
+        "scripts/records.mjs",
+        "scripts/records.test.mjs",
+        "scripts/specification-release-adapter.mjs",
+        "scripts/specification-release-adapter.test.mjs",
+        "scripts/specification-release.mjs",
+        "scripts/specification-release.test.mjs"
+      ]
+    }
+  ]
+}

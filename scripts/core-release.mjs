@@ -2750,16 +2750,14 @@ export function normalizeCoreTagRuleset(raw, expectedRulesetId) {
     !deletion ||
     !update ||
     !exactKeys(deletion, ["type"]) ||
-    !exactKeys(update, ["type", "parameters"]) ||
-    canonicalJSON(update.parameters) !==
-      canonicalJSON({ update_allows_fetch_and_merge: false })
+    !exactKeys(update, ["type"])
   ) {
     throw new Error(
-      "Core tag ruleset rules must be exactly deletion and update without fetch-and-merge",
+      "Core tag ruleset rules must be exactly deletion and update with type-only raw shapes",
     );
   }
   return {
-    format: "takoform.core-ruleset-audit@v2",
+    format: "takoform.core-ruleset-audit@v3",
     apiVersion: CORE_RELEASE.githubApiVersion,
     repository: CORE_RELEASE.githubRepository,
     tag: `refs/tags/${CORE_RELEASE.version}`,
@@ -2775,17 +2773,14 @@ export function normalizeCoreTagRuleset(raw, expectedRulesetId) {
     },
     rules: [
       { type: "deletion" },
-      {
-        type: "update",
-        parameters: { update_allows_fetch_and_merge: false },
-      },
+      { type: "update" },
     ],
   };
 }
 
 export function normalizeStoredRulesetAudit(audit, expectedRulesetId) {
   const expected = {
-    format: "takoform.core-ruleset-audit@v2",
+    format: "takoform.core-ruleset-audit@v3",
     apiVersion: CORE_RELEASE.githubApiVersion,
     repository: CORE_RELEASE.githubRepository,
     tag: `refs/tags/${CORE_RELEASE.version}`,
@@ -2801,10 +2796,7 @@ export function normalizeStoredRulesetAudit(audit, expectedRulesetId) {
     },
     rules: [
       { type: "deletion" },
-      {
-        type: "update",
-        parameters: { update_allows_fetch_and_merge: false },
-      },
+      { type: "update" },
     ],
   };
   if (

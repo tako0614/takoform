@@ -1800,9 +1800,7 @@ export function createSpecificationReleaseOperations({
       canonicalJSON([...rulesByType.keys()].sort()) !==
         canonicalJSON(["deletion", "update"]) ||
       !exactKeys(deletion, ["type"]) ||
-      !exactKeys(update, ["type", "parameters"]) ||
-      !exactKeys(update.parameters, ["update_allows_fetch_and_merge"]) ||
-      update.parameters.update_allows_fetch_and_merge !== false
+      !exactKeys(update, ["type"])
     ) {
       throw new Error("GitHub tag ruleset is broader, bypassable, or has missing/extra rules");
     }

@@ -1508,6 +1508,7 @@ describe("P1 immutable writer and split-lane authority", () => {
       "release/authority/record-head-ed25519.pub.pem",
       "release/authority/specification-schema-tool-closure.json",
       "release/authority/specification-writer-closure.json",
+      "release/authority/specification-writer-rotations.json",
       "release/core-release-policy.md",
       "release/schema-origin-policy.md",
       "release/specification-release-policy.md",

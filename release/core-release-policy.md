@@ -230,10 +230,15 @@ private asset directory, or GitHub Release asset.
 `audit` runs from a clean detached checkout of `S`. It sends one authenticated
 `GET /repos/tako0614/takoform/rulesets/ID` with the pinned GitHub API version.
 The response must contain `bypass_actors`; omission fails closed. It normalizes
-one exact canonical artifact `A` containing repository, tag, ruleset id,
-target, active enforcement, `bypassActors: []`, exact include/exclude
-conditions, exact deletion/update rules, and API version. Extra, creation,
-signature, merge-permitting, excluded-ref, inactive, or bypass state fails.
+one exact private `takoform.core-ruleset-audit@v3` artifact `A` containing
+repository, tag, ruleset id, target, active enforcement, `bypassActors: []`,
+exact include/exclude conditions, exact deletion/update rules, and API version.
+The raw `rules` value is exactly `[ { "type": "deletion" },
+{ "type": "update" } ]`: both objects are type-only. In particular,
+`update_allows_fetch_and_merge` is branch-only response material and must be
+absent; a `parameters` object or any other raw rule field is drift and fails
+closed. Extra, creation, signature, excluded-ref, inactive, or bypass state
+also fails.
 
 ## 3. Sign tag
 

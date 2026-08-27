@@ -308,10 +308,7 @@ function rawRuleset(id = 71) {
     },
     rules: [
       { type: "deletion" },
-      {
-        type: "update",
-        parameters: { update_allows_fetch_and_merge: false },
-      },
+      { type: "update" },
     ],
   };
 }
@@ -1227,6 +1224,8 @@ describe("prepare qualification report", () => {
 describe("ruleset audit A", () => {
   test("requires bypass_actors to be observable and normalizes a closed A", () => {
     const audit = normalizeCoreTagRuleset(rawRuleset(), 71);
+    expect(audit.format).toBe("takoform.core-ruleset-audit@v3");
+    expect(audit.rules).toEqual([{ type: "deletion" }, { type: "update" }]);
     expect(audit.bypassActors).toEqual([]);
     expect(audit.apiVersion).toBe(CORE_RELEASE.githubApiVersion);
     expect(normalizeStoredRulesetAudit(audit, 71)).toEqual(audit);
@@ -1234,6 +1233,28 @@ describe("ruleset audit A", () => {
     delete omitted.bypass_actors;
     expect(() => normalizeCoreTagRuleset(omitted, 71)).toThrow(
       /mutation-capable repository credential/,
+    );
+  });
+
+  test("requires the live update rule to be the exact type-only tag rule", () => {
+    const branchOnlyParameter = rawRuleset();
+    branchOnlyParameter.rules[1].parameters = {
+      update_allows_fetch_and_merge: false,
+    };
+    expect(() => normalizeCoreTagRuleset(branchOnlyParameter, 71)).toThrow(
+      /exactly deletion and update/u,
+    );
+
+    const unknownUpdateField = rawRuleset();
+    unknownUpdateField.rules[1].unexpected = false;
+    expect(() => normalizeCoreTagRuleset(unknownUpdateField, 71)).toThrow(
+      /exactly deletion and update/u,
+    );
+
+    const legacyAudit = auditFixture();
+    legacyAudit.format = "takoform.core-ruleset-audit@v2";
+    expect(() => normalizeStoredRulesetAudit(legacyAudit, 71)).toThrow(
+      /exact closed A artifact/u,
     );
   });
 
