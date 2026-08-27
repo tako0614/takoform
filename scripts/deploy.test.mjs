@@ -22,10 +22,19 @@ describe("Takoform deploy entrypoint", () => {
     });
     expect(DEPLOY_CONTRACT.surfaces[0].obligations).toHaveProperty("no-overwrite");
     expect(DEPLOY_CONTRACT.surfaces[0].obligations["post-conditions"]).toContain(
-      "GOPROXY=direct",
+      "GOPROXY=https://proxy.golang.org,direct",
     );
     expect(DEPLOY_CONTRACT.surfaces[0].obligations["post-conditions"]).toContain(
       "fresh temporary Go module",
+    );
+    expect(DEPLOY_CONTRACT.surfaces[0].obligations["post-conditions"]).toContain(
+      "exact require",
+    );
+    expect(DEPLOY_CONTRACT.surfaces[0].obligations["post-conditions"]).toContain(
+      "go mod tidy",
+    );
+    expect(DEPLOY_CONTRACT.surfaces[0].obligations["post-conditions"]).toContain(
+      "sibling caches",
     );
   });
 

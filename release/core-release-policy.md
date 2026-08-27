@@ -37,11 +37,14 @@ necessary, and requires a non-draft, non-prerelease Release with public source
 tarball and zip URLs. It then creates a fresh temporary consumer module and
 fresh Go module/build caches, resolves the exact
 `github.com/tako0614/takoform@v1.MINOR.PATCH` identity with
-`GOPROXY=direct`, confirms the resolved module version, and runs a tiny Go test
-that imports `formpackage`, `hostclient`, `snapshot`, and `trust`. Temporary
-consumer state is removed on both success and failure, and Go diagnostics are
-preserved. The internal release implementation is import-only; `bun run deploy`
-is the sole CLI.
+an exact `require`, runs `go mod tidy` with
+`GOPROXY=https://proxy.golang.org,direct` and SumDB enabled, confirms the
+resolved module version, and runs a tiny Go test that imports `formpackage`,
+`hostclient`, `snapshot`, and `trust`. The consumer module and fresh module,
+build, and GOPATH caches are siblings under one temporary root so cache
+contents remain outside the `go test ./...` package walk. That root is removed
+on both success and failure, and Go diagnostics are preserved. The internal
+release implementation is import-only; `bun run deploy` is the sole CLI.
 
 Publication authentication is the ordinary local `gh` configuration of the
 operator who deliberately runs the publish form; the script accepts no
