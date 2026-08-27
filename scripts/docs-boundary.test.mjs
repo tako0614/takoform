@@ -29,7 +29,12 @@ describe("current documentation boundary", () => {
     ["fixed official roster", "The official family roster contains eight families."],
     ["current Edge authority", "edge.forms.takoform.com is the current family."],
     ["positive Host API v2", "Hosts serve forms.takoform.com/v2 today."],
+    ["invented Host API v1.1", "Hosts serve Host API v1.1 today."],
+    ["invented v1.1 route", "Hosts serve forms.takoform.com/v1.1 today."],
+    ["ambiguous 1.1 shorthand", "This is the current post-1.1 draft."],
     ["Provider implementation authority", "Core owns the Provider projection and Terraform resource schema."],
+    ["future numbered writer", "Core owns the future Specification writer."],
+    ["schema hosting platform", "Core deploys the schema-origin with Wrangler."],
   ])("rejects %s", (_name, text) => {
     const entries = baseEntries();
     entries.set("spec/current.md", text);

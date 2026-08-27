@@ -104,7 +104,9 @@ Core owns:
 - `formpackage`, the public immutable Snapshot compiler, the neutral Host API
   client, generic conformance, and their SDK/CLI surfaces;
 - caller-supplied publisher/trust policy formats and offline verification;
-- the sole future Specification and public-schema ledger writers.
+- the active and verify-only public-schema identity ledger as a logical,
+  platform-neutral contract; the numbered Specification writer ended with the
+  W09 1.1 receipt.
 
 Core does not own:
 
@@ -123,12 +125,18 @@ compatibility inputs. They do not authorize new publication or Host support.
 
 1. Build and verify the extracted repository with all future writers disabled.
 2. Record the complete source/path/blob/digest map and the final Core commit.
-3. Land a forward tombstone in the old repository that freezes its
-   Specification/schema ledgers and removes future Specification writers.
-4. Remove old workflow/OIDC/tag-creation authority.
-5. Enable the new repository's sole future Specification/schema writer.
-6. Publish the first Core SDK/CLI release as `v0.1.0` and perform authoritative
-   tag, release, checksum, and Go module readback.
+3. Land forward tombstone T at predecessor commit
+   `220d37b284d8288e6e12d31375ecfdca6a5f15c5`, freezing its
+   Specification/schema ledgers and disabling both old writers.
+4. Land one direct cleanup child C that deletes the dormant numbered
+   Specification writer and every platform-specific schema hosting surface,
+   dependency, credential lane, and authority record from Core.
+5. Remove old workflow/OIDC/tag-creation authority.
+6. When separately requested, publish the first Core SDK/CLI release through
+   the ordinary stable SemVer tag and GitHub Release path, then perform its
+   public tag and source-archive readback.
 
-A short zero-writer interval is valid. A dual-writer interval is forbidden.
-Published Provider and Specification identities are never rewritten.
+A permanent zero-writer state for numbered Specifications is intentional. A
+dual-writer interval is forbidden. Published Provider and Specification
+identities are never rewritten. Core carries logical schema identities, not a
+hosting or cutover claim, and there is no activation-only A between P and C.

@@ -11,7 +11,5 @@ crash.*.log
 # worktree that borrowed one by symlink got it committed, and CI could not
 # install over it.
 node_modules
-/.release-tmp/
 /coverage.out
-/website/.wrangler/
 .claude/

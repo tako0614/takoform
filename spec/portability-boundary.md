@@ -30,7 +30,7 @@ that shape with the same meaning; no host must implement every Form.
 | Interface contract | exact operation surface a resource exposes | operations, input/output types, errors, pagination, consistency |
 | Binding contract | typed capability projected into a consumer | worker KV binding: runtime API + permission, no credentials |
 | Host Support Profile | whether and within what limits a host implements an exact ref | supported compatibility dates, flags, metrics, dimension ceilings |
-| Adapter profile | translation to one concrete backend or ecosystem | Cloudflare API mapping, S3 compatibility, workerd hosting |
+| Adapter profile | translation to one concrete backend or ecosystem | provider API mapping, object-store compatibility, edge-runtime hosting |
 | Operator policy | realized placement and operating decisions | region, replicas, capacity assignment |
 | Service Offering | commercial availability | quota, size classes, SLA, price, billing |
 

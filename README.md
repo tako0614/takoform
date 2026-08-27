@@ -9,18 +9,30 @@ It is an experimental specification and tooling project. It is not a cloud
 catalog, a hosted control plane, a Terraform Provider, or a claim that unlike
 service semantics can be made portable by renaming fields.
 
-## Independent version axes
+## Version model
+
+Takoform has exactly two domain version axes:
 
 | Axis | Current identity | Meaning |
 | --- | --- | --- |
-| Specification | `1.1` | immutable normative source snapshot released from the predecessor repository |
-| Core SDK and CLI | `v0.1.0` candidate | public Go packages and command behavior; released only after the W10 authority cutover |
-| Host API | `forms.takoform.com/v1` | separate unpublished protocol candidate |
-| Form Package format | `packages.forms.takoform.com/v1alpha5` | current data-envelope schema identity, not Core SemVer |
+| Host API major | `forms.takoform.com/v1` | wire envelope, discovery, and lifecycle compatibility |
+| Form definition | each Form's `definitionVersion` | compatibility of that Form's portable desired-state contract |
 
-These axes never advance one another implicitly. Specification 1.1 did not
-publish Host API v1, a Form, a Form Package, a Provider, Host support,
-activation, or an Offering. Core `v0.1.0` will not mint an API v2 identity.
+A reverse-DNS Form group is a namespace, not a version. A Form-owned Interface
+or Binding changes compatibly only with that Form's `definitionVersion`; an
+external protocol keeps the version owned by its external standard.
+
+Everything else is an artifact, parser, evidence, or distribution identity.
+Specification 1.1 is an immutable historical source snapshot. Core SDK/CLI
+SemVer, Provider SemVer, package envelope `$id`, schema `$id`, package digest,
+trust format, and record generation identify their own bytes or readers; they
+are not Takoform versions a user selects. Specification 1.1 did not publish a
+Form, package, Provider, Host support, activation, or Offering. Core `v0.1.0`
+will not mint an API v2 identity.
+
+Host API v1 is the only current source lane. Its publication and each Host's
+adoption remain separately evidenced facts; the historical Specification
+snapshot does not establish either one.
 
 Specification 1.1 remains bound to its original immutable release:
 
@@ -32,7 +44,8 @@ Specification 1.1 remains bound to its original immutable release:
 - source snapshot: `sha256:23a9b14dc79f46fae632624fc5c442f947f63565e9d7f9d0a614598b5027ae03`
 
 This repository imports that receipt but never recreates or retags the release.
-The extraction and future-writer handoff are recorded in
+The extraction, permanent numbered-writer retirement, and pure-Core ownership
+handoff are recorded in
 [`docs/extraction/w10-core-cutover.md`](docs/extraction/w10-core-cutover.md).
 
 ## Public Core packages
@@ -76,8 +89,8 @@ Core owns:
 - normative Specification source and active or verify-only schemas;
 - package canonicalization, validation, trust formats, and generic conformance;
 - immutable Snapshot compilation and the Host API client;
-- future Specification and public-schema release records after the one-way
-  authority handoff.
+- API source and public-schema records plus verify-only custody of the sealed
+  Specification 1.1 history after the one-way authority handoff.
 
 Core does not own:
 
@@ -106,13 +119,20 @@ ownership boundary, schema and release records, Go formatting/static analysis,
 all portable tests, generic conformance, and standalone builds. No sibling
 Provider checkout or `replace` directive is allowed.
 
+Core itself has no production hosting or deploy target. Its ordinary Git tag
+and GitHub Release path is documented in
+[`release/core-release-policy.md`](release/core-release-policy.md); the same
+single command supports read-only dry-run and public verification.
+
 ## Version cadence
 
-Specification majors receive deliberate compatibility review and normally no
-more than one planned release per year. A minor is released only when a coherent
-compatible body of change is ready; there is no obligation to mint one every
-month. Proposals accumulate before publication. Forms, packages, Core, Hosts,
-and Providers release on their own evidence and cadence.
+A Host API major is considered at most annually and only for an evidenced
+incompatible requirement. Compatible API-v1 source revisions accumulate in
+deliberate batches identified by exact commit, tree, and digest; they do not
+mint a synthetic Specification minor. Each Form advances its own
+`definitionVersion` only when that Form's evidence requires it, with no empty
+calendar release. Packages, Core, Hosts, clients, and Providers release their
+artifacts on their own evidence and cadence without becoming domain axes.
 
 API v2 remains proposal-only until a later explicit decision and release. This
 repository does not publish or route it as part of W09-W19.

@@ -4,13 +4,71 @@ import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 
 export const finalModule = "github.com/tako0614/takoform";
-const predecessorRepository =
-  "https://github.com/tako0614/terraform-provider-takoform.git";
 
-const predecessorEvidenceSources = new Set([
-  "scripts/schema-origin-deploy.mjs",
+const retiredSpecificationAuthorityPaths = new Set([
+  "release/specification-authority.json",
+  "release/specification-release-policy.md",
+  "release/authority/specification-schema-tool-closure.json",
+  "release/authority/specification-writer-closure.json",
+  "release/authority/specification-writer-rotations.json",
+  "scripts/specification-release.mjs",
+  "scripts/specification-release.test.mjs",
   "scripts/specification-release-adapter.mjs",
+  "scripts/specification-release-adapter.test.mjs",
 ]);
+
+const retiredSpecificationAuthorityTokens = [
+  "takoform-specification-release",
+  "TAKOFORM_SPECIFICATION_",
+  "prepare-activation",
+  "specification-release-adapter.mjs",
+  "specification-release.mjs",
+];
+
+const retiredReleaseAuthorityPaths = new Set([
+  "release/authority/core-release-broker.json",
+  "release/authority/core-release-continuation-review.pub",
+  "release/authority/core-tag-allowed-signers",
+  "release/core-releases.json",
+  "scripts/deploy.mjs",
+  "scripts/deploy.test.mjs",
+  "scripts/sealed-deploy-bootstrap.mjs",
+  "scripts/sealed-deploy-launcher.mjs",
+  "scripts/sealed-deploy-runner.mjs",
+]);
+
+const retiredReleaseAuthorityTokens = [
+  "TAKOFORM_CORE_",
+  "prepare-sealed-continuation",
+  "takoform-sealed-deploy",
+  "takoform.core-release-independent-review",
+  "takoform.core-release-receipt",
+  "takoform.core-releases@",
+  "record-push",
+  "ruleset-id",
+  "tag-bundle",
+];
+
+const forbiddenSchemaHostingPaths = new Set([
+  "release/schema-origin-authority.json",
+  "release/schema-origin-policy.md",
+  "release/schema-origin-record-prefix-chain.json",
+  "release/authority/schema-origin-tool-closure.json",
+  "scripts/schema-origin-authority.mjs",
+  "scripts/schema-origin-authority.test.mjs",
+  "scripts/schema-origin-deploy.mjs",
+  "scripts/schema-origin-deploy.test.mjs",
+  "scripts/schema-origin-projection.mjs",
+  "scripts/schema-origin-projection.test.mjs",
+  "scripts/schema-origin-tool-closure.mjs",
+  "scripts/schema-origin-tool-closure.test.mjs",
+]);
+
+const forbiddenSchemaHostingTokens = [
+  "takoform-schema-origin",
+  "CLOUDFLARE_",
+  "wrangler",
+];
 
 const forbiddenTopLevelPrefixes = [
   "internal/clientv3/",
@@ -30,10 +88,11 @@ function isReleaseAuthoritySource(path) {
   if (isRuntimeGoSource(path)) return true;
   if (path === "package.json" || path === "spec/trust/profile.json") return true;
   if (path.startsWith("scripts/") && path.endsWith(".mjs") && !path.endsWith(".test.mjs")) {
-    // These three guards must name the predecessor and forbidden identities in
+    // These guards must name predecessor and forbidden identities in
     // order to validate them. Their behavior is covered by adversarial tests.
     return !new Set([
       "scripts/extraction-map.mjs",
+      "scripts/docs-boundary.mjs",
       "scripts/records.mjs",
       "scripts/source-boundary.mjs",
     ]).has(path);
@@ -43,13 +102,6 @@ function isReleaseAuthoritySource(path) {
   return false;
 }
 
-function withoutPinnedPredecessorEvidence(path, content) {
-  if (!predecessorEvidenceSources.has(path)) return content;
-  return content
-    .replaceAll(JSON.stringify(predecessorRepository), "\"\"")
-    .replaceAll(`'${predecessorRepository}'`, "''");
-}
-
 export function inspectSource(entries) {
   const problems = [];
   const paths = [...entries.keys()].sort();
@@ -57,6 +109,35 @@ export function inspectSource(entries) {
   for (const prefix of forbiddenTopLevelPrefixes) {
     if (paths.some((path) => path.startsWith(prefix))) {
       problems.push(`forbidden pre-extraction source remains under ${prefix}`);
+    }
+  }
+
+  for (const path of retiredSpecificationAuthorityPaths) {
+    if (entries.has(path)) {
+      problems.push(`retired Specification authority path must remain absent: ${path}`);
+    }
+  }
+  for (const path of retiredReleaseAuthorityPaths) {
+    if (entries.has(path)) {
+      problems.push(`retired bespoke release authority path must remain absent: ${path}`);
+    }
+  }
+  if (paths.some((path) => path.startsWith("release/broker/"))) {
+    problems.push("Core must not contain a credential or release broker");
+  }
+  if (paths.some((path) => path.startsWith("schema-origin/"))) {
+    problems.push("Core must not contain a schema-origin hosting tree");
+  }
+  if (paths.some((path) =>
+    path.startsWith("scripts/schema-origin-") ||
+    path.startsWith("release/schema-origin-") ||
+    path.startsWith("release/authority/schema-origin-")
+  )) {
+    problems.push("Core must not contain schema-origin hosting scripts or authority records");
+  }
+  for (const path of forbiddenSchemaHostingPaths) {
+    if (entries.has(path)) {
+      problems.push(`schema hosting belongs outside Core: ${path}`);
     }
   }
 
@@ -75,8 +156,7 @@ export function inspectSource(entries) {
   for (const path of paths) {
     if (!isReleaseAuthoritySource(path) && path !== "go.mod") continue;
     const content = entries.get(path) ?? "";
-    const authorityContent = withoutPinnedPredecessorEvidence(path, content);
-    if (authorityContent.includes("github.com/tako0614/terraform-provider-takoform")) {
+    if (content.includes("github.com/tako0614/terraform-provider-takoform")) {
       problems.push(`${path} imports or executes through the former Provider module`);
     }
     if (content.includes("edge.forms.takoform.com")) {
@@ -84,6 +164,21 @@ export function inspectSource(entries) {
     }
     if (content.includes("forms.takoform.com/v2")) {
       problems.push(`${path} creates or consumes the forbidden Host API v2 identity`);
+    }
+    for (const token of retiredSpecificationAuthorityTokens) {
+      if (content.includes(token)) {
+        problems.push(`${path} retains retired Specification writer authority token ${token}`);
+      }
+    }
+    for (const token of retiredReleaseAuthorityTokens) {
+      if (content.includes(token)) {
+        problems.push(`${path} retains retired bespoke release authority token ${token}`);
+      }
+    }
+    for (const token of forbiddenSchemaHostingTokens) {
+      if (content.toLowerCase().includes(token.toLowerCase())) {
+        problems.push(`${path} retains platform-specific schema hosting token ${token}`);
+      }
     }
   }
 

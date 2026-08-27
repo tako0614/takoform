@@ -3,6 +3,13 @@
 - Status: Accepted
 - Date: 2026-08-22
 
+> Current applicability (2026-08-27): this Provider-coupled publication rule is
+> superseded. Official and independent publishers use the same independently
+> releasable, content-addressed package path, and a Form release does not wait
+> for a Provider release. The historical reasoning below remains evidence of
+> the predecessor design, not current publication authority. The current
+> version model is [`../versioning.md`](../versioning.md).
+
 ## Context
 
 The question was whether the package axis should be merged into the provider's.
