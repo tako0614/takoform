@@ -12,7 +12,7 @@
     "releaseId": 377480828
   },
   "predecessorTombstoneCommit": null,
-  "successorPreparedCommit": null,
+  "successorPreparedCommit": "9bf48fd913a5b87332e4bee415945b19f898080f",
   "schemaRouteCutover": null,
   "predecessorWriterDisabledAt": null,
   "successorWriterEnabledAt": null,
