@@ -21,6 +21,12 @@ describe("Takoform deploy entrypoint", () => {
       triggers: ["published-identity"],
     });
     expect(DEPLOY_CONTRACT.surfaces[0].obligations).toHaveProperty("no-overwrite");
+    expect(DEPLOY_CONTRACT.surfaces[0].obligations["post-conditions"]).toContain(
+      "GOPROXY=direct",
+    );
+    expect(DEPLOY_CONTRACT.surfaces[0].obligations["post-conditions"]).toContain(
+      "fresh temporary Go module",
+    );
   });
 
   test("delegates the current API/Core v1 release unchanged", async () => {

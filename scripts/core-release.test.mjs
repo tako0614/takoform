@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { realpathSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, realpathSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -63,6 +64,15 @@ function fixture({ published = false, tag = published, tagCommit = COMMIT } = {}
       releaseCreated = true;
       return { status: 0, stdout: "", stderr: "" };
     }
+    if (command === "go" && args[0] === "get") {
+      return { status: 0, stdout: "", stderr: "" };
+    }
+    if (command === "go" && args[0] === "list") {
+      return { status: 0, stdout: `${CORE_RELEASE.module}@v1.0.0\n`, stderr: "" };
+    }
+    if (command === "go" && args[0] === "test") {
+      return { status: 0, stdout: "ok\n", stderr: "" };
+    }
     throw new Error(`unexpected command: ${command} ${args.join(" ")}`);
   };
   const request = async () => ({
@@ -107,6 +117,7 @@ describe("minimal Core release", () => {
       mode: "verify",
       version: "v1.0.0",
       tagCommit: COMMIT,
+      goModule: "github.com/tako0614/takoform@v1.0.0",
       releaseURL: "https://github.com/tako0614/takoform/releases/tag/v1.0.0",
       sourceTarballURL: "https://api.github.com/repos/tako0614/takoform/tarball/v1.0.0",
       sourceZipballURL: "https://api.github.com/repos/tako0614/takoform/zipball/v1.0.0",
@@ -187,6 +198,74 @@ describe("minimal Core release", () => {
     const result = await verifyCoreRelease("v1.0.0", { root: ROOT, run: f.run, request: f.request });
     expect(result.tagCommit).toBe(COMMIT);
     expect(f.calls.some((call) => call.command === "bun" || call.command === "gh")).toBe(false);
+  });
+
+  test("verify compiles the exact public module in a fresh direct consumer and removes it", async () => {
+    const f = fixture({ published: true });
+    await verifyCoreRelease("v1.0.0", { root: ROOT, run: f.run, request: f.request });
+
+    const goCalls = f.calls.filter((call) => call.command === "go");
+    expect(goCalls.map((call) => call.args)).toEqual([
+      ["get", `${CORE_RELEASE.module}@v1.0.0`],
+      ["list", "-m", "-f", "{{.Path}}@{{.Version}}", CORE_RELEASE.module],
+      ["test", "./..."],
+    ]);
+    const consumerRoot = goCalls[0].options.cwd;
+    expect(goCalls.every((call) => call.options.cwd === consumerRoot)).toBe(true);
+    expect(goCalls.every((call) => call.options.env.GOPROXY === "direct")).toBe(true);
+    expect(goCalls.every((call) => call.options.env.GOWORK === "off")).toBe(true);
+    expect(goCalls.every((call) => call.options.env.GOMODCACHE.startsWith(consumerRoot))).toBe(true);
+    expect(existsSync(consumerRoot)).toBe(false);
+  });
+
+  test("verify preserves consumer diagnostics and removes temporary state on failure", async () => {
+    const f = fixture({ published: true });
+    const defaultFixtureRun = f.run;
+    f.run = (command, args, options = {}) => {
+      if (command === "go" && args[0] === "test") {
+        f.calls.push({ command, args: [...args], options: { ...options } });
+        return { status: 1, stdout: "", stderr: "public consumer compile failed\n" };
+      }
+      return defaultFixtureRun(command, args, options);
+    };
+
+    await expect(
+      verifyCoreRelease("v1.0.0", { root: ROOT, run: f.run, request: f.request }),
+    ).rejects.toThrow("public consumer compile failed");
+    const consumerRoot = f.calls.find((call) => call.command === "go").options.cwd;
+    expect(existsSync(consumerRoot)).toBe(false);
+  });
+
+  test("verify rejects a consumer resolution that is not the exact requested module", async () => {
+    const f = fixture({ published: true });
+    const defaultFixtureRun = f.run;
+    f.run = (command, args, options = {}) => {
+      if (command === "go" && args[0] === "list") {
+        f.calls.push({ command, args: [...args], options: { ...options } });
+        return { status: 0, stdout: `${CORE_RELEASE.module}@v1.0.1\n`, stderr: "" };
+      }
+      return defaultFixtureRun(command, args, options);
+    };
+
+    await expect(
+      verifyCoreRelease("v1.0.0", { root: ROOT, run: f.run, request: f.request }),
+    ).rejects.toThrow(
+      `fresh public consumer resolved ${CORE_RELEASE.module}@v1.0.1; want ${CORE_RELEASE.module}@v1.0.0`,
+    );
+    expect(f.calls.some((call) => call.command === "go" && call.args[0] === "test")).toBe(false);
+    const consumerRoot = f.calls.find((call) => call.command === "go").options.cwd;
+    expect(existsSync(consumerRoot)).toBe(false);
+  });
+
+  test("the internal release helper has no direct CLI", () => {
+    const result = spawnSync(
+      process.execPath,
+      [resolve(ROOT, "scripts/core-release.mjs"), "--must-remain-import-only"],
+      { cwd: ROOT, encoding: "utf8" },
+    );
+    expect(result.status).toBe(0);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toBe("");
   });
 
   test("verify rejects draft releases and missing source archive readback", async () => {
