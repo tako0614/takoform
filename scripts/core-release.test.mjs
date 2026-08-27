@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, realpathSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -64,7 +64,7 @@ function fixture({ published = false, tag = published, tagCommit = COMMIT } = {}
       releaseCreated = true;
       return { status: 0, stdout: "", stderr: "" };
     }
-    if (command === "go" && args[0] === "get") {
+    if (command === "go" && args.join(" ") === "mod tidy") {
       return { status: 0, stdout: "", stderr: "" };
     }
     if (command === "go" && args[0] === "list") {
@@ -200,22 +200,38 @@ describe("minimal Core release", () => {
     expect(f.calls.some((call) => call.command === "bun" || call.command === "gh")).toBe(false);
   });
 
-  test("verify compiles the exact public module in a fresh direct consumer and removes it", async () => {
+  test("verify compiles the exact public module in an isolated fresh consumer and removes it", async () => {
     const f = fixture({ published: true });
+    let consumerGoMod;
+    const defaultFixtureRun = f.run;
+    f.run = (command, args, options = {}) => {
+      if (command === "go" && args.join(" ") === "mod tidy") {
+        consumerGoMod = readFileSync(resolve(options.cwd, "go.mod"), "utf8");
+      }
+      return defaultFixtureRun(command, args, options);
+    };
     await verifyCoreRelease("v1.0.0", { root: ROOT, run: f.run, request: f.request });
 
     const goCalls = f.calls.filter((call) => call.command === "go");
     expect(goCalls.map((call) => call.args)).toEqual([
-      ["get", `${CORE_RELEASE.module}@v1.0.0`],
+      ["mod", "tidy"],
       ["list", "-m", "-f", "{{.Path}}@{{.Version}}", CORE_RELEASE.module],
       ["test", "./..."],
     ]);
     const consumerRoot = goCalls[0].options.cwd;
+    const temporaryRoot = dirname(consumerRoot);
+    expect(consumerRoot).toBe(resolve(temporaryRoot, "consumer"));
+    expect(consumerGoMod).toBe(
+      `module takoform.release/consumer\n\ngo 1.25.8\n\nrequire ${CORE_RELEASE.module} v1.0.0\n`,
+    );
     expect(goCalls.every((call) => call.options.cwd === consumerRoot)).toBe(true);
-    expect(goCalls.every((call) => call.options.env.GOPROXY === "direct")).toBe(true);
+    expect(goCalls.every((call) => call.options.env.GOPROXY === "https://proxy.golang.org,direct")).toBe(true);
+    expect(goCalls.every((call) => call.options.env.GOSUMDB === "sum.golang.org")).toBe(true);
     expect(goCalls.every((call) => call.options.env.GOWORK === "off")).toBe(true);
-    expect(goCalls.every((call) => call.options.env.GOMODCACHE.startsWith(consumerRoot))).toBe(true);
-    expect(existsSync(consumerRoot)).toBe(false);
+    expect(goCalls.every((call) => call.options.env.GOMODCACHE === resolve(temporaryRoot, "gomodcache"))).toBe(true);
+    expect(goCalls.every((call) => call.options.env.GOCACHE === resolve(temporaryRoot, "gocache"))).toBe(true);
+    expect(goCalls.every((call) => call.options.env.GOPATH === resolve(temporaryRoot, "gopath"))).toBe(true);
+    expect(existsSync(temporaryRoot)).toBe(false);
   });
 
   test("verify preserves consumer diagnostics and removes temporary state on failure", async () => {
@@ -232,8 +248,8 @@ describe("minimal Core release", () => {
     await expect(
       verifyCoreRelease("v1.0.0", { root: ROOT, run: f.run, request: f.request }),
     ).rejects.toThrow("public consumer compile failed");
-    const consumerRoot = f.calls.find((call) => call.command === "go").options.cwd;
-    expect(existsSync(consumerRoot)).toBe(false);
+    const temporaryRoot = dirname(f.calls.find((call) => call.command === "go").options.cwd);
+    expect(existsSync(temporaryRoot)).toBe(false);
   });
 
   test("verify rejects a consumer resolution that is not the exact requested module", async () => {
@@ -253,8 +269,8 @@ describe("minimal Core release", () => {
       `fresh public consumer resolved ${CORE_RELEASE.module}@v1.0.1; want ${CORE_RELEASE.module}@v1.0.0`,
     );
     expect(f.calls.some((call) => call.command === "go" && call.args[0] === "test")).toBe(false);
-    const consumerRoot = f.calls.find((call) => call.command === "go").options.cwd;
-    expect(existsSync(consumerRoot)).toBe(false);
+    const temporaryRoot = dirname(f.calls.find((call) => call.command === "go").options.cwd);
+    expect(existsSync(temporaryRoot)).toBe(false);
   });
 
   test("the internal release helper has no direct CLI", () => {

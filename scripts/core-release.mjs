@@ -1,7 +1,14 @@
 #!/usr/bin/env bun
 
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { devNull, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -140,26 +147,28 @@ function releasePath(version) {
 }
 
 function verifyPublicGoModule({ version, run }) {
-  const consumerRoot = mkdtempSync(join(tmpdir(), "takoform-release-consumer-"));
+  const temporaryRoot = mkdtempSync(join(tmpdir(), "takoform-release-consumer-"));
+  const consumerRoot = join(temporaryRoot, "consumer");
   let primaryError;
   try {
+    mkdirSync(consumerRoot);
     writeFileSync(
       join(consumerRoot, "go.mod"),
-      "module takoform.release/consumer\n\ngo 1.25.8\n",
+      `module takoform.release/consumer\n\ngo 1.25.8\n\nrequire ${CORE_RELEASE.module} ${version}\n`,
       "utf8",
     );
     writeFileSync(join(consumerRoot, "consumer_test.go"), PUBLIC_CONSUMER_TEST, "utf8");
     const env = {
       ...process.env,
-      GOCACHE: join(consumerRoot, "gocache"),
+      GOCACHE: join(temporaryRoot, "gocache"),
       GOFLAGS: "",
       GOINSECURE: "",
-      GOMODCACHE: join(consumerRoot, "gomodcache"),
+      GOMODCACHE: join(temporaryRoot, "gomodcache"),
       GONOPROXY: "none",
       GONOSUMDB: "",
-      GOPATH: join(consumerRoot, "gopath"),
+      GOPATH: join(temporaryRoot, "gopath"),
       GOPRIVATE: "",
-      GOPROXY: "direct",
+      GOPROXY: "https://proxy.golang.org,direct",
       GOSUMDB: "sum.golang.org",
       GOTOOLCHAIN: "local",
       GOVCS: "public:git,private:off",
@@ -171,7 +180,7 @@ function verifyPublicGoModule({ version, run }) {
       GIT_TERMINAL_PROMPT: "0",
     };
     const expected = `${CORE_RELEASE.module}@${version}`;
-    runChecked(run, "go", ["get", expected], {
+    runChecked(run, "go", ["mod", "tidy"], {
       cwd: consumerRoot,
       env,
       inherit: true,
@@ -196,7 +205,7 @@ function verifyPublicGoModule({ version, run }) {
     throw error;
   } finally {
     try {
-      rmSync(consumerRoot, { recursive: true, force: true });
+      rmSync(temporaryRoot, { recursive: true, force: true });
     } catch (cleanupError) {
       if (primaryError === undefined) throw cleanupError;
       process.stderr.write(
