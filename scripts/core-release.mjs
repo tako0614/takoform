@@ -1,9 +1,10 @@
 #!/usr/bin/env bun
 
 import { spawnSync } from "node:child_process";
-import { readFileSync, realpathSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { devNull, tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 export const CORE_RELEASE = Object.freeze({
   module: "github.com/tako0614/takoform",
@@ -23,6 +24,32 @@ const ROOT = realpathSync(resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const CURRENT_API_SEMVER_TAG = /^v1\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)$/u;
 const COMMIT = /^[0-9a-f]{40}$/u;
 const USAGE = "usage: bun run deploy -- core v1.MINOR.PATCH [--dry-run|--verify]";
+const PUBLIC_CONSUMER_TEST = `package consumer
+
+import (
+	"testing"
+
+	"github.com/tako0614/takoform/formpackage"
+	"github.com/tako0614/takoform/hostclient"
+	"github.com/tako0614/takoform/snapshot"
+	"github.com/tako0614/takoform/trust"
+)
+
+func TestPublicCorePackages(t *testing.T) {
+	digest := formpackage.DigestBytes([]byte("takoform-release-consumer"))
+	if !formpackage.ValidDigest(digest) {
+		t.Fatalf("formpackage returned invalid digest %q", digest)
+	}
+	if err := hostclient.ValidateSpaceID("release-consumer"); err != nil {
+		t.Fatalf("hostclient rejected portable SpaceID: %v", err)
+	}
+	compiled, diagnostics := snapshot.Compile(snapshot.Input{HostAPI: "forms.takoform.com/v1"})
+	if compiled == nil || len(diagnostics) != 0 {
+		t.Fatalf("snapshot rejected zero-family API v1 input: %#v", diagnostics)
+	}
+	_ = trust.PublisherPolicy{}
+}
+`;
 
 function text(value) {
   if (value === undefined || value === null) return "";
@@ -47,6 +74,7 @@ export function parseCoreReleaseArgs(args) {
 function defaultRun(command, args, options = {}) {
   return spawnSync(command, args, {
     cwd: options.cwd,
+    env: options.env ?? process.env,
     encoding: "utf8",
     stdio: options.inherit ? "inherit" : "pipe",
   });
@@ -109,6 +137,73 @@ async function defaultRequest(path) {
 
 function releasePath(version) {
   return `/repos/${CORE_RELEASE.githubRepository}/releases/tags/${encodeURIComponent(version)}`;
+}
+
+function verifyPublicGoModule({ version, run }) {
+  const consumerRoot = mkdtempSync(join(tmpdir(), "takoform-release-consumer-"));
+  let primaryError;
+  try {
+    writeFileSync(
+      join(consumerRoot, "go.mod"),
+      "module takoform.release/consumer\n\ngo 1.25.8\n",
+      "utf8",
+    );
+    writeFileSync(join(consumerRoot, "consumer_test.go"), PUBLIC_CONSUMER_TEST, "utf8");
+    const env = {
+      ...process.env,
+      GOCACHE: join(consumerRoot, "gocache"),
+      GOFLAGS: "",
+      GOINSECURE: "",
+      GOMODCACHE: join(consumerRoot, "gomodcache"),
+      GONOPROXY: "none",
+      GONOSUMDB: "",
+      GOPATH: join(consumerRoot, "gopath"),
+      GOPRIVATE: "",
+      GOPROXY: "direct",
+      GOSUMDB: "sum.golang.org",
+      GOTOOLCHAIN: "local",
+      GOVCS: "public:git,private:off",
+      GOWORK: "off",
+      GCM_INTERACTIVE: "never",
+      GIT_CONFIG_COUNT: "0",
+      GIT_CONFIG_GLOBAL: devNull,
+      GIT_CONFIG_NOSYSTEM: "1",
+      GIT_TERMINAL_PROMPT: "0",
+    };
+    const expected = `${CORE_RELEASE.module}@${version}`;
+    runChecked(run, "go", ["get", expected], {
+      cwd: consumerRoot,
+      env,
+      inherit: true,
+    });
+    const resolved = runChecked(
+      run,
+      "go",
+      ["list", "-m", "-f", "{{.Path}}@{{.Version}}", CORE_RELEASE.module],
+      { cwd: consumerRoot, env },
+    );
+    if (resolved !== expected) {
+      throw new Error(`fresh public consumer resolved ${resolved || "nothing"}; want ${expected}`);
+    }
+    runChecked(run, "go", ["test", "./..."], {
+      cwd: consumerRoot,
+      env,
+      inherit: true,
+    });
+    return expected;
+  } catch (error) {
+    primaryError = error;
+    throw error;
+  } finally {
+    try {
+      rmSync(consumerRoot, { recursive: true, force: true });
+    } catch (cleanupError) {
+      if (primaryError === undefined) throw cleanupError;
+      process.stderr.write(
+        `fresh consumer cleanup also failed: ${cleanupError instanceof Error ? cleanupError.message : String(cleanupError)}\n`,
+      );
+    }
+  }
 }
 
 function readPublicTag({ root, version, run }) {
@@ -199,10 +294,12 @@ export async function verifyCoreRelease(version, options = {}) {
   if (options.expectedCommit !== undefined && tagCommit !== options.expectedCommit) {
     throw new Error(`public Git tag ${version} does not point to the released commit`);
   }
+  const goModule = verifyPublicGoModule({ version, run });
   return Object.freeze({
     mode: "verify",
     version,
     tagCommit,
+    goModule,
     releaseURL: release.html_url,
     sourceTarballURL: release.tarball_url,
     sourceZipballURL: release.zipball_url,
@@ -270,18 +367,4 @@ export async function runCoreRelease(parsed, options = {}) {
     { cwd: root, inherit: true },
   );
   return verifyCoreRelease(parsed.version, { root, run, request, expectedCommit: commit });
-}
-
-function isMainModule() {
-  return process.argv[1] !== undefined && import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
-}
-
-if (isMainModule()) {
-  try {
-    const result = await runCoreRelease(parseCoreReleaseArgs(process.argv.slice(2)));
-    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
-  } catch (error) {
-    process.stderr.write(`Core release refused: ${error instanceof Error ? error.message : String(error)}\n`);
-    process.exitCode = 1;
-  }
 }

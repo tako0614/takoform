@@ -26,7 +26,7 @@ export const DEPLOY_CONTRACT = Object.freeze({
         provenance:
           "refuses a dirty worktree or wrong module/origin, binds the release to exact HEAD, and runs the complete owner gate before creating either public identity",
         "post-conditions":
-          "reads the public Git tag and non-draft, non-prerelease GitHub Release back and requires the tag to name the released commit and the Release to expose public source archives",
+          "reads the public Git tag and non-draft, non-prerelease GitHub Release back, then uses GOPROXY=direct with fresh module/build caches in a fresh temporary Go module to resolve the exact released module and test representative public Core packages before removing all temporary state",
         reversal:
           "the tag and GitHub Release are immutable consumer identities and are not rolled back in place; a bad publication is repaired only with a later compatible version",
         "failure-handling":
