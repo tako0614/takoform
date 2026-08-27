@@ -16,7 +16,7 @@ create another Takoform version axis.
 
 ## Immutable identities
 
-The active and verify-only schema identities are recorded in
+The non-retired and verify-only schema identities are recorded in
 [`release/public-schema-identities.json`](../release/public-schema-identities.json).
 The append-only release receipt and signed record chain are
 [`release/specification-releases.json`](../release/specification-releases.json),

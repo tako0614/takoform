@@ -70,7 +70,7 @@ that value may move.
 | Value | Current authority |
 | --- | --- |
 | Specification release receipt | [`release/specification-releases.json`](../release/specification-releases.json) |
-| Active and verify-only schema `$id` and path | [`release/public-schema-identities.json`](../release/public-schema-identities.json) |
+| Non-retired and verify-only schema `$id` and path | [`release/public-schema-identities.json`](../release/public-schema-identities.json) |
 
 Withdrawal is recorded, never silent. An occupied address or digest moves to a
 retired or verify-only record, keeps its bytes, and cannot be reused for another

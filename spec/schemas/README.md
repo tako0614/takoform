@@ -7,11 +7,12 @@ are also normative and may reject a structurally valid document. Where prose
 and a schema directly disagree about the same structural condition, the schema
 wins.
 
-## Active schema identities
+## Non-retired schema identities
 
-These files are active entries in the append-only public-schema identity
-ledger. Their logical identities and bytes remain available to readers even
-when a newer contract is preferred.
+These files are in the append-only ledger's non-retired identity list. That
+list contains both current authoring profiles and retained readable profiles;
+non-retired does not by itself mean preferred for new documents. The contract
+column states the role of each identity.
 
 | Schema | Contract |
 | --- | --- |
@@ -79,7 +80,7 @@ every implementation copy is byte-identical to its normative source.
 
 Every schema `$id` is a logical URI and may be used as a retrieval URL by an
 external publisher or operator. The files in this directory are the only
-current Core source. `bun run check:records` requires every active and
+current Core source. `bun run check:records` requires every non-retired and
 verify-only file, `$id`, raw SHA-256 digest, and ledger entry to agree. Core
 contains no hosting projection, platform configuration, credential, or deploy
 path for those URLs.

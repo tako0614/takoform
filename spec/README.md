@@ -20,7 +20,7 @@ output are introduced in the [repository example](../README.md#a-checked-in-form
 ## Authority and contract map
 
 The current normative contracts are the linked contract documents below and
-the active entries in
+the non-retired entries in
 [`release/public-schema-identities.json`](../release/public-schema-identities.json).
 `spec/proposals/` contains non-normative design; `spec/decisions/` contains
 rationale and history; extracted and retained predecessor documents are
