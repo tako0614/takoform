@@ -33,9 +33,9 @@ No Specification release, package, trust policy, generated index, Host report,
 activation, or Service Offering MAY by itself promote Form maturity. A Host
 MUST NOT describe its support decision as Takoform approval or certification.
 
-The current API/Core 1.0.1 source and matching Go module tag are a separate
-release line from Form, package, client, and Host adoption. Changing current
-source does not rewrite retained release records.
+Core v1.1.0 is a software/module artifact release separate from the Host API
+v1 lane and from Form, package, client, and Host adoption. Changing current
+source does not rewrite retained release records. There is no Host API v1.1.
 
 ## Form families
 
@@ -101,9 +101,9 @@ explicit per-Form decision that mints its own `1.0.0` identity.
 That decision MUST bind the exact predecessor FormRef, compatibility analysis,
 portable positive and negative evidence, migration or no-migration guidance,
 replacement/import/delete/recovery analysis, and known limitations. Host or
-consumer adoption is optional supporting evidence, never a Form or API release
-prerequisite, and grants no normative authority over Core or another
-publisher's Form.
+consumer adoption is optional supporting evidence, never a Form transition or
+Host API lane change prerequisite, and grants no normative authority over Core
+or another publisher's Form.
 
 Stable does not guarantee that every Host supports the Form or that any
 commercial platform offers it. A Specification or Host protocol release does

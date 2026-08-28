@@ -17,6 +17,8 @@ describe("Takoform deploy entrypoint", () => {
     expect(DEPLOY_CONTRACT.surfaces).toHaveLength(1);
     expect(DEPLOY_CONTRACT.surfaces[0]).toMatchObject({
       surface: "core",
+      target:
+        "go-module+git-tag+github-release:github.com/tako0614/takoform@v1.MINOR.PATCH",
       covers: ["."],
       triggers: ["published-identity"],
     });
@@ -36,11 +38,23 @@ describe("Takoform deploy entrypoint", () => {
     expect(DEPLOY_CONTRACT.surfaces[0].obligations["post-conditions"]).toContain(
       "sibling caches",
     );
+    expect(DEPLOY_CONTRACT.surfaces[0].obligations.provenance).toContain(
+      "credential-free public refs/heads/main",
+    );
+    expect(DEPLOY_CONTRACT.surfaces[0].obligations.provenance).toContain(
+      "Core software/module artifact",
+    );
+    expect(DEPLOY_CONTRACT.surfaces[0].obligations.provenance).toContain(
+      "forms.takoform.com/v1",
+    );
+    expect(DEPLOY_CONTRACT.surfaces[0].obligations["post-conditions"]).toContain(
+      "expected candidate commit",
+    );
   });
 
-  test("delegates the current API/Core v1 release unchanged", async () => {
+  test("delegates the current Core module v1 artifact release unchanged", async () => {
     const calls = [];
-    const parsed = parseDeployArgs(["core", "v1.0.0", "--dry-run"]);
+    const parsed = parseDeployArgs(["core", "v1.1.0", "--dry-run"]);
     const result = await runDeploy(parsed, {
       runCoreRelease: async (release) => {
         calls.push(release);
@@ -48,13 +62,13 @@ describe("Takoform deploy entrypoint", () => {
       },
     });
 
-    expect(calls).toEqual([{ version: "v1.0.0", mode: "dry-run" }]);
+    expect(calls).toEqual([{ version: "v1.1.0", mode: "dry-run" }]);
     expect(result).toEqual({ delegated: true });
   });
 
   test("fails closed before delegation for the abandoned v0 stream", () => {
     expect(() => parseDeployArgs(["core", "v0.1.0"])).toThrow(
-      "current API v1 line",
+      "current v1 line",
     );
   });
 

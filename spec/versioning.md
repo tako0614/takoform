@@ -1,7 +1,7 @@
 # Versioning and compatibility
 
-Takoform has exactly two domain version axes: the Takoform API release SemVer
-and each Form's `definitionVersion`. Other numbers and digests identify
+Takoform has exactly two domain version axes: the Host API wire lane and each
+Form's `definitionVersion`. Other numbers and digests identify
 namespaces, formats, schemas, evidence, parsers, clients, or distribution
 artifacts. They MUST NOT be presented as additional Takoform versions or
 aligned to imply one release or maturity level. Form lifecycle vocabulary is in
@@ -11,17 +11,15 @@ aligned to imply one release or maturity level. Form lifecycle vocabulary is in
 
 | Concern | Identifier | Meaning |
 | --- | --- | --- |
-| Takoform API release | SemVer such as `1.0.1`; only its major is projected onto a wire lane such as `forms.takoform.com/v1` | Compatible API/Core release checkpoint and wire-major compatibility |
+| Host API lane | an exact wire major such as `forms.takoform.com/v1` | Compatibility of Host discovery, routes, and closed wire documents |
 | Form definition | SemVer in one exact FormRef's `definitionVersion` | Compatibility of that Form's portable desired-state contract |
 
-The current release identity is **Takoform API/Core 1.0.1**. Its unchanged wire
-lane is Host API v1, and the Go module
-`github.com/tako0614/takoform` uses the matching `v1.0.1` tag. Core has no
-independent public version stream. At runtime the API release axis exposes only
-its major. API minor and patch numbers identify compatible checkpoints on that
-same lane, not new discovery or route identities. A Form group is a versionless
-namespace. `requiresHostApi` is a lower bound on the API wire major, not a
-negotiation or a third version.
+The current Host lane is exactly `forms.takoform.com/v1`. Core v1.1.0 is the Go
+software/module artifact that implements and verifies current contracts; its
+SemVer is a distribution identity, not a Host API version or a third domain
+axis. There is no Host API v1.1 and no discovery or route identity derived from
+the Core tag. A Form group is a versionless namespace. `requiresHostApi` is a
+lower bound on the Host API wire major, not a negotiation or a third version.
 
 ## Artifact and evidence identities
 
@@ -34,7 +32,7 @@ but are not user-selectable Takoform version axes:
 | Form Package | envelope `$id` plus content digest | manifest parser and immutable distribution bytes |
 | Interface / Binding | exact ref plus schema digest | digest-bound contract data; Form-owned compatibility follows the Form's `definitionVersion` |
 | External standard | the standard owner's protocol identity | compatibility governed by that external standard |
-| Core Go module | the matching API tag, beginning with `v1.0.1` | the Go distribution of that API checkpoint; never a separate Core version line |
+| Core Go module | module SemVer, currently `github.com/tako0614/takoform@v1.1.0` | one software artifact; it does not version the Host API or a Form |
 | Other client / Provider | the artifact's own release identity | local behavior, schema, state, and migration support |
 | Publisher trust | policy, root, bundle, lineage, and checkpoint identities | which exact provenance and revocation evidence an operator accepts |
 | Schema / record | `$id`, format, generation, sequence, and digest | parser and append-only evidence bytes |
@@ -46,17 +44,17 @@ domain version.
 The current revocation statement and checkpoint identity
 `trust.forms.takoform.com/v1`, its reserved genesis
 `checkpointVersion: 0.0.0`, and the retained v1alpha1 trust identities are data
-formats and record identities inside API/Core v1. They do not create another
+formats and record identities consumed by Core. They do not create another
 Host discovery lane, API route, or domain version axis. The occupied
 `trust.forms.takoform.com/v1alpha1` schema bytes remain readable rather than
 being overwritten to admit genesis.
 
-If published, Core support for the new trust formats and certificate-derived
-commit fields belongs in a compatible next API/Core v1 minor checkpoint and
-matching Go module tag. It does not alter the Host API v1 wire documents. This
-source change itself does not publish that checkpoint, a schema projection, or
-any publisher record; older Core readers continue to verify retained v1alpha1
-chains but do not understand the new v1 trust profile.
+Core v1.1.0 adds support for the new trust formats and certificate-derived
+commit fields as a compatible Core module artifact change. It does not alter
+the Host API v1 wire documents. There is no Host API v1.1. This source change
+itself does not publish the Core tag, a schema projection, or any publisher
+record; older Core readers continue to verify retained v1alpha1 chains but do
+not understand the new v1 trust profile.
 
 ## Absolute names
 
@@ -67,10 +65,11 @@ relative names remain immutable history.
 
 ## Current wire and package identities
 
-The current Core source carries API/Core 1.0.1 at the literal Host API v1 lane:
+The current Core v1.1.0 source consumes the literal Host API v1 lane,
 `forms.takoform.com/v1`. Its operation table, wire schema, discovery schema,
 and support-profile schema are unchanged from the established v1 contract.
-There is no fixed family roster or publisher allowlist.
+There is no fixed family roster or publisher allowlist, and the Core artifact
+version is not projected into any Host address.
 
 The current package profile is
 [`package-index-v1alpha5.schema.json`](schemas/package-index-v1alpha5.schema.json).
@@ -122,10 +121,12 @@ not aliases for the current profile.
 
 ## Core and client release identities
 
-Core is the Go implementation distributed with the Takoform API checkpoint. API
-1.0.1 and Go tag `v1.0.1` therefore name the same release, not two aligned
-products. A later v1 API checkpoint and its Go tag move together. There is no
-Core-only public version number to select.
+Core is the Go implementation distributed as module
+`github.com/tako0614/takoform`. Its current artifact SemVer is `v1.1.0`.
+That tag versions the exported software/module artifact only and does not mint
+or select a Host lane. There is no Host API v1.1, and the Core module major is
+not required to equal the Host wire major. Host compatibility is evaluated
+from the exact Host API lane and contract documents that a Core build supports.
 
 A client release identity describes only that client's protocol handling, local
 schema, persisted state, import behavior, and exact-identity compatibility. It
@@ -196,18 +197,13 @@ An occupied FormRef MUST never be reused for different bytes. A retained
 predecessor Form whose historical version is greater than zero is not thereby a
 current Stable Form, and no current tooling may renumber it.
 
-## Host API releases and lanes
+## Host API lanes
 
-Takoform API/Core 1.0.1 uses the exact Host API v1 lane, discovered at
-`/.well-known/takoform/v1` with API base `/apis/forms.takoform.com/v1`. Its
-wire contract is [`host-api/v1.md`](host-api/v1.md), unchanged by the 1.0.1
-checkpoint. The API release does not advance Form maturity, package
-publication, another client's release, or publisher trust.
-
-`v1.0.x` is reserved for a compatible correction to the 1.0 baseline. A future
-`v1.y.0` is a meaningful compatible checkpoint, not a calendar bump. It
-requires exact old-client/old-Host evidence and remains on the same v1 discovery
-and API roots.
+The exact Host API v1 lane is discovered at `/.well-known/takoform/v1` with API
+base `/apis/forms.takoform.com/v1`. Its wire contract is
+[`host-api/v1.md`](host-api/v1.md). Releasing Core v1.1.0 does not alter those
+addresses, advance Form maturity, publish a package, release another client,
+or change publisher trust.
 
 API v1 uses closed request, response, error, and endpoint envelopes. Adding an
 optional field can make an old decoder reject a document; adding an error can
@@ -218,10 +214,11 @@ send the new shape, normally through an already-safe explicit capability and
 positive/negative old-client witnesses. If that proof cannot be made, the
 change is incompatible.
 
-An incompatible protocol requires a new API major and a new exact wire and Go
-module identity together. A new API major is never a relabeling of an occupied
-address. Maturity language, a Form or family change, elapsed time, or a client
-release does not mint a Host lane.
+An incompatible protocol requires a new Host API major and new exact wire
+identities. It does not require the Core module to adopt the same numeric
+major. A new Host API major is never a relabeling of an occupied address.
+Maturity language, a Form or family change, elapsed time, or a software
+artifact release does not mint a Host lane.
 
 ## Historical Specification 1.1 and retained predecessors
 

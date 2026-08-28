@@ -57,3 +57,4 @@ state and does not override the current specification.
 - [0056 — Core compiles artifacts into an immutable Snapshot](0056-core-compiles-artifacts-into-an-immutable-snapshot.md)
 - [0057 — Specification 1.1 freezes compatibility and independent identities](0057-specification-1-1-compatibility-and-independent-identities.md)
 - [0058 — Takoform API and Core share the v1 release line](0058-api-and-core-share-the-v1-release-line.md)
+- [0059 — Core SemVer identifies the software artifact](0059-core-semver-identifies-the-software-artifact.md)

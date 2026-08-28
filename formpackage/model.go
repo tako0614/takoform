@@ -39,8 +39,8 @@ const (
 	// formats. They remain readable but are not changed in place.
 	TrustAPIVersion = "trust.forms.takoform.com/v1alpha1"
 	// CurrentTrustAPIVersion identifies the current revocation statement and
-	// signed checkpoint data formats. It is an identity within the existing
-	// Takoform API/Core v1, not another negotiated version axis.
+	// signed checkpoint data formats. It is consumed by Core and does not name
+	// another Host API lane or negotiated version axis.
 	CurrentTrustAPIVersion   = "trust.forms.takoform.com/v1"
 	RevocationKind           = "FormPackageRevocation"
 	RevocationCheckpointKind = "FormPackageRevocationCheckpoint"

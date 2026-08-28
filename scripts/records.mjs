@@ -200,7 +200,7 @@ export function validateHostAPIV1MachinePin(compatibility, sources) {
     } else if (raw === undefined || raw === null || sha256(raw) !== expected) {
       problem(
         problems,
-        `current API 1.0.0 machine bytes differ from the W09 pin at ${path}`,
+        `current Host API v1 machine bytes differ from the W09 baseline pin at ${path}`,
       );
     }
   }

@@ -68,8 +68,8 @@ bytes and their historical policy remain immutable.
 
 A revocation statement names an exact package digest and FormRef. The current
 statement and checkpoint data-format identity is
-`trust.forms.takoform.com/v1`. It is a record format within Takoform API/Core
-v1, not another Host API lane or a third negotiated version axis. Current
+`trust.forms.takoform.com/v1`. It is a record format consumed by Core v1.1.0,
+not another Host API lane or a third negotiated version axis. Current
 statements use the exact stable, versionless FormRef schema. A checkpoint entry
 records `statementApiVersion: trust.forms.takoform.com/v1`; Core derives its
 other identity fields and digest only from an already-canonical, validated

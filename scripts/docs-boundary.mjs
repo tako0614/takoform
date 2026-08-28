@@ -61,10 +61,13 @@ const hostApiV2Token = /\bforms\.takoform\.com\/v2(?:[^A-Za-z0-9_]|$)/iu;
 const hostApi11Token =
   /(?:\bHost API\s+(?:v)?1\.1\b|\bforms\.takoform\.com\/v1\.1\b)/iu;
 
+const takoformApiSemverToken =
+  /\bTakoform API\s+(?:v)?(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\b/iu;
+
 const ambiguousPostSpecificationToken = /\bpost-1\.1\b/iu;
 const unreleasedDraftToken = /\bunreleased\s+draft\b/iu;
 
-const unreleasedCurrentAPITokens = Object.freeze([
+const unreleasedCurrentHostAPITokens = Object.freeze([
   /\b(?:Host API|API)\s+(?:v)?1\b[^\n.!?]{0,100}\b(?:candidate|unpublished|unreleased)\b/iu,
   /\b(?:candidate|unpublished|unreleased)\b[^\n.!?]{0,100}\b(?:Host API|API)\s+(?:v)?1\b/iu,
 ]);
@@ -125,6 +128,12 @@ function isNegated(text, match) {
   return negationWords.test(localBefore) || /\b(?:not|never|no)\b/iu.test(localAfter.slice(0, 48));
 }
 
+function isExplicitHostAPIAbsence(text, match) {
+  const { start } = sentenceBounds(text, match.index ?? 0, match[0].length);
+  const localBefore = text.slice(start, match.index ?? 0);
+  return /\b(?:there\s+is\s+no|no)\s*$/iu.test(localBefore);
+}
+
 function matchesInLine(line, token) {
   const flags = token.flags.includes("g") ? token.flags : `${token.flags}g`;
   return line.matchAll(new RegExp(token.source, flags));
@@ -160,17 +169,37 @@ function checkVocabulary(path, content, problems) {
       }
     }
     for (const v11 of matchesInLine(line, hostApi11Token)) {
-      problems.push(`${path}:${index + 1} conflates Specification 1.1 with a Host API lane: ${v11[0]}`);
+      const absoluteV11 = { ...v11, index: absoluteOffset + (v11.index ?? 0) };
+      if (
+        !hasExceptionContext(normalizedContent, absoluteV11) &&
+        !isExplicitHostAPIAbsence(normalizedContent, absoluteV11)
+      ) {
+        problems.push(`${path}:${index + 1} conflates Specification 1.1 with a Host API lane: ${v11[0]}`);
+      }
+    }
+    for (const apiSemver of matchesInLine(line, takoformApiSemverToken)) {
+      const absoluteAPISemver = {
+        ...apiSemver,
+        index: absoluteOffset + (apiSemver.index ?? 0),
+      };
+      if (
+        !hasExceptionContext(normalizedContent, absoluteAPISemver) &&
+        !isNegated(normalizedContent, absoluteAPISemver)
+      ) {
+        problems.push(
+          `${path}:${index + 1} presents artifact SemVer as a Takoform API version: ${apiSemver[0]}`,
+        );
+      }
     }
     for (const ambiguous of matchesInLine(line, ambiguousPostSpecificationToken)) {
       problems.push(`${path}:${index + 1} uses ambiguous 1.1 shorthand instead of naming the historical Specification snapshot: ${ambiguous[0]}`);
     }
     for (const unreleased of matchesInLine(line, unreleasedDraftToken)) {
-      problems.push(`${path}:${index + 1} retains an unreleased-draft label after API 1.0 convergence: ${unreleased[0]}`);
+      problems.push(`${path}:${index + 1} retains an unreleased-draft label after Host API v1 convergence: ${unreleased[0]}`);
     }
-    for (const token of unreleasedCurrentAPITokens) {
+    for (const token of unreleasedCurrentHostAPITokens) {
       for (const stalled of matchesInLine(line, token)) {
-        problems.push(`${path}:${index + 1} describes the current API 1.0 release as an unpublished candidate: ${stalled[0]}`);
+        problems.push(`${path}:${index + 1} describes the current Host API v1 lane as an unpublished candidate: ${stalled[0]}`);
       }
     }
     for (const writer of matchesInLine(line, futureSpecificationWriterToken)) {

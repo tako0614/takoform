@@ -1,8 +1,10 @@
 # Takoform neutral Core and compiled Snapshot
 
-Core is the family-neutral compiler boundary for Takoform API 1.0.1. It turns
-already acquired, data-only contract artifacts into one closed, immutable graph
-that a client, Host adapter, or artifact conformance tool can consume.
+Core v1.1.0 is the family-neutral Go software/module artifact. It turns already
+acquired, data-only contract artifacts into one closed, immutable graph that a
+client, Host adapter, or artifact conformance tool can consume. Its artifact
+SemVer does not version the Host API; Core continues to consume the exact
+`forms.takoform.com/v1` lane, and there is no Host API v1.1.
 
 ## Core model
 

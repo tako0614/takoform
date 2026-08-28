@@ -1,8 +1,8 @@
 # Portable Form Host APIs
 
-## Current Host API v1 — Takoform API/Core 1.0.1
+## Current Host API v1
 
-The current release uses the unchanged literal, provider-neutral Host API v1
+The current Host lane uses the unchanged literal, provider-neutral Host API v1
 contract ([`v1.md`](v1.md)). Its endpoints are:
 
 - discovery: `GET /.well-known/takoform/v1`;
@@ -10,9 +10,10 @@ contract ([`v1.md`](v1.md)). Its endpoints are:
 - wire schema: [`host-api-wire-v1.schema.json`](../schemas/host-api-wire-v1.schema.json); and
 - operation table: [`operations-v1.json`](operations-v1.json).
 
-The lane is a protocol identity, not a Form catalog or publisher allowlist. The
-API 1.0.1 release changes no v1 wire identity; a Host still implements the
-contract and support profile independently.
+The lane is a protocol identity, not a Form catalog or publisher allowlist.
+Core v1.1.0 is a software/module artifact that changes no v1 wire identity; a
+Host still implements the contract and support profile independently. There is
+no Host API v1.1.
 
 ## Conformance
 

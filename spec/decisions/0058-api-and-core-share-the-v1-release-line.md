@@ -1,6 +1,6 @@
 # 0058 — Takoform API and Core share the v1 release line
 
-- Status: Accepted
+- Status: Superseded by [0059](0059-core-semver-identifies-the-software-artifact.md)
 - Date: 2026-08-27
 - Scope: API versioning, Go module identity, Host wire compatibility, and release entrypoint
 

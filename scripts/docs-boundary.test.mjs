@@ -31,6 +31,8 @@ describe("current documentation boundary", () => {
     ["positive Host API v2", "Hosts serve forms.takoform.com/v2 today."],
     ["invented Host API v1.1", "Hosts serve Host API v1.1 today."],
     ["invented v1.1 route", "Hosts serve forms.takoform.com/v1.1 today."],
+    ["negation-laundered Host API v1.1", "No clients reject the current Host API v1.1."],
+    ["invented API SemVer", "Takoform API 1.1.0 is the current release."],
     ["ambiguous 1.1 shorthand", "This is the current post-1.1 draft."],
     ["unpublished current API", "Host API v1 is the current unpublished candidate."],
     ["unreleased current API", "This is the current unreleased Host API v1 draft."],
@@ -53,11 +55,11 @@ describe("current documentation boundary", () => {
     expect(inspectDocs(entries)).toEqual([]);
   });
 
-  test("allows a compatible Takoform API 1.1.0 checkpoint without inventing a Host route", () => {
+  test("allows Core v1.1.0 only as a software artifact beside the unchanged Host API v1 lane", () => {
     const entries = baseEntries();
     entries.set(
       "spec/versioning.md",
-      "Takoform API 1.1.0 is a proven-compatible checkpoint on the unchanged Host API v1 route.\n",
+      "Takoform Core v1.1.0 is a software/module artifact release. The Host API remains forms.takoform.com/v1; there is no Host API v1.1.\n",
     );
     expect(inspectDocs(entries)).toEqual([]);
   });

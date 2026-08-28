@@ -13,10 +13,13 @@ import {
 
 const ROOT = realpathSync(resolve(dirname(fileURLToPath(import.meta.url)), ".."));
 const COMMIT = "0123456789abcdef0123456789abcdef01234567";
+const OTHER_COMMIT = "fedcba9876543210fedcba9876543210fedcba98";
+const VERSION = "v1.1.0";
 
 function releaseBody(version, overrides = {}) {
   return JSON.stringify({
     tag_name: version,
+    name: `Takoform Core ${version}`,
     draft: false,
     prerelease: false,
     html_url: `https://github.com/${CORE_RELEASE.githubRepository}/releases/tag/${version}`,
@@ -26,10 +29,17 @@ function releaseBody(version, overrides = {}) {
   });
 }
 
-function fixture({ published = false, tag = published, tagCommit = COMMIT } = {}) {
+function fixture({
+  published = false,
+  tag = published,
+  tagCommit = COMMIT,
+  headCommit = COMMIT,
+  mainCommits = [COMMIT],
+} = {}) {
   const calls = [];
   let tagCreated = tag;
   let releaseCreated = published;
+  let mainRead = 0;
   const run = (command, args, options = {}) => {
     calls.push({ command, args: [...args], options: { ...options } });
     if (command === "git" && args.join(" ") === "rev-parse --show-toplevel") {
@@ -42,9 +52,21 @@ function fixture({ published = false, tag = published, tagCommit = COMMIT } = {}
       return { status: 0, stdout: "", stderr: "" };
     }
     if (command === "git" && args.join(" ") === "rev-parse HEAD") {
-      return { status: 0, stdout: `${COMMIT}\n`, stderr: "" };
+      return { status: 0, stdout: `${headCommit}\n`, stderr: "" };
     }
-    if (command === "git" && args[0] === "ls-remote") {
+    if (
+      command === "git" &&
+      args.join(" ") === `ls-remote --heads ${CORE_RELEASE.publicOrigin} refs/heads/main`
+    ) {
+      const mainCommit = mainCommits[Math.min(mainRead, mainCommits.length - 1)];
+      mainRead += 1;
+      return {
+        status: 0,
+        stdout: `${mainCommit}\trefs/heads/main\n`,
+        stderr: "",
+      };
+    }
+    if (command === "git" && args[0] === "ls-remote" && args[1] === "--tags") {
       const version = args[3].slice("refs/tags/".length);
       return {
         status: 0,
@@ -68,7 +90,7 @@ function fixture({ published = false, tag = published, tagCommit = COMMIT } = {}
       return { status: 0, stdout: "", stderr: "" };
     }
     if (command === "go" && args[0] === "list") {
-      return { status: 0, stdout: `${CORE_RELEASE.module}@v1.0.0\n`, stderr: "" };
+      return { status: 0, stdout: `${CORE_RELEASE.module}@${VERSION}\n`, stderr: "" };
     }
     if (command === "go" && args[0] === "test") {
       return { status: 0, stdout: "ok\n", stderr: "" };
@@ -77,13 +99,13 @@ function fixture({ published = false, tag = published, tagCommit = COMMIT } = {}
   };
   const request = async () => ({
     status: releaseCreated ? 200 : 404,
-    body: releaseCreated ? releaseBody("v1.0.0") : "Not Found",
+    body: releaseCreated ? releaseBody(VERSION) : "Not Found",
   });
   return { calls, run, request };
 }
 
 describe("minimal Core release", () => {
-  test("accepts only the API and Go module v1 release line", () => {
+  test("accepts only the current Core module v1 release line", () => {
     expect(parseCoreReleaseArgs(["v1.0.0"])).toEqual({ version: "v1.0.0", mode: "publish" });
     expect(parseCoreReleaseArgs(["v1.2.3", "--dry-run"])).toEqual({ version: "v1.2.3", mode: "dry-run" });
     expect(parseCoreReleaseArgs(["v1.2.3", "--verify"])).toEqual({ version: "v1.2.3", mode: "verify" });
@@ -95,56 +117,139 @@ describe("minimal Core release", () => {
   test("dry-run is read-only and runs the complete portable gate", async () => {
     const f = fixture();
     expect(
-      await runCoreRelease(parseCoreReleaseArgs(["v1.0.0", "--dry-run"]), {
+      await runCoreRelease(parseCoreReleaseArgs([VERSION, "--dry-run"]), {
         root: ROOT,
         run: f.run,
         request: f.request,
       }),
-    ).toEqual({ mode: "dry-run", version: "v1.0.0", commit: COMMIT, tag: "missing", ready: true });
+    ).toEqual({
+      mode: "dry-run",
+      version: VERSION,
+      commit: COMMIT,
+      publicMainCommit: COMMIT,
+      publicMainMatchesHead: true,
+      tag: "missing",
+      gatePassed: true,
+      publishReady: true,
+    });
     expect(f.calls.filter((call) => call.command === "bun").map((call) => call.args)).toEqual([["run", "check"]]);
     expect(f.calls.some((call) => call.command === "gh")).toBe(false);
     expect(f.calls.some((call) => ["tag", "push"].includes(call.args[0]))).toBe(false);
   });
 
+  test("dry-run reports a reviewed branch that is not public main without publishing", async () => {
+    const f = fixture({ mainCommits: [OTHER_COMMIT] });
+    expect(
+      await runCoreRelease(parseCoreReleaseArgs([VERSION, "--dry-run"]), {
+        root: ROOT,
+        run: f.run,
+        request: f.request,
+      }),
+    ).toEqual({
+      mode: "dry-run",
+      version: VERSION,
+      commit: COMMIT,
+      publicMainCommit: OTHER_COMMIT,
+      publicMainMatchesHead: false,
+      tag: "missing",
+      gatePassed: true,
+      publishReady: false,
+    });
+    expect(f.calls.some((call) => call.command === "gh" || call.args[0] === "push")).toBe(false);
+  });
+
+  test("reads public main and tags without repository or credential configuration", async () => {
+    const f = fixture();
+    await runCoreRelease(parseCoreReleaseArgs([VERSION, "--dry-run"]), {
+      root: ROOT,
+      run: f.run,
+      request: f.request,
+    });
+
+    const publicReads = f.calls.filter(
+      (call) => call.command === "git" && call.args[0] === "ls-remote",
+    );
+    expect(publicReads).toHaveLength(2);
+    for (const call of publicReads) {
+      expect(call.args).toContain(CORE_RELEASE.publicOrigin);
+      expect(call.options.cwd).not.toBe(ROOT);
+      expect(call.options.env.GIT_CONFIG_COUNT).toBe("0");
+      expect(call.options.env.GIT_CONFIG_NOSYSTEM).toBe("1");
+      expect(call.options.env.GIT_TERMINAL_PROMPT).toBe("0");
+      expect(call.options.env.GH_TOKEN).toBeUndefined();
+      expect(call.options.env.GITHUB_TOKEN).toBeUndefined();
+    }
+  });
+
   test("publishes through one create-only GitHub Release call and verifies public readback", async () => {
     const f = fixture();
-    const result = await runCoreRelease(parseCoreReleaseArgs(["v1.0.0"]), {
+    const result = await runCoreRelease(parseCoreReleaseArgs([VERSION]), {
       root: ROOT,
       run: f.run,
       request: f.request,
     });
     expect(result).toEqual({
       mode: "verify",
-      version: "v1.0.0",
+      version: VERSION,
+      expectedCommit: COMMIT,
       tagCommit: COMMIT,
-      goModule: "github.com/tako0614/takoform@v1.0.0",
-      releaseURL: "https://github.com/tako0614/takoform/releases/tag/v1.0.0",
-      sourceTarballURL: "https://api.github.com/repos/tako0614/takoform/tarball/v1.0.0",
-      sourceZipballURL: "https://api.github.com/repos/tako0614/takoform/zipball/v1.0.0",
+      goModule: `github.com/tako0614/takoform@${VERSION}`,
+      releaseURL: `https://github.com/tako0614/takoform/releases/tag/${VERSION}`,
+      sourceTarballURL: `https://api.github.com/repos/tako0614/takoform/tarball/${VERSION}`,
+      sourceZipballURL: `https://api.github.com/repos/tako0614/takoform/zipball/${VERSION}`,
     });
     const ghCalls = f.calls.filter((call) => call.command === "gh");
     expect(ghCalls).toHaveLength(1);
     expect(ghCalls[0].args).toEqual([
       "release",
       "create",
-      "v1.0.0",
+      VERSION,
       "--repo",
       "tako0614/takoform",
       "--title",
-      "Takoform API 1.0.0",
+      "Takoform Core v1.1.0",
       "--generate-notes",
       "--verify-tag",
     ]);
     expect(ghCalls[0].args.some((arg) => /(?:edit|delete|upload|force)/u.test(arg))).toBe(false);
     expect(
       f.calls.filter((call) => call.command === "git" && call.args[0] === "push").map((call) => call.args),
-    ).toEqual([["push", "origin", `${COMMIT}:refs/tags/v1.0.0`]]);
+    ).toEqual([["push", "origin", `${COMMIT}:refs/tags/${VERSION}`]]);
+  });
+
+  test("publish refuses a commit that is not credential-free public main before the gate", async () => {
+    const f = fixture({ mainCommits: [OTHER_COMMIT] });
+    await expect(
+      runCoreRelease(parseCoreReleaseArgs([VERSION]), {
+        root: ROOT,
+        run: f.run,
+        request: f.request,
+      }),
+    ).rejects.toThrow("public refs/heads/main");
+    expect(
+      f.calls.some(
+        (call) => call.command === "bun" || call.command === "gh" || call.args[0] === "push",
+      ),
+    ).toBe(false);
+  });
+
+  test("publish rechecks public main after the owner gate", async () => {
+    const f = fixture({ mainCommits: [COMMIT, OTHER_COMMIT] });
+    await expect(
+      runCoreRelease(parseCoreReleaseArgs([VERSION]), {
+        root: ROOT,
+        run: f.run,
+        request: f.request,
+      }),
+    ).rejects.toThrow("public refs/heads/main changed");
+    expect(f.calls.filter((call) => call.command === "bun")).toHaveLength(1);
+    expect(f.calls.some((call) => call.command === "gh" || call.args[0] === "push")).toBe(false);
   });
 
   test("refuses an existing public tag before the gate or publication", async () => {
     const f = fixture({ published: true });
     await expect(
-      runCoreRelease(parseCoreReleaseArgs(["v1.0.0", "--dry-run"]), {
+      runCoreRelease(parseCoreReleaseArgs([VERSION, "--dry-run"]), {
         root: ROOT,
         run: f.run,
         request: f.request,
@@ -155,7 +260,7 @@ describe("minimal Core release", () => {
 
   test("completes a missing Release for an exact existing tag without pushing it again", async () => {
     const f = fixture({ tag: true });
-    const result = await runCoreRelease(parseCoreReleaseArgs(["v1.0.0"]), {
+    const result = await runCoreRelease(parseCoreReleaseArgs([VERSION]), {
       root: ROOT,
       run: f.run,
       request: f.request,
@@ -168,10 +273,10 @@ describe("minimal Core release", () => {
   test("refuses an occupied tag that points anywhere else", async () => {
     const f = fixture({
       tag: true,
-      tagCommit: "fedcba9876543210fedcba9876543210fedcba98",
+      tagCommit: OTHER_COMMIT,
     });
     await expect(
-      runCoreRelease(parseCoreReleaseArgs(["v1.0.0", "--dry-run"]), {
+      runCoreRelease(parseCoreReleaseArgs([VERSION, "--dry-run"]), {
         root: ROOT,
         run: f.run,
         request: f.request,
@@ -189,14 +294,15 @@ describe("minimal Core release", () => {
         f.calls.push({ command, args: [...args], options: { ...options } });
         return {
           status: 0,
-          stdout: `${tagObject}\trefs/tags/v1.0.0\n${COMMIT}\trefs/tags/v1.0.0^{}\n`,
+          stdout: `${tagObject}\trefs/tags/${VERSION}\n${COMMIT}\trefs/tags/${VERSION}^{}\n`,
           stderr: "",
         };
       }
       return defaultFixtureRun(command, args, options);
     };
-    const result = await verifyCoreRelease("v1.0.0", { root: ROOT, run: f.run, request: f.request });
+    const result = await verifyCoreRelease(VERSION, { root: ROOT, run: f.run, request: f.request });
     expect(result.tagCommit).toBe(COMMIT);
+    expect(result).not.toHaveProperty("expectedCommit");
     expect(f.calls.some((call) => call.command === "bun" || call.command === "gh")).toBe(false);
   });
 
@@ -210,7 +316,7 @@ describe("minimal Core release", () => {
       }
       return defaultFixtureRun(command, args, options);
     };
-    await verifyCoreRelease("v1.0.0", { root: ROOT, run: f.run, request: f.request });
+    await verifyCoreRelease(VERSION, { root: ROOT, run: f.run, request: f.request });
 
     const goCalls = f.calls.filter((call) => call.command === "go");
     expect(goCalls.map((call) => call.args)).toEqual([
@@ -222,7 +328,7 @@ describe("minimal Core release", () => {
     const temporaryRoot = dirname(consumerRoot);
     expect(consumerRoot).toBe(resolve(temporaryRoot, "consumer"));
     expect(consumerGoMod).toBe(
-      `module takoform.release/consumer\n\ngo 1.25.8\n\nrequire ${CORE_RELEASE.module} v1.0.0\n`,
+      `module takoform.release/consumer\n\ngo 1.25.8\n\nrequire ${CORE_RELEASE.module} ${VERSION}\n`,
     );
     expect(goCalls.every((call) => call.options.cwd === consumerRoot)).toBe(true);
     expect(goCalls.every((call) => call.options.env.GOPROXY === "https://proxy.golang.org,direct")).toBe(true);
@@ -246,7 +352,7 @@ describe("minimal Core release", () => {
     };
 
     await expect(
-      verifyCoreRelease("v1.0.0", { root: ROOT, run: f.run, request: f.request }),
+      verifyCoreRelease(VERSION, { root: ROOT, run: f.run, request: f.request }),
     ).rejects.toThrow("public consumer compile failed");
     const temporaryRoot = dirname(f.calls.find((call) => call.command === "go").options.cwd);
     expect(existsSync(temporaryRoot)).toBe(false);
@@ -264,9 +370,9 @@ describe("minimal Core release", () => {
     };
 
     await expect(
-      verifyCoreRelease("v1.0.0", { root: ROOT, run: f.run, request: f.request }),
+      verifyCoreRelease(VERSION, { root: ROOT, run: f.run, request: f.request }),
     ).rejects.toThrow(
-      `fresh public consumer resolved ${CORE_RELEASE.module}@v1.0.1; want ${CORE_RELEASE.module}@v1.0.0`,
+      `fresh public consumer resolved ${CORE_RELEASE.module}@v1.0.1; want ${CORE_RELEASE.module}@${VERSION}`,
     );
     expect(f.calls.some((call) => call.command === "go" && call.args[0] === "test")).toBe(false);
     const temporaryRoot = dirname(f.calls.find((call) => call.command === "go").options.cwd);
@@ -287,10 +393,45 @@ describe("minimal Core release", () => {
   test("verify rejects draft releases and missing source archive readback", async () => {
     const f = fixture({ published: true });
     for (const overrides of [{ draft: true }, { tarball_url: null }, { zipball_url: null }]) {
-      const request = async () => ({ status: 200, body: releaseBody("v1.0.0", overrides) });
-      await expect(verifyCoreRelease("v1.0.0", { root: ROOT, run: f.run, request })).rejects.toThrow(
-        "not one stable source release",
+      const request = async () => ({ status: 200, body: releaseBody(VERSION, overrides) });
+      await expect(verifyCoreRelease(VERSION, { root: ROOT, run: f.run, request })).rejects.toThrow(
+        "not one stable Core source release",
       );
     }
+  });
+
+  test("verify binds public tag readback to an explicit expected commit", async () => {
+    const f = fixture({ published: true, tagCommit: OTHER_COMMIT });
+    await expect(
+      verifyCoreRelease(VERSION, {
+        root: ROOT,
+        run: f.run,
+        request: f.request,
+        expectedCommit: COMMIT,
+      }),
+    ).rejects.toThrow("does not point to expected commit");
+    expect(f.calls.some((call) => call.command === "go")).toBe(false);
+  });
+
+  test("standalone verify remains valid from a newer local HEAD", async () => {
+    const f = fixture({ published: true, headCommit: OTHER_COMMIT });
+    const result = await verifyCoreRelease(VERSION, {
+      root: ROOT,
+      run: f.run,
+      request: f.request,
+    });
+    expect(result.tagCommit).toBe(COMMIT);
+    expect(result).not.toHaveProperty("expectedCommit");
+  });
+
+  test("verify rejects a GitHub Release with any other title", async () => {
+    const f = fixture({ published: true });
+    const request = async () => ({
+      status: 200,
+      body: releaseBody(VERSION, { name: "Takoform API 1.1.0" }),
+    });
+    await expect(verifyCoreRelease(VERSION, { root: ROOT, run: f.run, request })).rejects.toThrow(
+      "not one stable Core source release",
+    );
   });
 });

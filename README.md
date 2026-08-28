@@ -40,15 +40,18 @@ requires Host API v1, supports `create`, `read`, `delete`, `import`, and
 `RangeSequence` Form. It is a conformance fixture, not a built-in family or
 catalog entry.
 
-## Current API and model
+## Current Host API and Core artifact
 
-The current API/Core release is **1.0.1**. It uses the unchanged literal Host
-API v1 lane:
+The current Host API is the literal v1 lane:
 
 - discovery: `GET /.well-known/takoform/v1`;
 - API root: `/apis/forms.takoform.com/v1`;
 - wire contract: [`spec/host-api/v1.md`](spec/host-api/v1.md); and
 - generic corpus: [`conformance/takoform-v1/generic.json`](conformance/takoform-v1/generic.json).
+
+This source is distributed as the Core **v1.1.0** Go software/module artifact.
+That artifact SemVer identifies Core, not the Host protocol: there is no Host
+API v1.1, and the routes above remain unchanged.
 
 The normative model is split into:
 
@@ -80,13 +83,14 @@ Takoform has exactly two domain version axes:
 
 | Axis | Current identity | Meaning |
 | --- | --- | --- |
-| Takoform API release | `1.0.1` (wire major `forms.takoform.com/v1`) | API/Core compatibility checkpoint; only the major selects a wire lane |
+| Host API lane | `forms.takoform.com/v1` | Compatibility of the Host discovery and wire contract |
 | Form definition | each Form's `definitionVersion` | Compatibility of that Form's portable desired-state contract |
 
 A reverse-DNS Form group is a namespace, not a version. Package and schema
 `$id`, package digest, Interface/Binding ref, trust record, client release, and
 other evidence identify their own bytes or readers. The Go module
-`github.com/tako0614/takoform` uses tag `v1.0.1` for this API/Core release.
+`github.com/tako0614/takoform` uses `v1.1.0` as a software artifact identity;
+it is not a third domain version axis. There is no Host API v1.1.
 
 ## Publisher equality
 

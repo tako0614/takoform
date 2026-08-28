@@ -25,10 +25,10 @@ export const CORE_RELEASE = Object.freeze({
 });
 
 const ROOT = realpathSync(resolve(dirname(fileURLToPath(import.meta.url)), ".."));
-// API 1 and the Go module share one release line. A v0 tag would recreate the
-// abandoned pre-release Core stream; a v2 tag would be invalid until the wire
-// protocol and Go module both move through an explicit incompatible release.
-const CURRENT_API_SEMVER_TAG = /^v1\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)$/u;
+// This entrypoint owns the current v1 major of the Core Go module. It does not
+// version the Host API: the wire identity remains forms.takoform.com/v1, and a
+// Core v1.1.0 artifact never implies a Host API v1.1 lane.
+const CURRENT_CORE_MODULE_TAG = /^v1\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)$/u;
 const COMMIT = /^[0-9a-f]{40}$/u;
 const USAGE = "usage: bun run deploy -- core v1.MINOR.PATCH [--dry-run|--verify]";
 const PUBLIC_CONSUMER_TEST = `package consumer
@@ -66,8 +66,8 @@ function text(value) {
 export function parseCoreReleaseArgs(args) {
   if (args.length < 1 || args.length > 2) throw new Error(USAGE);
   const [version, option] = args;
-  if (!CURRENT_API_SEMVER_TAG.test(version)) {
-    throw new Error(`Core release tag must be exact SemVer on the current API v1 line: ${version}`);
+  if (!CURRENT_CORE_MODULE_TAG.test(version)) {
+    throw new Error(`Core module release tag must be exact stable SemVer on its current v1 line: ${version}`);
   }
   if (option !== undefined && option !== "--dry-run" && option !== "--verify") {
     throw new Error(USAGE);
@@ -95,6 +95,37 @@ function runChecked(run, command, args, options = {}) {
     throw new Error(`${command} ${args.join(" ")} failed${detail === "" ? "" : `: ${detail}`}`);
   }
   return text(result.stdout).trim();
+}
+
+function publicGitEnvironment() {
+  const env = { ...process.env };
+  for (const key of [
+    "GH_TOKEN",
+    "GITHUB_TOKEN",
+    "GIT_ASKPASS",
+    "GIT_CONFIG_PARAMETERS",
+    "GIT_SSH_COMMAND",
+    "GIT_SSH_VARIANT",
+    "SSH_ASKPASS",
+    "SSH_AUTH_SOCK",
+  ]) {
+    delete env[key];
+  }
+  return {
+    ...env,
+    GCM_INTERACTIVE: "never",
+    GIT_CONFIG_COUNT: "0",
+    GIT_CONFIG_GLOBAL: devNull,
+    GIT_CONFIG_NOSYSTEM: "1",
+    GIT_TERMINAL_PROMPT: "0",
+  };
+}
+
+function runPublicGit(run, args) {
+  return runChecked(run, "git", args, {
+    cwd: tmpdir(),
+    env: publicGitEnvironment(),
+  });
 }
 
 function assertRepository(root, run, { requireClean }) {
@@ -215,10 +246,9 @@ function verifyPublicGoModule({ version, run }) {
   }
 }
 
-function readPublicTag({ root, version, run }) {
-  const refs = runChecked(
+function readPublicTag({ version, run }) {
+  const refs = runPublicGit(
     run,
-    "git",
     [
       "ls-remote",
       "--tags",
@@ -226,9 +256,22 @@ function readPublicTag({ root, version, run }) {
       `refs/tags/${version}`,
       `refs/tags/${version}^{}`,
     ],
-    { cwd: root },
   );
   return refs === "" ? null : parseTagReadback(refs, version);
+}
+
+function readPublicMain(run) {
+  const raw = runPublicGit(run, [
+    "ls-remote",
+    "--heads",
+    CORE_RELEASE.publicOrigin,
+    "refs/heads/main",
+  ]);
+  const match = /^([0-9a-f]{40})\trefs\/heads\/main$/u.exec(raw);
+  if (!match) {
+    throw new Error("credential-free public refs/heads/main readback is missing or malformed");
+  }
+  return match[1];
 }
 
 async function assertReleaseMissing({ version, request }) {
@@ -270,6 +313,7 @@ function parseReleaseReadback(raw, version) {
     typeof release !== "object" ||
     Array.isArray(release) ||
     release.tag_name !== version ||
+    release.name !== `Takoform Core ${version}` ||
     release.draft !== false ||
     release.prerelease !== false ||
     typeof release.html_url !== "string" ||
@@ -279,34 +323,41 @@ function parseReleaseReadback(raw, version) {
     typeof release.zipball_url !== "string" ||
     !release.zipball_url.startsWith(`${CORE_RELEASE.githubApi}/repos/${CORE_RELEASE.githubRepository}/zipball/`)
   ) {
-    throw new Error(`public GitHub Release ${version} readback is not one stable source release`);
+    throw new Error(`public GitHub Release ${version} readback is not one stable Core source release`);
   }
   return release;
 }
 
 export async function verifyCoreRelease(version, options = {}) {
-  if (!CURRENT_API_SEMVER_TAG.test(version)) {
-    throw new Error(`Core release tag must be exact SemVer on the current API v1 line: ${version}`);
+  if (!CURRENT_CORE_MODULE_TAG.test(version)) {
+    throw new Error(`Core module release tag must be exact stable SemVer on its current v1 line: ${version}`);
   }
   const root = realpathSync(options.root ?? ROOT);
   const run = options.run ?? defaultRun;
   const request = options.request ?? defaultRequest;
   assertRepository(root, run, { requireClean: false });
+  const { expectedCommit } = options;
+  if (expectedCommit !== undefined && !COMMIT.test(expectedCommit)) {
+    throw new Error("Core release verification requires one exact expected Git commit");
+  }
 
-  const tagCommit = readPublicTag({ root, version, run });
+  const tagCommit = readPublicTag({ version, run });
   if (tagCommit === null) throw new Error(`public Git tag ${version} does not exist`);
+  if (expectedCommit !== undefined && tagCommit !== expectedCommit) {
+    throw new Error(
+      `public Git tag ${version} does not point to expected commit ${expectedCommit}`,
+    );
+  }
   const response = await request(releasePath(version));
   if (response.status !== 200) {
     throw new Error(`public GitHub Release ${version} readback failed with HTTP ${response.status}`);
   }
   const release = parseReleaseReadback(response.body, version);
-  if (options.expectedCommit !== undefined && tagCommit !== options.expectedCommit) {
-    throw new Error(`public Git tag ${version} does not point to the released commit`);
-  }
   const goModule = verifyPublicGoModule({ version, run });
   return Object.freeze({
     mode: "verify",
     version,
+    ...(expectedCommit === undefined ? {} : { expectedCommit }),
     tagCommit,
     goModule,
     releaseURL: release.html_url,
@@ -325,7 +376,14 @@ export async function runCoreRelease(parsed, options = {}) {
   }
 
   const commit = assertRepository(root, run, { requireClean: true });
-  const initialTag = readPublicTag({ root, version: parsed.version, run });
+  const publicMainCommit = readPublicMain(run);
+  const publicMainMatchesHead = publicMainCommit === commit;
+  if (parsed.mode === "publish" && !publicMainMatchesHead) {
+    throw new Error(
+      `Core publish HEAD ${commit} must already equal credential-free public refs/heads/main ${publicMainCommit}`,
+    );
+  }
+  const initialTag = readPublicTag({ version: parsed.version, run });
   if (initialTag !== null && initialTag !== commit) {
     throw new Error(`Core tag ${parsed.version} already names another commit; releases are never overwritten`);
   }
@@ -337,16 +395,25 @@ export async function runCoreRelease(parsed, options = {}) {
       mode: "dry-run",
       version: parsed.version,
       commit,
+      publicMainCommit,
+      publicMainMatchesHead,
       tag: initialTag === null ? "missing" : "existing-exact",
-      ready: true,
+      gatePassed: true,
+      publishReady: publicMainMatchesHead,
     });
   }
 
   // Re-read both public names after the gate. The create operation has no
   // update/delete counterpart here, so a concurrent or previous release is a
   // hard refusal rather than an overwrite path.
+  const confirmedPublicMainCommit = readPublicMain(run);
+  if (confirmedPublicMainCommit !== commit) {
+    throw new Error(
+      `credential-free public refs/heads/main changed after the owner gate: received ${confirmedPublicMainCommit}; want ${commit}`,
+    );
+  }
   await assertReleaseMissing({ version: parsed.version, request });
-  let tagCommit = readPublicTag({ root, version: parsed.version, run });
+  let tagCommit = readPublicTag({ version: parsed.version, run });
   if (tagCommit === null) {
     runChecked(
       run,
@@ -354,7 +421,7 @@ export async function runCoreRelease(parsed, options = {}) {
       ["push", "origin", `${commit}:refs/tags/${parsed.version}`],
       { cwd: root, inherit: true },
     );
-    tagCommit = readPublicTag({ root, version: parsed.version, run });
+    tagCommit = readPublicTag({ version: parsed.version, run });
   }
   if (tagCommit !== commit) {
     throw new Error(`public Git tag ${parsed.version} does not point to the released commit`);
@@ -369,7 +436,7 @@ export async function runCoreRelease(parsed, options = {}) {
       "--repo",
       CORE_RELEASE.githubRepository,
       "--title",
-      `Takoform API ${parsed.version.slice(1)}`,
+      `Takoform Core ${parsed.version}`,
       "--generate-notes",
       "--verify-tag",
     ],

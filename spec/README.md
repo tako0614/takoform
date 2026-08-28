@@ -4,15 +4,18 @@ This is the family-neutral contract map for portable identities, data-only Form
 Packages, immutable Snapshot compilation, Host lifecycle messages, trust
 inputs, and conformance language.
 
-## Current API and Core
+## Current Host API and Core
 
-The current API/Core release is **1.0.1**. It uses the unchanged literal Host
-API v1 lane:
+The current Host API is the unchanged literal v1 lane:
 
 - discovery: `GET /.well-known/takoform/v1`;
 - API root: `/apis/forms.takoform.com/v1`;
 - wire contract: [`host-api/v1.md`](host-api/v1.md); and
 - generic corpus: [`../conformance/takoform-v1/generic.json`](../conformance/takoform-v1/generic.json).
+
+The Core implementation in this source is distributed as the **v1.1.0** Go
+software/module artifact. Core SemVer is not a Host API identity: no Host API
+v1.1 exists, and the v1 discovery and API roots remain exact.
 
 The checked-in `CounterReservation` package, exact FormRef, and runnable verify
 output are introduced in the [repository example](../README.md#a-checked-in-form-example).

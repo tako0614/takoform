@@ -82,7 +82,7 @@ describe("sealed W09 history and platform-neutral schema records", () => {
     );
   });
 
-  test("API 1.0.0 machine wire bytes remain identical to the W09 compatibility pin", () => {
+  test("Host API v1 machine wire bytes remain identical to the W09 compatibility pin", () => {
     expect(
       validateHostAPIV1MachinePin(
         specificationCompatibility,
@@ -94,7 +94,7 @@ describe("sealed W09 history and platform-neutral schema records", () => {
     expect(
       validateHostAPIV1MachinePin(specificationCompatibility, changed),
     ).toContain(
-      `current API 1.0.0 machine bytes differ from the W09 pin at ${hostAPIV1MachinePaths[0]}`,
+      `current Host API v1 machine bytes differ from the W09 baseline pin at ${hostAPIV1MachinePaths[0]}`,
     );
   });
 

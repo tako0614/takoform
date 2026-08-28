@@ -1,13 +1,14 @@
 # Publication and change policy
 
-The current API/Core release is **1.0.1** on the unchanged literal Host API v1
-lane, `forms.takoform.com/v1`. The matching Go module tag is `v1.0.1`.
+The current Host API lane is the literal `forms.takoform.com/v1`. Core
+**v1.1.0** is a separate Go software/module artifact identity; it changes no
+Host discovery or route, and there is no Host API v1.1.
 
 Takoform has exactly two domain version axes:
 
 | Axis | Meaning |
 | --- | --- |
-| API release SemVer | API/Core compatibility checkpoint; only the major selects a wire lane |
+| Host API lane | Compatibility of one exact discovery and wire-contract major |
 | Form `definitionVersion` | Compatibility of one Form's portable desired-state contract |
 
 Form groups are namespaces. Package, schema, Interface/Binding, trust, client,
@@ -42,7 +43,7 @@ identities are never overwritten, retagged, or silently relabelled; a breaking
 change receives a new exact identity and the append-only ledgers retain the
 predecessor.
 
-The current API/Core source and the Host API v1 wire remain separate from Form
+The Core artifact release and the Host API v1 wire remain separate from Form
 maturity, package publication, Host support, client releases, and commercial
 Offering decisions. A green `bun run check` validates the repository; it does
 not publish, sign, install, activate, deploy, or mutate a Resource.
