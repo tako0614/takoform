@@ -73,6 +73,23 @@ describe("current documentation boundary", () => {
     expect(inspectDocs(entries)).toEqual([]);
   });
 
+  test("checks current-applicability overlays without rewriting historical decision bodies", () => {
+    const entries = baseEntries();
+    entries.set(
+      "spec/decisions/old.md",
+      "# Old decision\n\n> Current applicability: current authoring has the Takoform API\n> release SemVer.\n\n## Historical body\nThe Takoform API release SemVer was adopted here.\n",
+    );
+    expect(inspectDocs(entries)).toEqual([
+      "spec/decisions/old.md:3 retains a superseded API SemVer axis in a current-applicability overlay: Takoform API release SemVer",
+    ]);
+
+    entries.set(
+      "spec/decisions/old.md",
+      "# Old decision\n\n> Current applicability: the domain axes are the literal Host API lane and each Form's definitionVersion.\n\n## Historical body\nThe Takoform API release SemVer was adopted here.\n",
+    );
+    expect(inspectDocs(entries)).toEqual([]);
+  });
+
   test("checks links in historical decisions and retained Host docs", () => {
     const entries = baseEntries();
     entries.set(

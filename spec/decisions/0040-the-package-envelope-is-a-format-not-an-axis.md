@@ -3,13 +3,13 @@
 - Status: Accepted
 - Date: 2026-08-22
 
-> Current applicability (2026-08-27): the envelope-format conclusion remains
+> Current applicability (2026-08-28): the envelope-format conclusion remains
 > current. The final paragraph's three-axis inventory is superseded by
-> [`../versioning.md`](../versioning.md): Takoform now has only the Takoform API
-> release SemVer (with only its major on the wire) and per-Form
-> `definitionVersion` as domain axes. Provider SemVer is a client artifact
-> release identity; Interface/Binding identities are digest-bound contract
-> artifacts whose Form-owned compatibility follows the Form version.
+> [`../versioning.md`](../versioning.md): Takoform now has only the literal Host
+> API wire lane and per-Form `definitionVersion` as domain axes. Core and
+> Provider SemVer are software artifact release identities; Interface/Binding
+> identities are digest-bound contract artifacts whose Form-owned
+> compatibility follows the Form version.
 
 ## Context
 

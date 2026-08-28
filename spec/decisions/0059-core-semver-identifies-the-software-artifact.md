@@ -35,14 +35,26 @@ under `/apis/forms.takoform.com/v1`. There is no Host API v1.1. A future Host
 wire major and a future Core module major require their own compatibility
 decisions and are not required to use the same number.
 
-The Core release entrypoint publishes the module tag and a GitHub Release titled
-exactly `Takoform Core v1.1.0`. Publish mode requires local HEAD to equal a
-credential-free read of public `refs/heads/main` before and after the owner
-gate. Dry-run may validate a reviewed branch, but reports the main mismatch and
-does not call it publish-ready. The post-publication verifier binds readback to
-the exact candidate commit. Standalone historical verification instead checks
-the immutable tag, exact-title Release, source archives, and public Go module
-as one self-consistent identity, so it remains useful after main advances.
+The Core release entrypoint publishes the module tag and, for v1.1.0, a GitHub
+Release titled exactly `Takoform Core v1.1.0`. Creating a new tag requires local
+HEAD to equal a credential-free read of public `refs/heads/main` before and
+after the owner gate. Dry-run may validate a reviewed branch, but reports the
+main mismatch and does not call new-tag creation publish-ready.
+
+If tag creation succeeded but Release creation did not, reconciliation is a
+separate Release-only action. It requires clean HEAD to equal the exact public
+tag, proves that the Release is absent before and after the gate, and re-reads
+the unchanged tag. Public main may have advanced because this path creates no
+Git identity and never retags or overwrites one. A newer-main checkout cannot
+reconcile an older tag because its HEAD does not equal that tag commit.
+
+The post-publication verifier binds readback to the exact candidate commit.
+Standalone historical verification instead checks the immutable tag,
+version-specific exact-title Release, source archives, and public Go module as
+one self-consistent identity, so it remains useful after main advances. The
+occupied v1.0.0 and v1.0.1 titles remain `Takoform API 1.0.0` and
+`Takoform API 1.0.1`; v1.1.0 and later use `Takoform Core v...`. Retaining
+historical titles does not restore API SemVer as a current domain axis.
 
 Decision 0058 remains historical evidence of the earlier aligned release
 model, but its decision and consequences are superseded by this one.
@@ -56,5 +68,8 @@ model, but its decision and consequences are superseded by this one.
   or a Host wire version.
 - An immutable Core publication cannot be created from a commit that has not
   already appeared as credential-free public main.
+- An interrupted publication can add only the missing Release from the exact
+  tagged checkout; it cannot use newer main, recreate the tag, or move it.
 - Historical verification is independent of the repository's later HEAD,
-  while publication verification remains pinned to the candidate commit.
+  preserves occupied release titles, and keeps publication verification pinned
+  to the candidate commit.

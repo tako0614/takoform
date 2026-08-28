@@ -25,15 +25,15 @@ export const DEPLOY_CONTRACT = Object.freeze({
       triggers: Object.freeze(["published-identity"]),
       obligations: Object.freeze({
         provenance:
-          "publishes one Core software/module artifact while the Host API remains forms.takoform.com/v1 (there is no Host API v1.1); refuses a dirty worktree or wrong module/origin; requires exact HEAD to equal credential-free public refs/heads/main; and runs the complete owner gate before creating either public identity",
+          "publishes one Core software/module artifact while the Host API remains forms.takoform.com/v1 (there is no Host API v1.1); refuses a dirty worktree or wrong module/origin; requires new tag creation HEAD to equal credential-free public refs/heads/main before and after the owner gate; and permits Release-only reconciliation solely from clean HEAD equal to the existing exact public tag",
         "post-conditions":
-          "binds publication verification and public readback to the expected candidate commit; reads the public Git tag and exact-title, non-draft, non-prerelease GitHub Release back; then writes an exact require in a fresh temporary Go module, runs go mod tidy with GOPROXY=https://proxy.golang.org,direct and fresh sibling caches, confirms the exact resolved module, and tests representative public Core packages before removing all temporary state",
+          "binds publication verification and public readback to the expected candidate commit; reads the public Git tag and version-specific exact-title, non-draft, non-prerelease GitHub Release back; then writes an exact require in a fresh temporary Go module, runs go mod tidy with GOPROXY=https://proxy.golang.org,direct and fresh sibling caches, confirms the exact resolved module, and tests representative public Core packages before removing all temporary state",
         reversal:
           "the tag and GitHub Release are immutable consumer identities and are not rolled back in place; a bad publication is repaired only with a later compatible version",
         "failure-handling":
-          "preserves command diagnostics, refuses failed or indeterminate readback, never overwrites or blindly retries, and can reconcile an exact tag whose matching Release is still absent",
+          "preserves command diagnostics, refuses failed or indeterminate readback, never overwrites or blindly retries, and can reconcile an exact tag whose matching Release is proven absent before and after the owner gate even after public main advances",
         "no-overwrite":
-          "checks credential-free public main plus public tag and Release state before the owner gate, rechecks main and publication state after it, rejects any conflicting or existing Release, and uses only ordinary create operations without force, edit, delete, or retag paths",
+          "reads the exact public tag before evaluating main, re-reads the action-specific tag/main state and Release absence after the owner gate, rejects any changed or conflicting tag and any existing Release, and uses only ordinary create operations without force, edit, delete, or retag paths",
       }),
     }),
   ]),

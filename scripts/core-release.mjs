@@ -30,6 +30,12 @@ const ROOT = realpathSync(resolve(dirname(fileURLToPath(import.meta.url)), "..")
 // Core v1.1.0 artifact never implies a Host API v1.1 lane.
 const CURRENT_CORE_MODULE_TAG = /^v1\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)$/u;
 const COMMIT = /^[0-9a-f]{40}$/u;
+// These already-public titles are immutable read-compatibility facts. They do
+// not restore API SemVer as a current domain version axis.
+const HISTORICAL_RELEASE_TITLES = Object.freeze({
+  "v1.0.0": "Takoform API 1.0.0",
+  "v1.0.1": "Takoform API 1.0.1",
+});
 const USAGE = "usage: bun run deploy -- core v1.MINOR.PATCH [--dry-run|--verify]";
 const PUBLIC_CONSUMER_TEST = `package consumer
 
@@ -177,6 +183,10 @@ function releasePath(version) {
   return `/repos/${CORE_RELEASE.githubRepository}/releases/tags/${encodeURIComponent(version)}`;
 }
 
+function expectedReleaseTitle(version) {
+  return HISTORICAL_RELEASE_TITLES[version] ?? `Takoform Core ${version}`;
+}
+
 function verifyPublicGoModule({ version, run }) {
   const temporaryRoot = mkdtempSync(join(tmpdir(), "takoform-release-consumer-"));
   const consumerRoot = join(temporaryRoot, "consumer");
@@ -313,7 +323,7 @@ function parseReleaseReadback(raw, version) {
     typeof release !== "object" ||
     Array.isArray(release) ||
     release.tag_name !== version ||
-    release.name !== `Takoform Core ${version}` ||
+    release.name !== expectedReleaseTitle(version) ||
     release.draft !== false ||
     release.prerelease !== false ||
     typeof release.html_url !== "string" ||
@@ -376,16 +386,18 @@ export async function runCoreRelease(parsed, options = {}) {
   }
 
   const commit = assertRepository(root, run, { requireClean: true });
-  const publicMainCommit = readPublicMain(run);
-  const publicMainMatchesHead = publicMainCommit === commit;
-  if (parsed.mode === "publish" && !publicMainMatchesHead) {
-    throw new Error(
-      `Core publish HEAD ${commit} must already equal credential-free public refs/heads/main ${publicMainCommit}`,
-    );
-  }
   const initialTag = readPublicTag({ version: parsed.version, run });
   if (initialTag !== null && initialTag !== commit) {
     throw new Error(`Core tag ${parsed.version} already names another commit; releases are never overwritten`);
+  }
+  const publicationAction = initialTag === null ? "create" : "reconcile-existing-tag";
+  const publicMainCommit = readPublicMain(run);
+  const publicMainMatchesHead = publicMainCommit === commit;
+  const publishReady = publicationAction === "reconcile-existing-tag" || publicMainMatchesHead;
+  if (parsed.mode === "publish" && !publishReady) {
+    throw new Error(
+      `Core tag creation HEAD ${commit} must already equal credential-free public refs/heads/main ${publicMainCommit}`,
+    );
   }
   await assertReleaseMissing({ version: parsed.version, request });
   runChecked(run, "bun", ["run", "check"], { cwd: root, inherit: true });
@@ -397,24 +409,32 @@ export async function runCoreRelease(parsed, options = {}) {
       commit,
       publicMainCommit,
       publicMainMatchesHead,
+      publicationAction,
       tag: initialTag === null ? "missing" : "existing-exact",
       gatePassed: true,
-      publishReady: publicMainMatchesHead,
+      publishReady,
     });
   }
 
-  // Re-read both public names after the gate. The create operation has no
-  // update/delete counterpart here, so a concurrent or previous release is a
-  // hard refusal rather than an overwrite path.
-  const confirmedPublicMainCommit = readPublicMain(run);
-  if (confirmedPublicMainCommit !== commit) {
-    throw new Error(
-      `credential-free public refs/heads/main changed after the owner gate: received ${confirmedPublicMainCommit}; want ${commit}`,
-    );
+  // New tag creation remains pinned to public main before and after the gate.
+  // Reconciliation creates no Git identity, so it remains anchored to the
+  // already-public exact tag even when main has advanced.
+  if (publicationAction === "create") {
+    const confirmedPublicMainCommit = readPublicMain(run);
+    if (confirmedPublicMainCommit !== commit) {
+      throw new Error(
+        `credential-free public refs/heads/main changed after the owner gate: received ${confirmedPublicMainCommit}; want ${commit}`,
+      );
+    }
   }
   await assertReleaseMissing({ version: parsed.version, request });
   let tagCommit = readPublicTag({ version: parsed.version, run });
-  if (tagCommit === null) {
+  if (publicationAction === "reconcile-existing-tag" && tagCommit !== commit) {
+    throw new Error(
+      `public Git tag ${parsed.version} changed after the owner gate; reconciliation never creates or changes tags`,
+    );
+  }
+  if (publicationAction === "create" && tagCommit === null) {
     runChecked(
       run,
       "git",
@@ -436,7 +456,7 @@ export async function runCoreRelease(parsed, options = {}) {
       "--repo",
       CORE_RELEASE.githubRepository,
       "--title",
-      `Takoform Core ${parsed.version}`,
+      expectedReleaseTitle(parsed.version),
       "--generate-notes",
       "--verify-tag",
     ],

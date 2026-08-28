@@ -42,6 +42,12 @@ describe("Takoform deploy entrypoint", () => {
       "credential-free public refs/heads/main",
     );
     expect(DEPLOY_CONTRACT.surfaces[0].obligations.provenance).toContain(
+      "new tag creation",
+    );
+    expect(DEPLOY_CONTRACT.surfaces[0].obligations.provenance).toContain(
+      "clean HEAD equal to the existing exact public tag",
+    );
+    expect(DEPLOY_CONTRACT.surfaces[0].obligations.provenance).toContain(
       "Core software/module artifact",
     );
     expect(DEPLOY_CONTRACT.surfaces[0].obligations.provenance).toContain(
@@ -49,6 +55,15 @@ describe("Takoform deploy entrypoint", () => {
     );
     expect(DEPLOY_CONTRACT.surfaces[0].obligations["post-conditions"]).toContain(
       "expected candidate commit",
+    );
+    expect(DEPLOY_CONTRACT.surfaces[0].obligations["post-conditions"]).toContain(
+      "version-specific exact-title",
+    );
+    expect(DEPLOY_CONTRACT.surfaces[0].obligations["failure-handling"]).toContain(
+      "after public main advances",
+    );
+    expect(DEPLOY_CONTRACT.surfaces[0].obligations["no-overwrite"]).toContain(
+      "reads the exact public tag before evaluating main",
     );
   });
 

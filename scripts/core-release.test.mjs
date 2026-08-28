@@ -33,13 +33,18 @@ function fixture({
   published = false,
   tag = published,
   tagCommit = COMMIT,
+  tagReadbacks,
   headCommit = COMMIT,
   mainCommits = [COMMIT],
+  version = VERSION,
+  releaseTitle = `Takoform Core ${version}`,
 } = {}) {
   const calls = [];
   let tagCreated = tag;
   let releaseCreated = published;
   let mainRead = 0;
+  let tagRead = 0;
+  const releaseRequests = [];
   const run = (command, args, options = {}) => {
     calls.push({ command, args: [...args], options: { ...options } });
     if (command === "git" && args.join(" ") === "rev-parse --show-toplevel") {
@@ -68,9 +73,14 @@ function fixture({
     }
     if (command === "git" && args[0] === "ls-remote" && args[1] === "--tags") {
       const version = args[3].slice("refs/tags/".length);
+      let readback = tagCreated ? tagCommit : null;
+      if (tagReadbacks !== undefined) {
+        readback = tagReadbacks[Math.min(tagRead, tagReadbacks.length - 1)];
+      }
+      tagRead += 1;
       return {
         status: 0,
-        stdout: tagCreated ? `${tagCommit}\trefs/tags/${version}\n` : "",
+        stdout: readback === null ? "" : `${readback}\trefs/tags/${version}\n`,
         stderr: "",
       };
     }
@@ -90,18 +100,21 @@ function fixture({
       return { status: 0, stdout: "", stderr: "" };
     }
     if (command === "go" && args[0] === "list") {
-      return { status: 0, stdout: `${CORE_RELEASE.module}@${VERSION}\n`, stderr: "" };
+      return { status: 0, stdout: `${CORE_RELEASE.module}@${version}\n`, stderr: "" };
     }
     if (command === "go" && args[0] === "test") {
       return { status: 0, stdout: "ok\n", stderr: "" };
     }
     throw new Error(`unexpected command: ${command} ${args.join(" ")}`);
   };
-  const request = async () => ({
-    status: releaseCreated ? 200 : 404,
-    body: releaseCreated ? releaseBody(VERSION) : "Not Found",
-  });
-  return { calls, run, request };
+  const request = async () => {
+    releaseRequests.push(releaseCreated);
+    return {
+      status: releaseCreated ? 200 : 404,
+      body: releaseCreated ? releaseBody(version, { name: releaseTitle }) : "Not Found",
+    };
+  };
+  return { calls, releaseRequests, run, request };
 }
 
 describe("minimal Core release", () => {
@@ -128,6 +141,7 @@ describe("minimal Core release", () => {
       commit: COMMIT,
       publicMainCommit: COMMIT,
       publicMainMatchesHead: true,
+      publicationAction: "create",
       tag: "missing",
       gatePassed: true,
       publishReady: true,
@@ -151,9 +165,32 @@ describe("minimal Core release", () => {
       commit: COMMIT,
       publicMainCommit: OTHER_COMMIT,
       publicMainMatchesHead: false,
+      publicationAction: "create",
       tag: "missing",
       gatePassed: true,
       publishReady: false,
+    });
+    expect(f.calls.some((call) => call.command === "gh" || call.args[0] === "push")).toBe(false);
+  });
+
+  test("dry-run identifies an exact existing-tag reconciliation as publish-ready after main advances", async () => {
+    const f = fixture({ tag: true, mainCommits: [OTHER_COMMIT] });
+    expect(
+      await runCoreRelease(parseCoreReleaseArgs([VERSION, "--dry-run"]), {
+        root: ROOT,
+        run: f.run,
+        request: f.request,
+      }),
+    ).toEqual({
+      mode: "dry-run",
+      version: VERSION,
+      commit: COMMIT,
+      publicMainCommit: OTHER_COMMIT,
+      publicMainMatchesHead: false,
+      publicationAction: "reconcile-existing-tag",
+      tag: "existing-exact",
+      gatePassed: true,
+      publishReady: true,
     });
     expect(f.calls.some((call) => call.command === "gh" || call.args[0] === "push")).toBe(false);
   });
@@ -170,6 +207,7 @@ describe("minimal Core release", () => {
       (call) => call.command === "git" && call.args[0] === "ls-remote",
     );
     expect(publicReads).toHaveLength(2);
+    expect(publicReads.map((call) => call.args[1])).toEqual(["--tags", "--heads"]);
     for (const call of publicReads) {
       expect(call.args).toContain(CORE_RELEASE.publicOrigin);
       expect(call.options.cwd).not.toBe(ROOT);
@@ -258,8 +296,8 @@ describe("minimal Core release", () => {
     expect(f.calls.some((call) => call.command === "bun" || call.command === "gh")).toBe(false);
   });
 
-  test("completes a missing Release for an exact existing tag without pushing it again", async () => {
-    const f = fixture({ tag: true });
+  test("reconciles a missing Release from the tagged commit after public main advances", async () => {
+    const f = fixture({ tag: true, mainCommits: [OTHER_COMMIT] });
     const result = await runCoreRelease(parseCoreReleaseArgs([VERSION]), {
       root: ROOT,
       run: f.run,
@@ -268,6 +306,71 @@ describe("minimal Core release", () => {
     expect(result.tagCommit).toBe(COMMIT);
     expect(f.calls.some((call) => call.command === "git" && call.args[0] === "push")).toBe(false);
     expect(f.calls.filter((call) => call.command === "gh")).toHaveLength(1);
+    expect(f.releaseRequests).toEqual([false, false, true]);
+    expect(
+      f.calls.filter(
+        (call) =>
+          call.command === "git" &&
+          call.args.join(" ") ===
+            `ls-remote --heads ${CORE_RELEASE.publicOrigin} refs/heads/main`,
+      ),
+    ).toHaveLength(1);
+  });
+
+  test("newer public main cannot reconcile a tag that names the older candidate", async () => {
+    const f = fixture({
+      tag: true,
+      tagCommit: COMMIT,
+      headCommit: OTHER_COMMIT,
+      mainCommits: [OTHER_COMMIT],
+    });
+    await expect(
+      runCoreRelease(parseCoreReleaseArgs([VERSION]), {
+        root: ROOT,
+        run: f.run,
+        request: f.request,
+      }),
+    ).rejects.toThrow("already names another commit");
+    expect(f.calls.some((call) => call.command === "bun" || call.command === "gh")).toBe(false);
+    expect(
+      f.calls.some(
+        (call) => call.command === "git" && call.args.includes("refs/heads/main"),
+      ),
+    ).toBe(false);
+  });
+
+  test("reconciliation refuses if the exact public tag changes after the gate", async () => {
+    const f = fixture({
+      tag: true,
+      tagReadbacks: [COMMIT, OTHER_COMMIT],
+      mainCommits: [OTHER_COMMIT],
+    });
+    await expect(
+      runCoreRelease(parseCoreReleaseArgs([VERSION]), {
+        root: ROOT,
+        run: f.run,
+        request: f.request,
+      }),
+    ).rejects.toThrow("changed after the owner gate");
+    expect(f.calls.some((call) => call.command === "git" && call.args[0] === "push")).toBe(false);
+    expect(f.calls.some((call) => call.command === "gh")).toBe(false);
+  });
+
+  test("reconciliation never recreates a public tag that disappears after the gate", async () => {
+    const f = fixture({
+      tag: true,
+      tagReadbacks: [COMMIT, null],
+      mainCommits: [OTHER_COMMIT],
+    });
+    await expect(
+      runCoreRelease(parseCoreReleaseArgs([VERSION]), {
+        root: ROOT,
+        run: f.run,
+        request: f.request,
+      }),
+    ).rejects.toThrow("changed after the owner gate");
+    expect(f.calls.some((call) => call.command === "git" && call.args[0] === "push")).toBe(false);
+    expect(f.calls.some((call) => call.command === "gh")).toBe(false);
   });
 
   test("refuses an occupied tag that points anywhere else", async () => {
@@ -422,6 +525,24 @@ describe("minimal Core release", () => {
     });
     expect(result.tagCommit).toBe(COMMIT);
     expect(result).not.toHaveProperty("expectedCommit");
+  });
+
+  test.each([
+    ["v1.0.0", "Takoform API 1.0.0"],
+    ["v1.0.1", "Takoform API 1.0.1"],
+  ])("verify preserves the immutable historical title for %s", async (version, releaseTitle) => {
+    const f = fixture({ published: true, version, releaseTitle });
+    const result = await verifyCoreRelease(version, {
+      root: ROOT,
+      run: f.run,
+      request: f.request,
+    });
+    expect(result).toMatchObject({
+      version,
+      tagCommit: COMMIT,
+      goModule: `${CORE_RELEASE.module}@${version}`,
+      releaseURL: `https://github.com/${CORE_RELEASE.githubRepository}/releases/tag/${version}`,
+    });
   });
 
   test("verify rejects a GitHub Release with any other title", async () => {

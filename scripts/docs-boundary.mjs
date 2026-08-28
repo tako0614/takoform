@@ -63,6 +63,7 @@ const hostApi11Token =
 
 const takoformApiSemverToken =
   /\bTakoform API\s+(?:v)?(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\b/iu;
+const staleCurrentAxisToken = /\bTakoform API release SemVer\b/iu;
 
 const ambiguousPostSpecificationToken = /\bpost-1\.1\b/iu;
 const unreleasedDraftToken = /\bunreleased\s+draft\b/iu;
@@ -215,6 +216,36 @@ function checkVocabulary(path, content, problems) {
   }
 }
 
+function checkDecisionCurrentApplicability(path, content, problems) {
+  if (!path.startsWith("spec/decisions/")) return;
+  const lines = content.replace(/\r\n?/gu, "\n").split("\n");
+  let overlayLines = [];
+  let overlayStart = 0;
+  const flushOverlay = () => {
+    if (overlayLines.length === 0) return;
+    const overlay = overlayLines.map((line) => line.replace(/^>\s?/u, "")).join(" ");
+    for (const staleAxis of matchesInLine(overlay, staleCurrentAxisToken)) {
+      problems.push(
+        `${path}:${overlayStart} retains a superseded API SemVer axis in a current-applicability overlay: ${staleAxis[0]}`,
+      );
+    }
+    overlayLines = [];
+  };
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (/^>\s*Current applicability\b/iu.test(line)) {
+      flushOverlay();
+      overlayStart = index + 1;
+      overlayLines.push(line);
+    } else if (overlayLines.length > 0 && /^>/u.test(line)) {
+      overlayLines.push(line);
+    } else if (overlayLines.length > 0) {
+      flushOverlay();
+    }
+  }
+  flushOverlay();
+}
+
 function stripLinkTarget(raw) {
   const value = raw.trim();
   if (value.startsWith("<") && value.endsWith(">")) return value.slice(1, -1);
@@ -280,6 +311,7 @@ export function inspectDocs(entries) {
     if (!isCurrentDoc(path)) continue;
     const content = String(map.get(path) ?? "");
     if (!isLinkExcludedDoc(path)) checkLocalLinks(path, content, map, problems);
+    checkDecisionCurrentApplicability(path, content, problems);
     if (!isVocabularyExcludedDoc(path)) checkVocabulary(path, content, problems);
   }
   return problems;
