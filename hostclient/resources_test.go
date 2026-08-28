@@ -216,8 +216,10 @@ func TestGetResourceCapturesRevisionETag(t *testing.T) {
 	spec := map[string]any{"image": "example"}
 	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) bool {
 		if r.Method == http.MethodGet && r.URL.EscapedPath() == splitGroupResourcePath("app", "") {
-			if r.URL.Query().Get("group") != testGroup {
-				t.Errorf("read query must carry group, got %v", r.URL.Query())
+			q := r.URL.Query()
+			if len(q) != 3 || q.Get("space") != testSpace || q.Get("definitionVersion") != testRef.DefinitionVersion ||
+				q.Get("schemaDigest") != testRef.SchemaDigest || q.Has("group") || q.Has("kind") {
+				t.Errorf("read query must carry only path-complement identity, got %v", q)
 			}
 			w.Header().Set("ETag", `"12"`)
 			writeJSON(t, w, http.StatusOK, wireResource("app", "uid-1", "2", "12", spec))
@@ -304,8 +306,10 @@ func TestDeleteResourceGenerationFence(t *testing.T) {
 			if r.Header.Get("Idempotency-Key") == "" {
 				t.Errorf("delete must send an Idempotency-Key")
 			}
-			if r.URL.Query().Get("group") != testGroup {
-				t.Errorf("delete query must carry the exact FormRef, got %v", r.URL.Query())
+			q := r.URL.Query()
+			if len(q) != 3 || q.Get("space") != testSpace || q.Get("definitionVersion") != testRef.DefinitionVersion ||
+				q.Get("schemaDigest") != testRef.SchemaDigest || q.Has("group") || q.Has("kind") {
+				t.Errorf("delete query must carry only path-complement identity, got %v", q)
 			}
 			w.WriteHeader(http.StatusNoContent)
 			return true
