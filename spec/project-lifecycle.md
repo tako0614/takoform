@@ -156,6 +156,13 @@ Security revocation is separate and append-only as defined by
 the referenced bytes remain available for observation, deletion, recovery, or
 an explicit operator evacuation path.
 
+A publisher's verified, signed sequence-zero revocation genesis proves only
+that its authenticated current revocation set is empty at that checkpoint. It
+does not publish a package, establish publisher trust, promote Form maturity,
+assert Host Support, activate a Form, provision a Resource, or create a Service
+Offering. An absent, unsigned, or merely schema-valid genesis proves none of
+those facts and cannot authorize `CheckNotRevoked`.
+
 Retained release identities and their exact source records are documented in
 [`versioning.md`](versioning.md); this lifecycle record does not reinterpret
 those bytes as current maturity evidence.

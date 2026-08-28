@@ -9,6 +9,7 @@ import {
   validateRetiredWriterHistory,
   validateSchemaLedgerShape,
   validateSpecificationLedger,
+  validateTrustProfile,
 } from "./records.mjs";
 
 const hostAPIV1MachinePaths = [
@@ -23,6 +24,9 @@ const specification = JSON.parse(
 );
 const schemas = JSON.parse(
   readFileSync(new URL("../release/public-schema-identities.json", import.meta.url)),
+);
+const trustProfile = JSON.parse(
+  readFileSync(new URL("../spec/trust/profile.json", import.meta.url)),
 );
 const combinedChain = JSON.parse(
   readFileSync(new URL("../release/record-prefix-chain.json", import.meta.url)),
@@ -108,6 +112,16 @@ describe("sealed W09 history and platform-neutral schema records", () => {
         "imported 15-entry verify-only schema prefix changed or was removed",
       ]),
     );
+  });
+
+  test("the Core trust profile pins provenance claims and signed genesis semantics", () => {
+    expect(validateTrustProfile(trustProfile)).toEqual([]);
+    const callerFallback = structuredClone(trustProfile);
+    callerFallback.signature.verifiedCertificateCommits.callerSuppliedFallback = true;
+    expect(validateTrustProfile(callerFallback)).not.toEqual([]);
+    const unsignedGenesis = structuredClone(trustProfile);
+    unsignedGenesis.revocation.genesis.signatureRequired = false;
+    expect(validateTrustProfile(unsignedGenesis)).not.toEqual([]);
   });
 
   test("the imported combined head remains independently signed", () => {

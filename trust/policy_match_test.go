@@ -40,10 +40,13 @@ func TestDistinctPublisherPoliciesUseTheSameExactCertificateMatcher(t *testing.T
 			actual := certificate.Summary{
 				SubjectAlternativeName: policy.Identity(),
 				Extensions: certificate.Extensions{
-					Issuer:              policy.OIDCIssuer,
-					SourceRepositoryURI: policy.SourceRepository,
-					SourceRepositoryRef: policy.Ref,
-					BuildSignerURI:      policy.Identity(),
+					Issuer:                 policy.OIDCIssuer,
+					SourceRepositoryURI:    policy.SourceRepository,
+					SourceRepositoryRef:    policy.Ref,
+					BuildSignerURI:         policy.Identity(),
+					SourceRepositoryDigest: "1111111111111111111111111111111111111111",
+					BuildSignerDigest:      "2222222222222222222222222222222222222222",
+					BuildConfigDigest:      "3333333333333333333333333333333333333333",
 				},
 			}
 			if err := verifyCertificatePolicy(actual, policy); err != nil {

@@ -43,6 +43,21 @@ No `admissionVersion` exists or is needed. A stable admission report binds its
 exact fields, digests, trust evidence, and capability without minting another
 domain version.
 
+The current revocation statement and checkpoint identity
+`trust.forms.takoform.com/v1`, its reserved genesis
+`checkpointVersion: 0.0.0`, and the retained v1alpha1 trust identities are data
+formats and record identities inside API/Core v1. They do not create another
+Host discovery lane, API route, or domain version axis. The occupied
+`trust.forms.takoform.com/v1alpha1` schema bytes remain readable rather than
+being overwritten to admit genesis.
+
+If published, Core support for the new trust formats and certificate-derived
+commit fields belongs in a compatible next API/Core v1 minor checkpoint and
+matching Go module tag. It does not alter the Host API v1 wire documents. This
+source change itself does not publish that checkpoint, a schema projection, or
+any publisher record; older Core readers continue to verify retained v1alpha1
+chains but do not understand the new v1 trust profile.
+
 ## Absolute names
 
 An absolute name identifies the lane or artifact it describes. A relative name

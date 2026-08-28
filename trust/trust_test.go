@@ -21,9 +21,13 @@ func TestVerifyBundleCryptographicallyOffline(t *testing.T) {
 	if err != nil {
 		t.Fatalf("verify real Cosign v3 bundle offline: %v", err)
 	}
+	const fixtureCommit = "5173386b3e898a607b99a87ae0dc6f386927ca9e"
 	if report.Status != trust.VerifiedStatus ||
 		report.SubjectDigest != formpackage.DigestBytes(subject) ||
 		report.PublisherIdentity != policy.Identity() ||
+		report.SourceCommit != fixtureCommit ||
+		report.WorkflowCommit != fixtureCommit ||
+		report.BuildConfigCommit != fixtureCommit ||
 		!report.TransparencyLogVerified || report.TransparencyLogThreshold != 1 {
 		t.Fatalf("unexpected verification report: %+v", report)
 	}

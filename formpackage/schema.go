@@ -37,12 +37,15 @@ const (
 	// It remains the compatibility profile for a versionless Definition that
 	// does not declare the stable Host lane.
 	betaTwoFamilyFormDefinitionSchemaID = "https://forms.takoform.com/schemas/v1beta2/form-definition.schema.json"
+	stableFamilyFormRefSchemaID         = "https://forms.takoform.com/schemas/v1/form-ref.schema.json"
 	stableFamilyFormDefinitionSchemaID  = "https://forms.takoform.com/schemas/v1/form-definition.schema.json"
 	stableHostAPIVersion                = "forms.takoform.com/v1"
 	interfaceDefinitionSchemaID         = "https://forms.takoform.com/schemas/interfaces/v1alpha1/interface-definition.schema.json"
 	bindingDefinitionSchemaID           = "https://forms.takoform.com/schemas/bindings/v1alpha2/binding-definition.schema.json"
 	revocationSchemaID                  = "https://forms.takoform.com/schemas/v1alpha1/form-package-revocation.schema.json"
+	revocationV1SchemaID                = "https://forms.takoform.com/schemas/v1/form-package-revocation.schema.json"
 	revocationCheckpointSchemaID        = "https://forms.takoform.com/schemas/v1alpha1/form-package-revocation-checkpoint.schema.json"
+	revocationCheckpointV1SchemaID      = "https://forms.takoform.com/schemas/v1/form-package-revocation-checkpoint.schema.json"
 	portableMapKeyPattern               = `^[A-Za-z][A-Za-z0-9._-]{0,63}$`
 	portableMapPolicyKey                = "x-takoform-fieldPolicy"
 	portableMapPolicyValue              = "portable-data-only-v1"
@@ -67,6 +70,7 @@ type compiledSchemas struct {
 	retainedFamilyFormRef    *jsonschema.Schema
 	betaFamilyFormRef        *jsonschema.Schema
 	betaTwoFamilyFormRef     *jsonschema.Schema
+	stableFamilyFormRef      *jsonschema.Schema
 	legacyDefinition         *jsonschema.Schema
 	currentDefinition        *jsonschema.Schema
 	retainedFamilyDefinition *jsonschema.Schema
@@ -79,7 +83,9 @@ type compiledSchemas struct {
 	indexV1Alpha4            *jsonschema.Schema
 	indexV1Alpha5            *jsonschema.Schema
 	revocation               *jsonschema.Schema
+	revocationV1             *jsonschema.Schema
 	revocationCheckpoint     *jsonschema.Schema
+	revocationCheckpointV1   *jsonschema.Schema
 	interfaceDefinition      *jsonschema.Schema
 	bindingDefinition        *jsonschema.Schema
 }
@@ -113,9 +119,9 @@ func familyProfileForPackage(packageAPIVersion string) familyValidationProfile {
 // specification reserves for envelope identities rather than Form groups:
 // packages.forms.takoform.com carries Form Package indexes (PackageAPIVersion
 // through FamilyPackageAPIVersion) and trust.forms.takoform.com carries
-// revocation statements and checkpoints (TrustAPIVersion). A Form Definition
-// published under either namespace would collide with the envelope that
-// distributes it.
+// retained and current revocation statements and checkpoints
+// (TrustAPIVersion and CurrentTrustAPIVersion). A Form Definition published
+// under either namespace would collide with the envelope that distributes it.
 var reservedFormsTakoformNamespaces = map[string]struct{}{
 	"packages.forms.takoform.com": {},
 	"trust.forms.takoform.com":    {},
@@ -168,7 +174,7 @@ func loadSchemas() (compiledSchemas, error) {
 		compiler.DefaultDraft(jsonschema.Draft2020)
 		compiler.AssertFormat()
 		compiler.UseLoader(closedSchemaLoader{})
-		files := []string{"form-ref.schema.json", "form-ref-v1alpha2.schema.json", "form-ref-v1alpha3.schema.json", "form-ref-v1beta1.schema.json", "form-ref-v1beta2.schema.json", "form-definition.schema.json", "form-definition-v1alpha2.schema.json", "form-definition-v1alpha3.schema.json", "form-definition-v1beta1.schema.json", "form-definition-v1beta2.schema.json", "form-definition-v1.schema.json", "package-index.schema.json", "package-index-v1alpha2.schema.json", "package-index-v1alpha3.schema.json", "package-index-v1alpha4.schema.json", "package-index-v1alpha5.schema.json", "interface-ref-v1alpha1.schema.json", "interface-definition-v1alpha1.schema.json", "binding-definition-v1alpha2.schema.json", "binding-ref-v1alpha1.schema.json", "binding-ref-v1alpha2.schema.json", "form-package-revocation.schema.json", "form-package-revocation-checkpoint.schema.json"}
+		files := []string{"form-ref.schema.json", "form-ref-v1.schema.json", "form-ref-v1alpha2.schema.json", "form-ref-v1alpha3.schema.json", "form-ref-v1beta1.schema.json", "form-ref-v1beta2.schema.json", "form-definition.schema.json", "form-definition-v1alpha2.schema.json", "form-definition-v1alpha3.schema.json", "form-definition-v1beta1.schema.json", "form-definition-v1beta2.schema.json", "form-definition-v1.schema.json", "package-index.schema.json", "package-index-v1alpha2.schema.json", "package-index-v1alpha3.schema.json", "package-index-v1alpha4.schema.json", "package-index-v1alpha5.schema.json", "interface-ref-v1alpha1.schema.json", "interface-definition-v1alpha1.schema.json", "binding-definition-v1alpha2.schema.json", "binding-ref-v1alpha1.schema.json", "binding-ref-v1alpha2.schema.json", "form-package-revocation.schema.json", "form-package-revocation-v1.schema.json", "form-package-revocation-checkpoint.schema.json", "form-package-revocation-checkpoint-v1.schema.json"}
 		entries, err := schemaFiles.ReadDir("schemas")
 		if err != nil {
 			schemasErr = fmt.Errorf("read embedded schema closure: %w", err)
@@ -247,6 +253,11 @@ func loadSchemas() (compiledSchemas, error) {
 			schemasErr = fmt.Errorf("compile Beta 2 family FormRef schema: %w", schemasErr)
 			return
 		}
+		schemasValue.stableFamilyFormRef, schemasErr = compiler.Compile(stableFamilyFormRefSchemaID)
+		if schemasErr != nil {
+			schemasErr = fmt.Errorf("compile stable family FormRef schema: %w", schemasErr)
+			return
+		}
 		schemasValue.legacyDefinition, schemasErr = compiler.Compile(legacyFormDefinitionSchemaID)
 		if schemasErr != nil {
 			schemasErr = fmt.Errorf("compile legacy Form Definition schema: %w", schemasErr)
@@ -308,9 +319,19 @@ func loadSchemas() (compiledSchemas, error) {
 			schemasErr = fmt.Errorf("compile Form Package revocation schema: %w", schemasErr)
 			return
 		}
+		schemasValue.revocationV1, schemasErr = compiler.Compile(revocationV1SchemaID)
+		if schemasErr != nil {
+			schemasErr = fmt.Errorf("compile v1 Form Package revocation schema: %w", schemasErr)
+			return
+		}
 		schemasValue.revocationCheckpoint, schemasErr = compiler.Compile(revocationCheckpointSchemaID)
 		if schemasErr != nil {
 			schemasErr = fmt.Errorf("compile Form Package revocation checkpoint schema: %w", schemasErr)
+			return
+		}
+		schemasValue.revocationCheckpointV1, schemasErr = compiler.Compile(revocationCheckpointV1SchemaID)
+		if schemasErr != nil {
+			schemasErr = fmt.Errorf("compile v1 Form Package revocation checkpoint schema: %w", schemasErr)
 			return
 		}
 		schemasValue.interfaceDefinition, schemasErr = compiler.Compile(interfaceDefinitionSchemaID)
@@ -999,14 +1020,62 @@ func ValidateRevocationStatement(raw []byte) (RevocationStatement, error) {
 	if err != nil {
 		return RevocationStatement{}, err
 	}
+	var envelope struct {
+		APIVersion string `json:"apiVersion"`
+	}
+	if err := json.Unmarshal(raw, &envelope); err != nil {
+		return RevocationStatement{}, fmt.Errorf("Form Package revocation: %w", err)
+	}
+	var schema *jsonschema.Schema
+	switch envelope.APIVersion {
+	case TrustAPIVersion:
+		schema = schemas.revocation
+	case CurrentTrustAPIVersion:
+		schema = schemas.revocationV1
+	default:
+		return RevocationStatement{}, fmt.Errorf("Form Package revocation: unsupported apiVersion %q", envelope.APIVersion)
+	}
 	var statement RevocationStatement
-	if err := validateDocument(raw, schemas.revocation, &statement); err != nil {
+	if err := validateDocument(raw, schema, &statement); err != nil {
 		return RevocationStatement{}, fmt.Errorf("Form Package revocation: %w", err)
 	}
 	if !ValidDigest(statement.PackageDigest) {
 		return RevocationStatement{}, fmt.Errorf("Form Package revocation: packageDigest is not canonical")
 	}
+	if err := ValidateRevocationFormRef(statement.APIVersion, statement.FormRef); err != nil {
+		return RevocationStatement{}, fmt.Errorf("Form Package revocation: %w", err)
+	}
 	return statement, nil
+}
+
+// RevocationCheckpointEntryForStatement validates one statement and derives
+// the exact cumulative-checkpoint identity for its RFC 8785 bytes. The current
+// profile records its statement data-format identity explicitly; the retained
+// v1alpha1 profile omits it because that published entry shape is immutable.
+func RevocationCheckpointEntryForStatement(raw []byte) (RevocationCheckpointEntry, error) {
+	canonical, err := Canonicalize(raw)
+	if err != nil {
+		return RevocationCheckpointEntry{}, fmt.Errorf("Form Package revocation checkpoint entry: %w", err)
+	}
+	if !bytes.Equal(raw, canonical) {
+		return RevocationCheckpointEntry{}, fmt.Errorf("Form Package revocation checkpoint entry: statement bytes must be RFC 8785 canonical JSON")
+	}
+	statement, err := ValidateRevocationStatement(raw)
+	if err != nil {
+		return RevocationCheckpointEntry{}, err
+	}
+	statementAPIVersion := ""
+	if statement.APIVersion == CurrentTrustAPIVersion {
+		statementAPIVersion = CurrentTrustAPIVersion
+	}
+	return RevocationCheckpointEntry{
+		StatementAPIVersion: statementAPIVersion,
+		Sequence:            statement.Sequence,
+		StatementVersion:    statement.StatementVersion,
+		StatementDigest:     DigestBytes(raw),
+		PackageDigest:       statement.PackageDigest,
+		FormRef:             statement.FormRef,
+	}, nil
 }
 
 // ValidateRevocationCheckpoint validates the cumulative checkpoint schema and
@@ -1016,17 +1085,37 @@ func ValidateRevocationCheckpoint(raw []byte) (RevocationCheckpoint, error) {
 	if err != nil {
 		return RevocationCheckpoint{}, err
 	}
+	var envelope struct {
+		APIVersion string `json:"apiVersion"`
+	}
+	if err := json.Unmarshal(raw, &envelope); err != nil {
+		return RevocationCheckpoint{}, fmt.Errorf("Form Package revocation checkpoint: %w", err)
+	}
+	var schema *jsonschema.Schema
+	switch envelope.APIVersion {
+	case TrustAPIVersion:
+		schema = schemas.revocationCheckpoint
+	case CurrentTrustAPIVersion:
+		schema = schemas.revocationCheckpointV1
+	default:
+		return RevocationCheckpoint{}, fmt.Errorf("Form Package revocation checkpoint: unsupported apiVersion %q", envelope.APIVersion)
+	}
 	var checkpoint RevocationCheckpoint
-	if err := validateDocument(raw, schemas.revocationCheckpoint, &checkpoint); err != nil {
+	if err := validateDocument(raw, schema, &checkpoint); err != nil {
 		return RevocationCheckpoint{}, fmt.Errorf("Form Package revocation checkpoint: %w", err)
 	}
 	if uint64(len(checkpoint.Entries)) != checkpoint.Sequence {
 		return RevocationCheckpoint{}, fmt.Errorf("Form Package revocation checkpoint: sequence %d requires %d cumulative entries, found %d", checkpoint.Sequence, checkpoint.Sequence, len(checkpoint.Entries))
 	}
-	if checkpoint.Sequence == 1 && checkpoint.PreviousCheckpointDigest != nil {
+	if checkpoint.APIVersion == TrustAPIVersion && checkpoint.Sequence == 1 && checkpoint.PreviousCheckpointDigest != nil {
 		return RevocationCheckpoint{}, fmt.Errorf("Form Package revocation checkpoint: sequence 1 must have null previousCheckpointDigest")
 	}
-	if checkpoint.Sequence > 1 && (checkpoint.PreviousCheckpointDigest == nil || !ValidDigest(*checkpoint.PreviousCheckpointDigest)) {
+	if checkpoint.APIVersion == TrustAPIVersion && checkpoint.Sequence > 1 &&
+		(checkpoint.PreviousCheckpointDigest == nil || !ValidDigest(*checkpoint.PreviousCheckpointDigest)) {
+		return RevocationCheckpoint{}, fmt.Errorf("Form Package revocation checkpoint: sequence %d requires a canonical previousCheckpointDigest", checkpoint.Sequence)
+	}
+	if checkpoint.APIVersion == CurrentTrustAPIVersion && checkpoint.Sequence > 0 &&
+		(checkpoint.PreviousCheckpointDigest == nil || !ValidDigest(*checkpoint.PreviousCheckpointDigest)) {
 		return RevocationCheckpoint{}, fmt.Errorf("Form Package revocation checkpoint: sequence %d requires a canonical previousCheckpointDigest", checkpoint.Sequence)
 	}
 	seenVersions := map[string]struct{}{}
@@ -1039,6 +1128,9 @@ func ValidateRevocationCheckpoint(raw []byte) (RevocationCheckpoint, error) {
 		if !ValidDigest(entry.StatementDigest) || !ValidDigest(entry.PackageDigest) {
 			return RevocationCheckpoint{}, fmt.Errorf("Form Package revocation checkpoint: entries[%d] has a non-canonical digest", index)
 		}
+		if err := ValidateRevocationFormRef(checkpoint.APIVersion, entry.FormRef); err != nil {
+			return RevocationCheckpoint{}, fmt.Errorf("Form Package revocation checkpoint: entries[%d]: %w", index, err)
+		}
 		if _, duplicate := seenVersions[entry.StatementVersion]; duplicate {
 			return RevocationCheckpoint{}, fmt.Errorf("Form Package revocation checkpoint: duplicate statementVersion %q", entry.StatementVersion)
 		}
@@ -1047,6 +1139,9 @@ func ValidateRevocationCheckpoint(raw []byte) (RevocationCheckpoint, error) {
 		}
 		seenVersions[entry.StatementVersion] = struct{}{}
 		seenStatements[entry.StatementDigest] = struct{}{}
+	}
+	if checkpoint.Sequence == 0 {
+		return checkpoint, nil
 	}
 	if checkpoint.Entries[len(checkpoint.Entries)-1].StatementVersion != checkpoint.CheckpointVersion {
 		return RevocationCheckpoint{}, fmt.Errorf("Form Package revocation checkpoint: final statementVersion must equal checkpointVersion")
@@ -1066,18 +1161,57 @@ func AdvanceRevocationCheckpoint(previous *RevocationCheckpointPin, raw []byte) 
 	if err != nil {
 		return RevocationCheckpointPin{}, err
 	}
+	entriesDigest, err := revocationEntriesDigest(checkpoint.Entries)
+	if err != nil {
+		return RevocationCheckpointPin{}, err
+	}
 	if previous == nil {
-		if checkpoint.Sequence != 1 || checkpoint.PreviousCheckpointDigest != nil {
-			return RevocationCheckpointPin{}, fmt.Errorf("first trusted revocation checkpoint must be sequence 1")
+		switch checkpoint.APIVersion {
+		case TrustAPIVersion:
+			if checkpoint.Sequence != 1 || checkpoint.PreviousCheckpointDigest != nil {
+				return RevocationCheckpointPin{}, fmt.Errorf("first trusted legacy revocation checkpoint must be sequence 1")
+			}
+			return RevocationCheckpointPin{Sequence: 1, Digest: digest, EntriesDigest: entriesDigest}, nil
+		case CurrentTrustAPIVersion:
+			if checkpoint.Sequence != 0 || checkpoint.PreviousCheckpointDigest != nil {
+				return RevocationCheckpointPin{}, fmt.Errorf("first trusted current revocation checkpoint must be the signed sequence 0 genesis")
+			}
+			return RevocationCheckpointPin{
+				CheckpointAPIVersion: CurrentTrustAPIVersion,
+				Sequence:             0,
+				Digest:               digest,
+				EntriesDigest:        entriesDigest,
+			}, nil
+		default:
+			return RevocationCheckpointPin{}, fmt.Errorf("unsupported revocation checkpoint profile %q", checkpoint.APIVersion)
 		}
-		entriesDigest, err := revocationEntriesDigest(checkpoint.Entries)
-		if err != nil {
-			return RevocationCheckpointPin{}, err
-		}
-		return RevocationCheckpointPin{Sequence: 1, Digest: digest, EntriesDigest: entriesDigest}, nil
 	}
 	if !ValidDigest(previous.Digest) || !ValidDigest(previous.EntriesDigest) {
 		return RevocationCheckpointPin{}, fmt.Errorf("previous revocation checkpoint pin has a non-canonical digest")
+	}
+	switch previous.CheckpointAPIVersion {
+	case "":
+		if previous.Sequence == 0 {
+			return RevocationCheckpointPin{}, fmt.Errorf("legacy revocation checkpoint pin cannot have sequence 0")
+		}
+		if checkpoint.APIVersion != TrustAPIVersion {
+			return RevocationCheckpointPin{}, fmt.Errorf("revocation checkpoint profile %q does not match pinned legacy profile %q", checkpoint.APIVersion, TrustAPIVersion)
+		}
+	case CurrentTrustAPIVersion:
+		if checkpoint.APIVersion != CurrentTrustAPIVersion {
+			return RevocationCheckpointPin{}, fmt.Errorf("revocation checkpoint profile %q does not match pinned profile %q", checkpoint.APIVersion, previous.CheckpointAPIVersion)
+		}
+		if previous.Sequence == 0 {
+			genesisPin, err := currentRevocationGenesisPin()
+			if err != nil {
+				return RevocationCheckpointPin{}, err
+			}
+			if previous.Digest != genesisPin.Digest || previous.EntriesDigest != genesisPin.EntriesDigest {
+				return RevocationCheckpointPin{}, fmt.Errorf("previous revocation checkpoint pin does not identify the exact signed current genesis")
+			}
+		}
+	default:
+		return RevocationCheckpointPin{}, fmt.Errorf("previous revocation checkpoint pin has unsupported profile %q", previous.CheckpointAPIVersion)
 	}
 	if checkpoint.Sequence != previous.Sequence+1 {
 		return RevocationCheckpointPin{}, fmt.Errorf("revocation checkpoint sequence is %d, want %d", checkpoint.Sequence, previous.Sequence+1)
@@ -1092,11 +1226,41 @@ func AdvanceRevocationCheckpoint(previous *RevocationCheckpointPin, raw []byte) 
 	if prefixDigest != previous.EntriesDigest {
 		return RevocationCheckpointPin{}, fmt.Errorf("revocation checkpoint rewrites the pinned cumulative entries")
 	}
-	entriesDigest, err := revocationEntriesDigest(checkpoint.Entries)
+	return RevocationCheckpointPin{
+		CheckpointAPIVersion: previous.CheckpointAPIVersion,
+		Sequence:             checkpoint.Sequence,
+		Digest:               digest,
+		EntriesDigest:        entriesDigest,
+	}, nil
+}
+
+func currentRevocationGenesisPin() (RevocationCheckpointPin, error) {
+	genesis := RevocationCheckpoint{
+		APIVersion:               CurrentTrustAPIVersion,
+		Kind:                     RevocationCheckpointKind,
+		CheckpointVersion:        "0.0.0",
+		Sequence:                 0,
+		PreviousCheckpointDigest: nil,
+		Entries:                  []RevocationCheckpointEntry{},
+	}
+	raw, err := json.Marshal(genesis)
 	if err != nil {
 		return RevocationCheckpointPin{}, err
 	}
-	return RevocationCheckpointPin{Sequence: checkpoint.Sequence, Digest: digest, EntriesDigest: entriesDigest}, nil
+	digest, err := DigestCanonicalJSON(raw)
+	if err != nil {
+		return RevocationCheckpointPin{}, err
+	}
+	entriesDigest, err := revocationEntriesDigest(genesis.Entries)
+	if err != nil {
+		return RevocationCheckpointPin{}, err
+	}
+	return RevocationCheckpointPin{
+		CheckpointAPIVersion: CurrentTrustAPIVersion,
+		Sequence:             0,
+		Digest:               digest,
+		EntriesDigest:        entriesDigest,
+	}, nil
 }
 
 func revocationEntriesDigest(entries []RevocationCheckpointEntry) (string, error) {
@@ -1105,6 +1269,38 @@ func revocationEntriesDigest(entries []RevocationCheckpointEntry) (string, error
 		return "", err
 	}
 	return DigestCanonicalJSON(raw)
+}
+
+// ValidateRevocationFormRef checks that ref belongs to the exact FormRef
+// profile addressed by a retained or current revocation document. This closes
+// empty checkpoints as well as entries: one profile cannot issue a
+// not-revoked result for a FormRef that only the other profile can revoke.
+func ValidateRevocationFormRef(revocationAPIVersion string, ref FormRef) error {
+	schemas, err := loadSchemas()
+	if err != nil {
+		return err
+	}
+	raw, err := json.Marshal(ref)
+	if err != nil {
+		return fmt.Errorf("encode FormRef: %w", err)
+	}
+	var schema *jsonschema.Schema
+	switch revocationAPIVersion {
+	case TrustAPIVersion:
+		schema = schemas.legacyFormRef
+	case CurrentTrustAPIVersion:
+		schema = schemas.stableFamilyFormRef
+	default:
+		return fmt.Errorf("unsupported revocation apiVersion %q", revocationAPIVersion)
+	}
+	var validated FormRef
+	if err := validateDocument(raw, schema, &validated); err != nil {
+		return fmt.Errorf("FormRef does not match revocation profile %q: %w", revocationAPIVersion, err)
+	}
+	if revocationAPIVersion == CurrentTrustAPIVersion && !NamespacedFormGroup(validated.APIVersion) {
+		return fmt.Errorf("FormRef apiVersion %q is reserved or unsupported", validated.APIVersion)
+	}
+	return nil
 }
 
 func validateDocument(raw []byte, schema *jsonschema.Schema, destination any) error {

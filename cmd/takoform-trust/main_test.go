@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/tako0614/takoform/formpackage"
@@ -63,6 +65,21 @@ func TestVerifyBundleCommandEmitsStableJSONFromExplicitFiles(t *testing.T) {
 	}
 	if report.Status != trust.VerifiedStatus || report.PublisherIdentity != fixturePolicy().Identity() {
 		t.Fatalf("unexpected CLI report: %+v", report)
+	}
+	const fixtureCommit = "5173386b3e898a607b99a87ae0dc6f386927ca9e"
+	for _, member := range []string{
+		`"sourceCommit":"` + fixtureCommit + `"`,
+		`"workflowCommit":"` + fixtureCommit + `"`,
+		`"buildConfigCommit":"` + fixtureCommit + `"`,
+	} {
+		if !bytes.Contains(first.Bytes(), []byte(member)) {
+			t.Fatalf("public verification JSON is missing %s: %s", member, first.Bytes())
+		}
+	}
+	for _, internalName := range []string{"sourceRepositoryDigest", "buildSignerDigest", "buildConfigDigest"} {
+		if bytes.Contains(first.Bytes(), []byte(`"`+internalName+`"`)) {
+			t.Fatalf("certificate extension name %q leaked into public JSON: %s", internalName, first.Bytes())
+		}
 	}
 }
 
@@ -130,6 +147,44 @@ func TestVerifyCheckpointAndRevocationCommandsAuthenticateExactCheckpointSubject
 	)
 	if err := run(checkArguments, &bytes.Buffer{}); err == nil {
 		t.Fatal("revocation command skipped checkpoint signature verification")
+	}
+}
+
+func TestReadPreviousPinAcceptsCurrentSequenceZeroAndRetainedLegacyShape(t *testing.T) {
+	t.Parallel()
+	digest := "sha256:" + strings.Repeat("a", 64)
+	for name, raw := range map[string]string{
+		"current genesis": fmt.Sprintf(`{"checkpointApiVersion":"trust.forms.takoform.com/v1","digest":%q,"entriesDigest":%q,"sequence":0}`, digest, digest),
+		"retained legacy": fmt.Sprintf(`{"digest":%q,"entriesDigest":%q,"sequence":1}`, digest, digest),
+	} {
+		name, raw := name, raw
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			path := filepath.Join(t.TempDir(), "pin.json")
+			if err := os.WriteFile(path, []byte(raw), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := readPreviousPin(path); err != nil {
+				t.Fatalf("read compatible previous pin: %v", err)
+			}
+		})
+	}
+
+	for name, raw := range map[string]string{
+		"profileless sequence zero": fmt.Sprintf(`{"digest":%q,"entriesDigest":%q,"sequence":0}`, digest, digest),
+		"unknown profile":           fmt.Sprintf(`{"checkpointApiVersion":"trust.forms.takoform.com/v2","digest":%q,"entriesDigest":%q,"sequence":1}`, digest, digest),
+	} {
+		name, raw := name, raw
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			path := filepath.Join(t.TempDir(), "pin.json")
+			if err := os.WriteFile(path, []byte(raw), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := readPreviousPin(path); err == nil {
+				t.Fatal("invalid previous pin unexpectedly accepted")
+			}
+		})
 	}
 }
 

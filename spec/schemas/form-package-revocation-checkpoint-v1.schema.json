@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forms.takoform.com/schemas/v1/form-package-revocation-checkpoint.schema.json",
+  "title": "Takoform cumulative Form Package revocation checkpoint v1",
+  "description": "A cumulative, signed revocation checkpoint. Sequence zero with checkpointVersion 0.0.0 is the only empty state and is the genesis of every new v1 chain.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "apiVersion",
+    "kind",
+    "checkpointVersion",
+    "sequence",
+    "previousCheckpointDigest",
+    "entries"
+  ],
+  "properties": {
+    "apiVersion": {
+      "const": "trust.forms.takoform.com/v1"
+    },
+    "kind": {
+      "const": "FormPackageRevocationCheckpoint"
+    },
+    "checkpointVersion": {
+      "$ref": "#/$defs/semver"
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "previousCheckpointDigest": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/digest" }
+      ]
+    },
+    "entries": {
+      "type": "array",
+      "maxItems": 100000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "statementApiVersion",
+          "sequence",
+          "statementVersion",
+          "statementDigest",
+          "packageDigest",
+          "formRef"
+        ],
+        "properties": {
+          "statementApiVersion": {
+            "const": "trust.forms.takoform.com/v1"
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "statementVersion": {
+            "$ref": "#/$defs/semver"
+          },
+          "statementDigest": {
+            "$ref": "#/$defs/digest"
+          },
+          "packageDigest": {
+            "$ref": "#/$defs/digest"
+          },
+          "formRef": {
+            "$ref": "https://forms.takoform.com/schemas/v1/form-ref.schema.json"
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "sequence": { "const": 0 }
+        },
+        "required": ["sequence"]
+      },
+      "then": {
+        "properties": {
+          "checkpointVersion": { "const": "0.0.0" },
+          "previousCheckpointDigest": { "type": "null" },
+          "entries": { "maxItems": 0 }
+        }
+      },
+      "else": {
+        "properties": {
+          "checkpointVersion": { "not": { "const": "0.0.0" } },
+          "previousCheckpointDigest": { "$ref": "#/$defs/digest" },
+          "entries": { "minItems": 1 }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "semver": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(\\.(0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*))?(\\+([0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*))?$"
+    }
+  }
+}

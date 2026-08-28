@@ -37,6 +37,26 @@ Verification requires its transparency-log inclusion evidence and fails closed
 when the root, signature, issuer, source, workflow, ref, subject, or log proof
 does not match.
 
+The issued `BundleVerification` also carries three commits copied only from the
+verified Fulcio certificate summary:
+
+- `sourceCommit` is `SourceRepositoryDigest`, the exact source revision built;
+- `workflowCommit` is `BuildSignerDigest`, the revision of the specific build
+  instructions responsible for signing; and
+- `buildConfigCommit` is `BuildConfigDigest`, the revision of the top-level
+  initiating build instructions.
+
+Each value is mandatory and must already be one non-null, lowercase 40-hex Git
+commit digest. There is no caller-supplied fallback or normalization. Core
+validates the three fields separately and does not require them to be equal.
+Equality is a publisher/import policy decision: a reusable signing workflow can
+make the specific signing instructions a different revision from the source or
+calling workflow. Fulcio defines the three independent extension roles in its
+[`OID directory`](https://github.com/sigstore/fulcio/blob/main/docs/oid-info.md)
+and maps GitHub's `sha`, `job_workflow_sha`, and `workflow_sha` claims to them
+separately in its
+[`GitHub CI issuer profile`](https://github.com/sigstore/fulcio/blob/main/config/identity/config.yaml).
+
 An operator may trust multiple publishers, including a project-maintained one,
 by installing multiple policies. Every policy traverses the same verifier and
 produces the same report shape.
@@ -46,11 +66,51 @@ produces the same report shape.
 Publisher identity rotation is an explicit policy change. Existing package
 bytes and their historical policy remain immutable.
 
-A revocation statement names an exact package digest and FormRef. Checkpoints
-are cumulative and hash-chained from sequence 1. A verifier persists
-`(sequence, checkpointDigest, cumulativeEntriesDigest)` and accepts only the
-next checkpoint whose previous digest and complete retained prefix match that
-pin. Rollback, omission, fork, and prefix rewrite fail closed.
+A revocation statement names an exact package digest and FormRef. The current
+statement and checkpoint data-format identity is
+`trust.forms.takoform.com/v1`. It is a record format within Takoform API/Core
+v1, not another Host API lane or a third negotiated version axis. Current
+statements use the exact stable, versionless FormRef schema. A checkpoint entry
+records `statementApiVersion: trust.forms.takoform.com/v1`; Core derives its
+other identity fields and digest only from an already-canonical, validated
+statement, so the digest names the same RFC 8785 bytes that a publisher signs.
+
+Every new current chain begins with this exact data document:
+
+```json
+{"apiVersion":"trust.forms.takoform.com/v1","checkpointVersion":"0.0.0","entries":[],"kind":"FormPackageRevocationCheckpoint","previousCheckpointDigest":null,"sequence":0}
+```
+
+This is the only empty checkpoint. `0.0.0` is reserved as its
+`checkpointVersion` and is not a current `statementVersion`; every later
+checkpoint has at least one entry, uses the final statement's version, and
+carries the exact digest of its predecessor. Thus sequence one descends from
+the signed genesis rather than starting a new chain with a null predecessor.
+
+The document alone grants nothing. The publisher signs its exact canonical
+bytes, and `VerifyRevocationCheckpoint` still requires the caller's exact
+publisher policy, trusted root, Sigstore signature, transparency inclusion,
+certificate provenance, and previous pin. Only that complete verification
+issues the unforgeable capability consumed by `CheckNotRevoked`. A verified
+genesis capability proves the publisher's signed current revocation set is
+empty and can authorize `CheckNotRevoked` without inventing evidence. The
+capability remains FormRef-profile-bound: a current checkpoint covers stable
+versionless FormRefs, while a retained v1alpha1 checkpoint covers its Legacy
+FormRef epoch. An empty current genesis cannot answer for the legacy chain.
+
+A current verifier persists
+`(checkpointApiVersion, sequence, checkpointDigest,
+cumulativeEntriesDigest)` and accepts only the next checkpoint in that same
+profile whose predecessor digest and complete retained prefix match the pin.
+Rollback, omission, fork, prefix rewrite, and cross-profile advancement fail
+closed. The caller stores that pin under the exact publisher policy that
+verified it; a pin is not cross-publisher authority.
+
+The occupied `trust.forms.takoform.com/v1alpha1` statement and checkpoint
+schemas remain byte-exact readable history. Those chains begin at sequence one
+with a null predecessor, and their historical pin JSON omits
+`checkpointApiVersion`. They cannot be continued by a current v1 checkpoint or
+used as an alias for the signed v1 genesis.
 
 Security revocation blocks create, update, and activation. It does not replace
 package bytes or erase existing Resources: referenced bytes remain available

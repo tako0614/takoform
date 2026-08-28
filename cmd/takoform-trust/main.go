@@ -237,8 +237,20 @@ func readPreviousPin(path string) (*formpackage.RevocationCheckpointPin, error) 
 	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
 		return nil, fmt.Errorf("previous-pin: trailing JSON value")
 	}
-	if pin.Sequence == 0 || !formpackage.ValidDigest(pin.Digest) || !formpackage.ValidDigest(pin.EntriesDigest) {
-		return nil, fmt.Errorf("previous-pin: sequence and digests are required")
+	if !formpackage.ValidDigest(pin.Digest) || !formpackage.ValidDigest(pin.EntriesDigest) {
+		return nil, fmt.Errorf("previous-pin: canonical digests are required")
+	}
+	switch pin.CheckpointAPIVersion {
+	case "":
+		if pin.Sequence == 0 {
+			return nil, fmt.Errorf("previous-pin: legacy profile requires sequence 1 or greater")
+		}
+	case formpackage.CurrentTrustAPIVersion:
+		// Sequence zero is structurally reserved for the current-profile
+		// genesis. AdvanceRevocationCheckpoint verifies its exact digest before
+		// allowing sequence one; later pins retain the same format identity.
+	default:
+		return nil, fmt.Errorf("previous-pin: unsupported checkpointApiVersion %q", pin.CheckpointAPIVersion)
 	}
 	return &pin, nil
 }

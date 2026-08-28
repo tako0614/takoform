@@ -416,6 +416,8 @@ export function validateRetiredWriterHistory(
 
 export function validateTrustProfile(profile) {
   const problems = [];
+  const commits = profile?.signature?.verifiedCertificateCommits;
+  const revocation = profile?.revocation;
   if (
     profile?.format !== "takoform.core-trust-profile@v1" ||
     profile?.status !== "core-format" ||
@@ -424,10 +426,32 @@ export function validateTrustProfile(profile) {
     profile?.publisherPolicy?.officialTrustBypass !== false ||
     profile?.publisherPolicy?.defaultPublisher !== false ||
     profile?.signature?.ambientTrustedRoot !== false ||
+    commits?.sourceCommitExtension !== "SourceRepositoryDigest" ||
+    commits?.workflowCommitExtension !== "BuildSignerDigest" ||
+    commits?.buildConfigCommitExtension !== "BuildConfigDigest" ||
+    commits?.format !== "non-null-lowercase-40-hex-git-commit" ||
+    commits?.callerSuppliedFallback !== false ||
+    commits?.requireEquality !== false ||
+    revocation?.statementIdentity !== "trust.forms.takoform.com/v1" ||
+    revocation?.checkpointIdentity !== "trust.forms.takoform.com/v1" ||
+    revocation?.identityIsDataFormatWithinAPIV1 !== true ||
+    revocation?.genesis?.checkpointVersion !== "0.0.0" ||
+    revocation?.genesis?.sequence !== 0 ||
+    revocation?.genesis?.previousCheckpointDigest !== null ||
+    revocation?.genesis?.entries !== 0 ||
+    revocation?.genesis?.signatureRequired !== true ||
+    revocation?.nonGenesisRequiresEntryAndPredecessor !== true ||
+    revocation?.retainedV1Alpha1?.statementIdentity !== "trust.forms.takoform.com/v1alpha1" ||
+    revocation?.retainedV1Alpha1?.checkpointIdentity !== "trust.forms.takoform.com/v1alpha1" ||
+    revocation?.retainedV1Alpha1?.initialSequence !== 1 ||
+    revocation?.retainedV1Alpha1?.nullInitialPredecessor !== true ||
+    revocation?.pinIncludesCheckpointIdentityForCurrentProfile !== true ||
+    revocation?.crossProfileAdvance !== false ||
+    revocation?.notRevokedFormRefProfileBound !== true ||
     profile?.contentPolicy?.dataOnly !== true ||
     profile?.contentPolicy?.allowExecutableValidationOrAdapterCode !== false
   ) {
-    problem(problems, "Core trust profile grants ambient publisher or executable authority");
+    problem(problems, "Core trust profile grants ambient authority or weakens trust/revocation closure");
   }
   return problems;
 }

@@ -186,6 +186,18 @@
       "sha256": "sha256:d73d7ec00554457a8c57e8df3ae39ddfe17b4470b969f9f98e0d975792132c96",
       "source": "spec/schemas/host-discovery-v1beta4.schema.json",
       "public": "website/public/schemas/v1beta4/host-discovery.schema.json"
+    },
+    {
+      "id": "https://forms.takoform.com/schemas/v1/form-package-revocation-checkpoint.schema.json",
+      "sha256": "sha256:0d5f7528247f445b76cb79002a01a7acc498c7fe267651ca22ee41255fac754a",
+      "source": "spec/schemas/form-package-revocation-checkpoint-v1.schema.json",
+      "public": "website/public/schemas/v1/form-package-revocation-checkpoint.schema.json"
+    },
+    {
+      "id": "https://forms.takoform.com/schemas/v1/form-package-revocation.schema.json",
+      "sha256": "sha256:9f5cd02ea32d72e568a072e3d2888abf2dbd21e7ada90370b3a09fbd87e48a0f",
+      "source": "spec/schemas/form-package-revocation-v1.schema.json",
+      "public": "website/public/schemas/v1/form-package-revocation.schema.json"
     }
   ],
   "retired": [

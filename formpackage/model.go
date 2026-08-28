@@ -35,11 +35,17 @@ const (
 	// requires one, and that schema is published.
 	VersionlessFamilyPackageAPIVersion = "packages.forms.takoform.com/v1alpha5"
 	PackageKind                        = "FormPackage"
-	TrustAPIVersion                    = "trust.forms.takoform.com/v1alpha1"
-	RevocationKind                     = "FormPackageRevocation"
-	RevocationCheckpointKind           = "FormPackageRevocationCheckpoint"
-	PackageIndexFilename               = "package-index.json"
-	DefinitionMediaType                = "application/vnd.takoform.form-definition.v1+json"
+	// TrustAPIVersion identifies the occupied v1alpha1 statement and checkpoint
+	// formats. They remain readable but are not changed in place.
+	TrustAPIVersion = "trust.forms.takoform.com/v1alpha1"
+	// CurrentTrustAPIVersion identifies the current revocation statement and
+	// signed checkpoint data formats. It is an identity within the existing
+	// Takoform API/Core v1, not another negotiated version axis.
+	CurrentTrustAPIVersion   = "trust.forms.takoform.com/v1"
+	RevocationKind           = "FormPackageRevocation"
+	RevocationCheckpointKind = "FormPackageRevocationCheckpoint"
+	PackageIndexFilename     = "package-index.json"
+	DefinitionMediaType      = "application/vnd.takoform.form-definition.v1+json"
 )
 
 // FormRef is the exact portable identity of one immutable Form Definition.
@@ -363,7 +369,8 @@ type RevocationEffects struct {
 
 // RevocationCheckpoint is a signed cumulative index. Sequence and
 // PreviousCheckpointDigest form a monotonic hash chain; Entries closes the
-// complete statement set from sequence 1 through this checkpoint.
+// complete statement set from sequence 1 through this checkpoint. In the
+// current profile, sequence zero is the one signed empty genesis state.
 type RevocationCheckpoint struct {
 	APIVersion               string                      `json:"apiVersion"`
 	Kind                     string                      `json:"kind"`
@@ -374,17 +381,22 @@ type RevocationCheckpoint struct {
 }
 
 type RevocationCheckpointEntry struct {
-	Sequence         uint64  `json:"sequence"`
-	StatementVersion string  `json:"statementVersion"`
-	StatementDigest  string  `json:"statementDigest"`
-	PackageDigest    string  `json:"packageDigest"`
-	FormRef          FormRef `json:"formRef"`
+	StatementAPIVersion string  `json:"statementApiVersion,omitempty"`
+	Sequence            uint64  `json:"sequence"`
+	StatementVersion    string  `json:"statementVersion"`
+	StatementDigest     string  `json:"statementDigest"`
+	PackageDigest       string  `json:"packageDigest"`
+	FormRef             FormRef `json:"formRef"`
 }
 
 // RevocationCheckpointPin is the minimum durable state a host retains after
 // cryptographically verifying a checkpoint signature and publisher policy.
+// CheckpointAPIVersion is omitted only on retained v1alpha1 pins whose
+// historical JSON shape predates profile binding. Current pins carry the exact
+// checkpoint data-format identity so a caller cannot splice profiles.
 type RevocationCheckpointPin struct {
-	Sequence      uint64 `json:"sequence"`
-	Digest        string `json:"digest"`
-	EntriesDigest string `json:"entriesDigest"`
+	CheckpointAPIVersion string `json:"checkpointApiVersion,omitempty"`
+	Sequence             uint64 `json:"sequence"`
+	Digest               string `json:"digest"`
+	EntriesDigest        string `json:"entriesDigest"`
 }

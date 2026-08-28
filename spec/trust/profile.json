@@ -13,7 +13,15 @@
     "mode": "keyless-message-signature",
     "offlineVerification": true,
     "transparencyLogInclusionRequired": true,
-    "ambientTrustedRoot": false
+    "ambientTrustedRoot": false,
+    "verifiedCertificateCommits": {
+      "sourceCommitExtension": "SourceRepositoryDigest",
+      "workflowCommitExtension": "BuildSignerDigest",
+      "buildConfigCommitExtension": "BuildConfigDigest",
+      "format": "non-null-lowercase-40-hex-git-commit",
+      "callerSuppliedFallback": false,
+      "requireEquality": false
+    }
   },
   "publisherPolicy": {
     "callerSupplied": true,
@@ -28,12 +36,29 @@
     "defaultPublisher": false
   },
   "revocation": {
-    "statementIdentity": "trust.forms.takoform.com/v1alpha1",
-    "checkpointIdentity": "trust.forms.takoform.com/v1alpha1",
-    "initialSequence": 1,
+    "statementIdentity": "trust.forms.takoform.com/v1",
+    "checkpointIdentity": "trust.forms.takoform.com/v1",
+    "identityIsDataFormatWithinAPIV1": true,
+    "genesis": {
+      "checkpointVersion": "0.0.0",
+      "sequence": 0,
+      "previousCheckpointDigest": null,
+      "entries": 0,
+      "signatureRequired": true
+    },
+    "nonGenesisRequiresEntryAndPredecessor": true,
+    "retainedV1Alpha1": {
+      "statementIdentity": "trust.forms.takoform.com/v1alpha1",
+      "checkpointIdentity": "trust.forms.takoform.com/v1alpha1",
+      "initialSequence": 1,
+      "nullInitialPredecessor": true
+    },
     "appendOnly": true,
     "previousCheckpointDigest": "sha256",
     "callerSuppliedPreviousPin": true,
+    "pinIncludesCheckpointIdentityForCurrentProfile": true,
+    "crossProfileAdvance": false,
+    "notRevokedFormRefProfileBound": true,
     "rejectRollbackForkOrPrefixRewrite": true,
     "blockCreateUpdateAndActivation": true,
     "retainReferencedBytesForObserveDeleteOrEvacuation": true,

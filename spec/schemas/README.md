@@ -24,8 +24,10 @@ column states the role of each identity.
 | [`form-ref-v1.schema.json`](form-ref-v1.schema.json) | the stable exact four-field Form reference for one versionless Form Family group; the referenced Form's own `0.x` or future `1.x` maturity remains independent |
 | [`package-index-v1alpha4.schema.json`](package-index-v1alpha4.schema.json) | the retained Provider 2.1.1 content-addressed package profile for versioned family FormRefs |
 | [`package-index-v1alpha5.schema.json`](package-index-v1alpha5.schema.json) | the current content-addressed package profile for stable versionless-group FormRefs |
-| [`form-package-revocation.schema.json`](form-package-revocation.schema.json) | one append-only revocation statement |
-| [`form-package-revocation-checkpoint.schema.json`](form-package-revocation-checkpoint.schema.json) | the cumulative, hash-chained revocation checkpoint |
+| [`form-package-revocation-v1.schema.json`](form-package-revocation-v1.schema.json) | the current append-only revocation statement for an exact package and stable versionless FormRef |
+| [`form-package-revocation-checkpoint-v1.schema.json`](form-package-revocation-checkpoint-v1.schema.json) | the current cumulative checkpoint profile, rooted in its one signed empty sequence-zero genesis |
+| [`form-package-revocation.schema.json`](form-package-revocation.schema.json) | the retained v1alpha1 revocation statement for a Legacy FormRef |
+| [`form-package-revocation-checkpoint.schema.json`](form-package-revocation-checkpoint.schema.json) | the retained v1alpha1 cumulative checkpoint profile whose historical chains begin at sequence one |
 | [`host-discovery-v1beta1.schema.json`](host-discovery-v1beta1.schema.json) | the Beta host discovery document |
 | [`host-api-wire-v1beta1.schema.json`](host-api-wire-v1beta1.schema.json) | the Beta UID/generation/revision Resource, condition, operation, artifact, and error envelopes |
 | [`host-discovery-v1beta4.schema.json`](host-discovery-v1beta4.schema.json) | the retained Beta 4 Host discovery document |

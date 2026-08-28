@@ -49,11 +49,40 @@ func TestVerifyRevocationCheckpointExtensionDetectsRollbackForkAndPrefixRewrite(
 	}
 }
 
+func TestVerifyRevocationCheckpointExtensionAcceptsCurrentSignedGenesisShape(t *testing.T) {
+	t.Parallel()
+	genesis := []byte(`{"apiVersion":"trust.forms.takoform.com/v1","checkpointVersion":"0.0.0","entries":[],"kind":"FormPackageRevocationCheckpoint","previousCheckpointDigest":null,"sequence":0}`)
+	result, err := trust.VerifyRevocationCheckpointExtension(nil, genesis)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Status != trust.ValidCheckpointExtensionStatus || result.CheckpointVersion != "0.0.0" ||
+		result.EntryCount != 0 || result.Pin.CheckpointAPIVersion != formpackage.CurrentTrustAPIVersion ||
+		result.Pin.Sequence != 0 || !formpackage.ValidDigest(result.Pin.Digest) ||
+		!formpackage.ValidDigest(result.Pin.EntriesDigest) {
+		t.Fatalf("unexpected current genesis extension report: %+v", result)
+	}
+}
+
 func TestUnverifiedCheckpointCannotAuthorizeNotRevoked(t *testing.T) {
 	t.Parallel()
 	var unverified trust.RevocationCheckpointVerification
 	if err := unverified.CheckNotRevoked("sha256:"+strings.Repeat("a", 64), formpackage.FormRef{}); !errors.Is(err, trust.ErrInvalidCheckpoint) {
 		t.Fatalf("zero verification capability error = %v", err)
+	}
+	forged := trust.RevocationCheckpointVerification{
+		Status:            trust.VerifiedStatus,
+		CheckpointVersion: "0.0.0",
+		EntryCount:        0,
+		Pin: formpackage.RevocationCheckpointPin{
+			CheckpointAPIVersion: formpackage.CurrentTrustAPIVersion,
+			Sequence:             0,
+			Digest:               "sha256:" + strings.Repeat("a", 64),
+			EntriesDigest:        "sha256:" + strings.Repeat("b", 64),
+		},
+	}
+	if err := forged.CheckNotRevoked("sha256:"+strings.Repeat("c", 64), formpackage.FormRef{}); !errors.Is(err, trust.ErrInvalidCheckpoint) {
+		t.Fatalf("forged visible verification fields authorized a revocation check: %v", err)
 	}
 }
 
@@ -75,6 +104,10 @@ func TestVerifyRevocationCheckpointBindsSignatureToExactCheckpointBytes(t *testi
 	}
 	if _, err := trust.VerifyRevocationCheckpoint(canonical, bundle, trustedRoot, fixturePolicy(), &first.Pin); err == nil {
 		t.Fatal("signature mismatch was hidden by checkpoint continuity")
+	}
+	genesis := []byte(`{"apiVersion":"trust.forms.takoform.com/v1","checkpointVersion":"0.0.0","entries":[],"kind":"FormPackageRevocationCheckpoint","previousCheckpointDigest":null,"sequence":0}`)
+	if _, err := trust.VerifyRevocationCheckpoint(genesis, bundle, trustedRoot, fixturePolicy(), nil); err == nil {
+		t.Fatal("bundle for a different subject authenticated the current genesis checkpoint")
 	}
 }
 

@@ -64,6 +64,7 @@ func TestReservedNamespacesAreTheEnvelopeIdentities(t *testing.T) {
 	for _, envelope := range []string{
 		PackageAPIVersion, LegacyContentAddressedPackageAPIVersion,
 		CurrentPackageAPIVersion, FamilyPackageAPIVersion, TrustAPIVersion,
+		CurrentTrustAPIVersion,
 	} {
 		if NamespacedFormGroup(envelope) {
 			t.Fatalf("envelope identity %q was accepted as a Form group", envelope)

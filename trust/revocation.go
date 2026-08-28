@@ -2,7 +2,6 @@ package trust
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 
 	"github.com/tako0614/takoform/formpackage"
@@ -36,8 +35,9 @@ type RevocationCheckpointVerification struct {
 
 // VerifyRevocationCheckpointExtension validates the generic append-only hash
 // chain using formpackage's schema, RFC 8785 digest, and prefix primitives.
-// The previous pin is always caller-supplied; nil is valid only for sequence 1.
-// This function deliberately does not imply signature verification.
+// The previous pin is always caller-supplied. Nil is valid for the current
+// sequence-zero signed genesis or a retained v1alpha1 sequence-one start. This
+// function deliberately does not imply signature verification.
 func VerifyRevocationCheckpointExtension(previous *formpackage.RevocationCheckpointPin, checkpointJSON []byte) (CheckpointExtensionVerification, error) {
 	checkpoint, err := formpackage.ValidateRevocationCheckpoint(checkpointJSON)
 	if err != nil {
@@ -102,11 +102,7 @@ func checkNotRevoked(checkpoint formpackage.RevocationCheckpoint, packageDigest 
 	if !formpackage.ValidDigest(packageDigest) {
 		return fmt.Errorf("%w: package digest is not canonical", ErrInvalidCheckpoint)
 	}
-	rawRef, err := json.Marshal(formRef)
-	if err != nil {
-		return fmt.Errorf("%w: encode FormRef: %v", ErrInvalidCheckpoint, err)
-	}
-	if _, err := formpackage.ValidateFormRef(rawRef); err != nil {
+	if err := formpackage.ValidateRevocationFormRef(checkpoint.APIVersion, formRef); err != nil {
 		return fmt.Errorf("%w: FormRef: %v", ErrInvalidCheckpoint, err)
 	}
 	for _, entry := range checkpoint.Entries {

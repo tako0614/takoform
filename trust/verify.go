@@ -30,6 +30,9 @@ type BundleVerification struct {
 	Workflow                 string `json:"workflow"`
 	Ref                      string `json:"ref"`
 	PublisherIdentity        string `json:"publisherIdentity"`
+	SourceCommit             string `json:"sourceCommit"`
+	WorkflowCommit           string `json:"workflowCommit"`
+	BuildConfigCommit        string `json:"buildConfigCommit"`
 	TransparencyLogVerified  bool   `json:"transparencyLogVerified"`
 	TransparencyLogThreshold int    `json:"transparencyLogThreshold"`
 }
@@ -75,6 +78,9 @@ func VerifyBundle(subject, bundleJSON, trustedRootJSON []byte, policy PublisherP
 		Workflow:                 policy.Workflow,
 		Ref:                      policy.Ref,
 		PublisherIdentity:        policy.Identity(),
+		SourceCommit:             result.Signature.Certificate.SourceRepositoryDigest,
+		WorkflowCommit:           result.Signature.Certificate.BuildSignerDigest,
+		BuildConfigCommit:        result.Signature.Certificate.BuildConfigDigest,
 		TransparencyLogVerified:  true,
 		TransparencyLogThreshold: minimumEvidenceEntries,
 	}, nil
@@ -174,5 +180,37 @@ func verifyCertificatePolicy(actual certificate.Summary, policy PublisherPolicy)
 	if actual.BuildSignerURI != policy.Identity() {
 		return fmt.Errorf("%w: certificate build signer workflow/ref mismatch", ErrVerification)
 	}
+	claims := []struct {
+		name   string
+		digest string
+	}{
+		{name: "source repository", digest: actual.SourceRepositoryDigest},
+		{name: "build signer", digest: actual.BuildSignerDigest},
+		{name: "build config", digest: actual.BuildConfigDigest},
+	}
+	for _, claim := range claims {
+		if !validGitCommitDigest(claim.digest) {
+			return fmt.Errorf("%w: certificate %s digest is not a canonical Git commit", ErrVerification, claim.name)
+		}
+	}
 	return nil
+}
+
+// validGitCommitDigest accepts the GitHub-compatible commit spelling carried
+// by this trust profile: one non-null SHA-1 commit digest as 40 lowercase hex
+// characters, with no algorithm prefix or surrounding normalization.
+func validGitCommitDigest(value string) bool {
+	if len(value) != 40 {
+		return false
+	}
+	nonzero := false
+	for _, character := range value {
+		if character < '0' || (character > '9' && character < 'a') || character > 'f' {
+			return false
+		}
+		if character != '0' {
+			nonzero = true
+		}
+	}
+	return nonzero
 }
