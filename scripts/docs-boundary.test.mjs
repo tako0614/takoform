@@ -1,6 +1,14 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 import { inspectDocs } from "./docs-boundary.mjs";
+
+const ROOT = resolve(import.meta.dirname, "..");
+
+function currentDoc(path) {
+  return readFileSync(resolve(ROOT, path), "utf8");
+}
 
 function baseEntries() {
   return new Map([
@@ -11,6 +19,23 @@ function baseEntries() {
 }
 
 describe("current documentation boundary", () => {
+  test("current version docs expose four streams and retain Specification 1.1 as history", () => {
+    const readme = currentDoc("README.md");
+    const versioning = currentDoc("spec/versioning.md");
+    const publication = currentDoc("spec/publication-freeze.md");
+
+    expect(readme).toContain("Takoform has exactly four named version streams");
+    expect(readme).not.toMatch(/^\|\s*Specification\s*\|/mu);
+    expect(readme).not.toMatch(/^\|\s*Form Package(?: format)?\s*\|/mu);
+    expect(versioning).toContain("Host API major, each Form's");
+    expect(versioning).toContain("Core/library SemVer, and Provider SemVer");
+    expect(versioning).toMatch(/There is no current\s+Specification 1\.0 or 1\.1 release lane/iu);
+    expect(versioning).toMatch(/package envelope[\s\S]+not a\s+fifth product release stream/iu);
+    expect(publication).toMatch(/Specification 1\.1 is immutable history/iu);
+    expect(publication).toMatch(/There is no current Specification 1\.0 or 1\.1 release lane/iu);
+    expect(publication).toMatch(/Host API v1[\s\S]+semantics are frozen/iu);
+  });
+
   test("accepts neutral docs and existing local links", () => {
     expect(inspectDocs(baseEntries())).toEqual([]);
   });

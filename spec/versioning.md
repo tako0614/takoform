@@ -1,22 +1,35 @@
 # Versioning and compatibility
 
-Takoform has independent version axes. A protocol lane, Form, package,
-Interface, Binding, client, and publisher policy answer different compatibility
-questions; their numbers MUST NOT be aligned to imply one release or maturity
-level. Form lifecycle vocabulary is in
-[`project-lifecycle.md`](project-lifecycle.md).
+Takoform uses exactly four named version streams: Host API major, each Form's
+`definitionVersion`, Core/library SemVer, and Provider SemVer. The first two
+are domain compatibility axes; the latter two version independently released
+software. Digests, schema IDs, tags, package envelopes, record formats, and
+evidence sequences are exact identities, not additional version streams. These
+values MUST NOT be aligned to imply one release or maturity level. Form
+lifecycle vocabulary is in [`project-lifecycle.md`](project-lifecycle.md).
 
-## Version axes
+## Version streams
 
 | Concern | Identifier | Meaning |
 | --- | --- | --- |
-| Host API | An exact API lane such as `forms.takoform.com/v1` | Wire envelope, discovery, and lifecycle compatibility |
-| Form group | A versionless reverse-DNS group in a FormRef | Namespace boundary chosen by a publisher |
-| Form | SemVer in an exact FormRef | Compatibility of one portable desired-state contract |
-| Form Package | Exact envelope and content digest | Immutable distribution of one Form and its data |
-| Interface / Binding | Exact ref plus schema digest | Immutable operation and capability contracts |
-| Client | The client's own release identity | Local schema, state, and migration behavior |
-| Publisher policy | Caller-supplied provenance and trust inputs | Which signatures and source identities an operator accepts |
+| Host API major | An exact wire lane such as `forms.takoform.com/v1` | Compatibility of Host discovery, routes, and closed wire documents |
+| Form definition | SemVer in one exact FormRef's `definitionVersion` | Compatibility of that Form's portable desired-state contract |
+| Core/library | Independent SemVer | Compatibility of the SDK, CLI, verifier, compiler, and client implementation |
+| Provider | Independent SemVer | Compatibility of Terraform/OpenTofu schema, state, import, diagnostics, and mappings |
+
+The current Host lane is exactly `forms.takoform.com/v1`. The Core release
+record carries `v0.1.0` as a candidate software identity; it is not a Host API
+version. Provider SemVer belongs to the Provider's own release authority and is
+not synchronized with Core, Host API, or any Form. There is no current
+Specification 1.0 or 1.1 release lane; the retained 1.1 receipt and its
+history label are described below. A reverse-DNS Form group is a versionless
+namespace.
+
+The package envelope, such as
+`packages.forms.takoform.com/v1alpha5`, is a wire-format/schema identity, not a
+fifth product release stream. It can carry any publisher's exact FormRef. The
+package digest identifies immutable distribution bytes; the Form's
+`definitionVersion` remains the desired-state compatibility version.
 
 ### Absolute names
 
@@ -36,8 +49,8 @@ and the extracted ledger records the old lane declarations in
 
 The current Core source carries the literal Host API v1 candidate
 `forms.takoform.com/v1` and the versionless family-group grammar. It does not
-carry a fixed family roster. Publishing a Specification release does not
-publish a Host lane or promote a Form.
+carry a fixed family roster. The historical Specification 1.1 receipt did not
+publish a Host lane or promote a Form, and it is not a current release input.
 
 The current package profile is
 [`package-index-v1alpha5.schema.json`](schemas/package-index-v1alpha5.schema.json).
@@ -57,22 +70,37 @@ The old repository's [immutable specification tree](https://github.com/tako0614/
 and the local extracted history preserve those facts. They are not current
 Core inputs or publisher authority.
 
+## Host API v1 stability
+
+The current Host API lane is exactly `forms.takoform.com/v1`, discovered at
+`/.well-known/takoform/v1` and served at `/apis/forms.takoform.com/v1`. Its
+wire contract is [`host-api/v1.md`](host-api/v1.md) and its complete operation
+table is [`host-api/operations-v1.json`](host-api/operations-v1.json). These
+documents are the stable v1 source; a Core or Provider release does not alter
+their addresses or semantics.
+
+Prose may receive an editorial correction only when every conforming peer's
+accepted, sent, stored, and observed behavior is unchanged. A new endpoint,
+field, error, feature, constraint, state transition, discovery member, or
+changed lifecycle meaning is an API change and waits for a separately
+justified Host API v2. There is no Host API v1.1 lane or calendar checkpoint.
+
 ## What freezes a value
 
 An axis says what a number means; an append-only identity ledger says whether
 that value may move.
 
-| Value | Current authority |
+| Value | Authority (current or retained) |
 | --- | --- |
-| Specification release | [`release/specification-releases.json`](../release/specification-releases.json) |
+| Historical Specification receipt | [`release/specification-releases.json`](../release/specification-releases.json) |
 | Active and verify-only schema `$id` and path | [`release/public-schema-identities.json`](../release/public-schema-identities.json) |
 | Pre-extraction served-document declarations | [`docs/extraction/history/published-document-lanes.json`](../docs/extraction/history/published-document-lanes.json) |
 | Retained predecessor bytes | Immutable git history and the predecessor release identity |
 
 Withdrawal is recorded, never silent. An occupied address or digest moves to a
 retired/verify-only record, keeps its bytes, and cannot be reused for another
-contract. The schema ledger is append-only; the extracted W09 ledger is a
-historical receipt and is not regenerated.
+contract. The schema ledger and retained receipt are append-only; the extracted
+W09 ledger is historical evidence and is not regenerated.
 
 ## Form groups
 
@@ -95,13 +123,24 @@ identities. Archive headers and compression are transport and MUST NOT enter
 either digest.
 
 The package profile may evolve only when its validation contract changes. A
-publisher's package release cadence is independent of Specification, Form,
-Host, and client releases. A package digest does not carry an implicit SemVer;
-the Form's `definitionVersion` is the compatibility version for desired state.
+publisher's package publication cadence is independent of the four version
+streams and the retained Specification receipt. A package digest does not carry
+an implicit SemVer; the Form's `definitionVersion` is the compatibility version
+for desired state.
 
 The predecessor package profiles and locator grammars remain verify-only
 history. Their bytes are accepted only to read or recover an occupied identity;
 they are not aliases for the current profile.
+
+## Core and Provider software identities
+
+Core/library SemVer identifies the exported SDK, CLI, verifier, compiler, and
+Host API client implementation. Provider SemVer identifies the Provider's
+Terraform/OpenTofu schema, state, import, diagnostics, and mapping behavior.
+They are independent software streams: either may advance without minting a
+Host API lane or changing a Form's `definitionVersion`, and a package-envelope
+format change does not require either stream to advance. Provider publication
+remains outside this repository.
 
 ## Client versions are independent
 
@@ -178,18 +217,37 @@ current Stable Form, and no current tooling may renumber it.
 
 The current source candidate is the exact Host API v1 lane, discovered at
 `/.well-known/takoform/v1` with API base `/apis/forms.takoform.com/v1`. Its
-wire contract is [`host-api/v1.md`](host-api/v1.md). A Host lane is independent
-of Form maturity, package publication, client versions, and publisher trust.
+wire contract is [`host-api/v1.md`](host-api/v1.md) and its operation table is
+[`host-api/operations-v1.json`](host-api/operations-v1.json). A Host lane is
+independent of Form maturity, package publication, client versions, Core
+library releases, Provider releases, and publisher trust.
 
-A new lane is minted only for a changed protocol contract or an explicitly
-evidenced protocol graduation. It is a new exact identity, never a relabeling
-of an occupied address. A Form Family change or client release alone does not
-mint a Host lane.
+The v1 operation, wire, discovery, support, and lifecycle semantics are frozen.
+Prose may receive an editorial correction only when every conforming peer's
+accepted, sent, stored, and observed behavior is unchanged. A new endpoint,
+field, error, feature, constraint, state transition, discovery member, or
+changed lifecycle meaning is an API change and waits for a separately
+justified Host API v2. There is no Host API v1.1 lane or calendar checkpoint.
+
+A new Host API major is a new exact identity, never a relabeling of an occupied
+address. A Form Family change, client release, Core/library release, Provider
+release, or package-envelope change alone does not mint a Host lane.
 
 The predecessor Host lanes, their discovery paths, and their operation tables
 remain retained history. They are identified in the extracted W09 ledger and
 the [immutable predecessor source](https://github.com/tako0614/terraform-provider-takoform/tree/1fa34160a4ed152443b4ea424a324f7677716e36/spec/host-api);
 they do not authorize a new lane or a current runner.
+
+## Historical Specification receipt
+
+Specification 1.1 is an immutable historical source receipt recorded in
+[`release/specification-releases.json`](../release/specification-releases.json).
+It created no Host API, Form, package, Provider, or client release.
+Specification 1.0 was never published, is withdrawn, and cannot be reused.
+The extracted predecessor policy and publication evidence under
+[`docs/extraction/history/`](../docs/extraction/history/README.md) preserve
+those exact historical facts; they are not current version streams or writer
+authority.
 
 ## Deprecation and revocation
 

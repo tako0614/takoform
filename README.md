@@ -9,31 +9,41 @@ It is an experimental specification and tooling project. It is not a cloud
 catalog, a hosted control plane, a Terraform Provider, or a claim that unlike
 service semantics can be made portable by renaming fields.
 
-## Independent version axes
+## Current version streams
 
-| Axis | Current identity | Meaning |
+Takoform has exactly four named version streams. Host API and Form versions are
+domain compatibility; Core/library and Provider versions identify independently
+released software:
+
+| Stream | Current identity | Meaning |
 | --- | --- | --- |
-| Specification | `1.1` | immutable normative source snapshot released from the predecessor repository |
-| Core SDK and CLI | `v0.1.0` candidate | public Go packages and command behavior; released only after the W10 authority cutover |
-| Host API | `forms.takoform.com/v1` | separate unpublished protocol candidate |
-| Form Package format | `packages.forms.takoform.com/v1alpha5` | current data-envelope schema identity, not Core SemVer |
+| Host API major | `forms.takoform.com/v1` | Compatibility of the Host discovery and wire contract |
+| Form definition | each Form's `definitionVersion` | Compatibility of that Form's portable desired-state contract |
+| Core/library | `v0.1.0` candidate | SDK, CLI, verifier, compiler, and client implementation compatibility |
+| Provider | independent SemVer | Terraform/OpenTofu schema, state, import, diagnostics, and mapping compatibility |
 
-These axes never advance one another implicitly. Specification 1.1 did not
-publish Host API v1, a Form, a Form Package, a Provider, Host support,
-activation, or an Offering. Core `v0.1.0` will not mint an API v2 identity.
+These streams never advance one another implicitly. A Core or Provider release
+does not mint a Host API lane or change a Form identity, and a Form release does
+not require a Core or Provider bump.
 
-Specification 1.1 remains bound to its original immutable release:
+The package envelope, such as
+`packages.forms.takoform.com/v1alpha5`, is a wire-format/schema identity for a
+manifest. It is not a fifth product release stream. A package digest identifies
+the exact distribution bytes, while the Form's `definitionVersion` carries the
+desired-state compatibility version. A reverse-DNS Form group is a namespace,
+not a version.
 
-- repository: `github.com/tako0614/terraform-provider-takoform`
-- tag: `specification/1.1`
-- annotated tag object: `e2c1ba71766a6b25cae0826df99c8906a7f3f20b`
-- normative source commit: `00ae5ee4e2ea2eb62ea796499a93081374dc36b9`
-- release commit: `35c03a76326c808e859aa77172e086f15a2aeb5d`
-- source snapshot: `sha256:23a9b14dc79f46fae632624fc5c442f947f63565e9d7f9d0a614598b5027ae03`
+## Historical Specification receipt
 
-This repository imports that receipt but never recreates or retags the release.
-The extraction and future-writer handoff are recorded in
-[`docs/extraction/w10-core-cutover.md`](docs/extraction/w10-core-cutover.md).
+Specification 1.1 is an immutable historical receipt, not a current version
+stream. Its exact source snapshot, tag, release, and evidence remain in the
+append-only [`Specification release ledger`](release/specification-releases.json)
+and the extracted predecessor evidence under
+[`docs/extraction/history/`](docs/extraction/history/README.md). Specification
+1.0 was never published, is withdrawn, and cannot be reused. There is no
+current Specification 1.0 or 1.1 release lane; the receipt did not publish the
+Host API v1, a Form, a package, a Provider, Host support, activation, or an
+Offering.
 
 ## Public Core packages
 
@@ -76,8 +86,8 @@ Core owns:
 - normative Specification source and active or verify-only schemas;
 - package canonicalization, validation, trust formats, and generic conformance;
 - immutable Snapshot compilation and the Host API client;
-- future Specification and public-schema release records after the one-way
-  authority handoff.
+- append-only schema identities and historical publication receipts; these
+  records identify exact bytes and are not an additional release stream.
 
 Core does not own:
 
@@ -106,16 +116,16 @@ ownership boundary, schema and release records, Go formatting/static analysis,
 all portable tests, generic conformance, and standalone builds. No sibling
 Provider checkout or `replace` directive is allowed.
 
-## Version cadence
+## Release boundaries
 
-Specification majors receive deliberate compatibility review and normally no
-more than one planned release per year. A minor is released only when a coherent
-compatible body of change is ready; there is no obligation to mint one every
-month. Proposals accumulate before publication. Forms, packages, Core, Hosts,
-and Providers release on their own evidence and cadence.
-
-API v2 remains proposal-only until a later explicit decision and release. This
-repository does not publish or route it as part of W09-W19.
+The four streams above have independent owners, evidence, and cadence. The
+current Host API v1 remains the exact lane documented above; its wire identity
+does not become `v1.1`, and a new endpoint, field, error, feature, constraint,
+state transition, or discovery member waits for a separately justified Host API
+v2 proposal. The Core candidate and any Provider candidate are source evidence,
+not publication proof. Form and package publishers make their own release
+decisions under the exact identity and digest rules in
+[`spec/versioning.md`](spec/versioning.md).
 
 ## License
 

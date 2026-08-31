@@ -1,23 +1,43 @@
 # Current publication and change boundary
 
-This tree is an unreleased post-1.1 draft. The predecessor W09 policy and
-publication evidence are imported under
+The current model has exactly four version streams: Host API major, each Form's
+`definitionVersion`, Core/library SemVer, and Provider SemVer. The predecessor
+W09 policy and publication evidence are imported under
 [`docs/extraction/history/`](../docs/extraction/history/README.md); they are
 history, not current writer authority.
 
-## Published identity
+## Historical Specification receipt
 
-Takoform Specification 1.1 is immutable history published from
+Specification 1.1 is immutable history published from
 `github.com/tako0614/terraform-provider-takoform`. Its original source, tag,
-Release, snapshot, and asset receipt remain exact in
-[`release/specification-releases.json`](../release/specification-releases.json).
+Release, snapshot, and asset receipt remain exact in the append-only
+[`release/specification-releases.json`](../release/specification-releases.json)
+ledger and the extracted
+[`Specification 1.1 evidence`](../docs/extraction/history/specification-1.1-publication-evidence.json).
 This repository must not recreate, retag, overwrite, or relocate it.
 Specification 1.0 was never published, is withdrawn, and cannot be reused.
+There is no current Specification 1.0 or 1.1 release lane; the receipt is not a
+fifth stream.
 
-Editing `main` does not publish a Specification, Host API, Form, Form Package,
+Editing `main` does not publish a version stream, Host API, Form, Form Package,
 Interface, Binding, Provider, Host capability, activation, or Offering. The
 literal `forms.takoform.com/v1` Host API remains an independent unpublished
 candidate.
+
+## Host API v1 stability
+
+The current Host API v1 is the exact lane discovered at
+`/.well-known/takoform/v1` and served at `/apis/forms.takoform.com/v1`. Its
+wire prose and machine documents are [`host-api/v1.md`](host-api/v1.md) and
+[`host-api/operations-v1.json`](host-api/operations-v1.json). Their required
+bytes and semantics are frozen: a Core or Provider release, new Form, or
+elapsed time does not reopen v1.
+
+Editorial corrections MAY clarify prose only when every conforming peer's
+accepted, sent, stored, and observed behavior is unchanged. A new endpoint,
+field, error, feature, constraint, state transition, discovery member, or
+changed lifecycle meaning is an API change and waits for a separately
+justified Host API v2. There is no Host API v1.1 lane or calendar checkpoint.
 
 ## Dormant writer
 
@@ -38,24 +58,23 @@ rotation; D, N, E, recovery, and receipt commits cannot change it. The exact
 rules are in
 [`release/specification-release-policy.md`](../release/specification-release-policy.md).
 
-## Independent publication lanes
+## Independent publication boundaries
 
-A future Specification `1.x` release may have zero schema additions, N equal
-to D, and no Cloudflare mutation. A schema-only append/deploy has no
-Specification version, tag, Release, or receipt. A composed operation may do
-both, but neither identity depends on the other. The initial schema-origin
-authority cutover remains a separate one-time authority transfer.
+The four current streams have independent owners, evidence, and cadence. A
+schema-only append/deploy has no Specification version, tag, Release, or receipt;
+the schema identity is an exact wire artifact. A Form Package publisher may
+publish package bytes under its own policy, while this repository only verifies
+the closed data-only envelope and digest.
 
-No current or future command in this lane may mint Specification 2.x, Host API
-v2, a v2 schema/route/tag/receipt/Release, or claim a new public identity.
-Design text for a possible v2 is allowed only below `spec/proposals/` with
-exact `classification: non-normative-proposal` front matter. Normative source
-snapshot creation and publication re-read exact D bytes and enforce that
-classification.
+The dormant writer describes a possible future Specification identity only; it
+does not make a current release lane. No command in this tree may recreate,
+retag, overwrite, or relocate the occupied Specification 1.1 receipt. Design
+text for a possible Host API v2 is allowed only below `spec/proposals/` with
+exact `classification: non-normative-proposal` front matter. No v2 route,
+schema, tag, receipt, or Release is current publication evidence.
 
-Specification, Core SDK/CLI, Host API, each Form and Form Package, Provider,
-Host implementation, support, activation, and commercial Offering remain
-independent release axes. Official and third-party publishers use the same
+Host API major, each Form `definitionVersion`, Core/library SemVer, and Provider
+SemVer remain independent. Official and third-party publishers use the same
 package, verification, trust, revocation, installation, support, and activation
 mechanisms; provenance may differ, but the contract has no official privilege
 bit or bypass.
