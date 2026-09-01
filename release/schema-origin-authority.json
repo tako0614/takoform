@@ -1,0 +1,17 @@
+{
+  "format": "takoform.schema-origin-authority-transfer@v1",
+  "state": "prepared-writer-disabled",
+  "hostApi": "forms.takoform.com/v1",
+  "hostApiClosure": "release/host-api-v1.json",
+  "schemaLedger": "release/public-schema-identities.json",
+  "predecessorRepository": "https://github.com/tako0614/terraform-provider-takoform.git",
+  "predecessorCutoffCommit": "1fa34160a4ed152443b4ea424a324f7677716e36",
+  "predecessorCutoffTree": "7e4a2578af2f50b826fba1004fdd4e430c761314",
+  "successorRepository": "https://github.com/tako0614/takoform.git",
+  "predecessorTombstoneCommit": null,
+  "schemaRouteCutover": null,
+  "predecessorWriterDisabledAt": null,
+  "successorWriterEnabledAt": null,
+  "writerOverlapAllowed": false,
+  "rollback": "Before successor activation, abandon the prepared repository and leave the predecessor schema writer unchanged. After predecessor disablement, repair forward in the successor; never reopen the predecessor schema writer."
+}

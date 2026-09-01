@@ -2,8 +2,8 @@
 
 This document records the non-destructive extraction that establishes
 `github.com/tako0614/takoform` as the final neutral Core owner. It is an
-extraction receipt, not a replacement for the immutable Specification 1.1
-release receipt.
+extraction receipt. The numbered release facts below are raw predecessor
+evidence, not a current version axis or writer authority.
 
 ## Fixed source identities
 
@@ -25,7 +25,7 @@ release receipt.
   `6542239003656464f8c78f87dca7d37f5e2b2ae358a49734d8f48a939bc52dad`
 
 The extraction started from a main-only, no-tag clone. No Provider, Form,
-admission, or Specification tag is copied to the new repository.
+admission, or project-wide document tag is copied to the new repository.
 
 ## Immutable Specification 1.1 history
 
@@ -95,16 +95,16 @@ split. The module-cutover commit removes Provider, official-family, Edge
 runtime, publisher-operation, and mixed-ledger content from the current tree.
 Historical presence in an extracted commit does not grant current authority.
 
-## Current ownership after cutover
+## Ownership recorded by the extraction
 
 Core owns:
 
-- the normative Specification and complete active/verify-only neutral schema
+- the normative contracts and complete active/verify-only neutral schema
   closure;
 - `formpackage`, the public immutable Snapshot compiler, the neutral Host API
   client, generic conformance, and their SDK/CLI surfaces;
 - caller-supplied publisher/trust policy formats and offline verification;
-- the sole future Specification and public-schema ledger writers.
+- the public-schema identity ledger and its schema-origin writer.
 
 Core does not own:
 
@@ -119,16 +119,15 @@ Core does not own:
 Historical Host and Form Package schemas remain byte-exact `verify-only`
 compatibility inputs. They do not authorize new publication or Host support.
 
-## Authority transfer order
+## Current authority boundary
 
-1. Build and verify the extracted repository with all future writers disabled.
-2. Record the complete source/path/blob/digest map and the final Core commit.
-3. Land a forward tombstone in the old repository that freezes its
-   Specification/schema ledgers and removes future Specification writers.
-4. Remove old workflow/OIDC/tag-creation authority.
-5. Enable the new repository's sole future Specification/schema writer.
-6. Publish the first Core SDK/CLI release as `v0.1.0` and perform authoritative
-   tag, release, checksum, and Go module readback.
-
-A short zero-writer interval is valid. A dual-writer interval is forbidden.
-Published Provider and Specification identities are never rewritten.
+The original general document-writer transfer plan is retired. There is no
+numbered document writer or project-wide release train. Core/library releases
+use Core SemVer. The still-dormant schema-origin transfer is independently
+governed by
+[`release/schema-origin-authority.json`](../../release/schema-origin-authority.json)
+and [`release/schema-origin-policy.md`](../../release/schema-origin-policy.md).
+It binds the Host API v1 closure and public-schema identity ledger, requires the
+predecessor schema writer to be disabled before cutover, forbids dual writers,
+and repairs forward after activation. Published Provider and raw predecessor
+identities are never rewritten.

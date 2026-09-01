@@ -20,10 +20,9 @@ lifecycle vocabulary is in [`project-lifecycle.md`](project-lifecycle.md).
 The current Host lane is exactly `forms.takoform.com/v1`. The Core release
 record carries `v0.1.0` as a candidate software identity; it is not a Host API
 version. Provider SemVer belongs to the Provider's own release authority and is
-not synchronized with Core, Host API, or any Form. There is no current
-Specification 1.0 or 1.1 release lane; the retained 1.1 receipt and its
-history label are described below. A reverse-DNS Form group is a versionless
-namespace.
+not synchronized with Core, Host API, or any Form. There is no independent
+numbered document version, document release train, or selectable document
+maturity label. A reverse-DNS Form group is a versionless namespace.
 
 The package envelope, such as
 `packages.forms.takoform.com/v1alpha5`, is a wire-format/schema identity, not a
@@ -47,10 +46,9 @@ and the extracted ledger records the old lane declarations in
 
 ## Current and retained identities
 
-The current Core source carries the literal Host API v1 candidate
+The current Core source carries the literal Host API v1 contract
 `forms.takoform.com/v1` and the versionless family-group grammar. It does not
-carry a fixed family roster. The historical Specification 1.1 receipt did not
-publish a Host lane or promote a Form, and it is not a current release input.
+carry a fixed family roster or another project-wide version axis.
 
 The current package profile is
 [`package-index-v1alpha5.schema.json`](schemas/package-index-v1alpha5.schema.json).
@@ -92,15 +90,15 @@ that value may move.
 
 | Value | Authority (current or retained) |
 | --- | --- |
-| Historical Specification receipt | [`release/specification-releases.json`](../release/specification-releases.json) |
+| Host API v1 normative closure | [`release/host-api-v1.json`](../release/host-api-v1.json) |
 | Active and verify-only schema `$id` and path | [`release/public-schema-identities.json`](../release/public-schema-identities.json) |
 | Pre-extraction served-document declarations | [`docs/extraction/history/published-document-lanes.json`](../docs/extraction/history/published-document-lanes.json) |
 | Retained predecessor bytes | Immutable git history and the predecessor release identity |
 
 Withdrawal is recorded, never silent. An occupied address or digest moves to a
 retired/verify-only record, keeps its bytes, and cannot be reused for another
-contract. The schema ledger and retained receipt are append-only; the extracted
-W09 ledger is historical evidence and is not regenerated.
+contract. The schema ledger is append-only; the extracted W09 ledger is
+historical evidence and is not regenerated.
 
 ## Form groups
 
@@ -124,7 +122,7 @@ either digest.
 
 The package profile may evolve only when its validation contract changes. A
 publisher's package publication cadence is independent of the four version
-streams and the retained Specification receipt. A package digest does not carry
+streams. A package digest does not carry
 an implicit SemVer; the Form's `definitionVersion` is the compatibility version
 for desired state.
 
@@ -238,16 +236,12 @@ remain retained history. They are identified in the extracted W09 ledger and
 the [immutable predecessor source](https://github.com/tako0614/terraform-provider-takoform/tree/1fa34160a4ed152443b4ea424a324f7677716e36/spec/host-api);
 they do not authorize a new lane or a current runner.
 
-## Historical Specification receipt
+## Historical source evidence
 
-Specification 1.1 is an immutable historical source receipt recorded in
-[`release/specification-releases.json`](../release/specification-releases.json).
-It created no Host API, Form, package, Provider, or client release.
-Specification 1.0 was never published, is withdrawn, and cannot be reused.
 The extracted predecessor policy and publication evidence under
-[`docs/extraction/history/`](../docs/extraction/history/README.md) preserve
-those exact historical facts; they are not current version streams or writer
-authority.
+[`docs/extraction/history/`](../docs/extraction/history/README.md) remain
+byte-pinned raw history. Their embedded labels do not define a current version
+stream, compatibility rule, publication input, or writer authority.
 
 ## Deprecation and revocation
 

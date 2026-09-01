@@ -280,7 +280,7 @@ func validateRuntime(cfg config, proposal *sealedProposal) error {
 			return err
 		}
 	}
-	requiresBun := proposal.Invocation.Surface == "takoform-specification-release" || proposal.Invocation.Surface == "takoform-schema-origin"
+	requiresBun := proposal.Invocation.Surface == "takoform-schema-origin"
 	if requiresBun != (proposal.PreparationTools.Bun != nil) {
 		return errors.New("credentialless preparation Bun binding differs from the exact surface role")
 	}
@@ -468,30 +468,6 @@ func expectedCredentialNames(invocation invocation) ([]string, error) {
 			}
 		}
 	}
-	if surface == "takoform-specification-release" {
-		lane := flagValue(invocation.Args, "--lane")
-		var names []string
-		switch {
-		case phase == "prepare" && (lane == "schema" || lane == "composed"):
-			names = []string{"CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_ZONE_ID"}
-		case (phase == "publish" || phase == "recover") && lane == "specification":
-			names = []string{"GH_TOKEN", "TAKOFORM_CORE_TAG_SIGNING_KEY", "TAKOFORM_SPECIFICATION_RULESET_AUDIT_TOKEN"}
-		case (phase == "publish" || phase == "recover") && lane == "schema":
-			names = []string{"CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ZONE_ID"}
-		case (phase == "publish" || phase == "recover") && lane == "composed":
-			names = []string{"CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ZONE_ID", "GH_TOKEN", "TAKOFORM_CORE_TAG_SIGNING_KEY", "TAKOFORM_SPECIFICATION_RULESET_AUDIT_TOKEN"}
-		case phase == "prepare-receipt":
-			names = []string{"TAKOFORM_SPECIFICATION_RULESET_AUDIT_TOKEN"}
-		case phase == "record":
-			names = []string{"TAKOFORM_SPECIFICATION_REF_WRITE_TOKEN", "TAKOFORM_SPECIFICATION_RULESET_AUDIT_TOKEN"}
-		case phase == "verify" && lane != "schema":
-			names = []string{"TAKOFORM_SPECIFICATION_RULESET_AUDIT_TOKEN"}
-		}
-		if names != nil {
-			sort.Strings(names)
-			return names, nil
-		}
-	}
 	return nil, errors.New("sealed invocation is not one exact credentialed phase")
 }
 
@@ -577,15 +553,6 @@ func pathWithin(root, path string) bool {
 	}
 	relation, err := filepath.Rel(root, path)
 	return err == nil && relation != "." && relation != ".." && !strings.HasPrefix(relation, "../") && !filepath.IsAbs(relation)
-}
-
-func flagValue(args []string, flag string) string {
-	for index := 0; index+1 < len(args); index++ {
-		if args[index] == flag {
-			return args[index+1]
-		}
-	}
-	return ""
 }
 
 func toRunExecutable(identity executableIdentity) runExecutableIdentity {

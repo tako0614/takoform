@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { execFileSync, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import {
   chmodSync,
   chownSync,
@@ -35,18 +35,18 @@ import {
 import {
   parseSchemaToolClosurePolicy,
   sealInstalledToolClosure,
-} from "./specification-release-adapter.mjs";
+} from "./schema-tool-closure.mjs";
 import {
+  schemaOriginWriterClosurePaths,
   schemaRouteCutoverClosureSha256,
-  validateAuthorityTransfer,
+  validateSchemaOriginAuthority,
 } from "./records.mjs";
-import {
-  WRITER_CLOSURE_MANIFEST_PATH,
-  WRITER_EXECUTION_PATHS,
-} from "./specification-release.mjs";
+
+const WRITER_CLOSURE_MANIFEST_PATH =
+  "release/authority/schema-origin-writer-closure.json";
+const WRITER_EXECUTION_PATHS = schemaOriginWriterClosurePaths;
 
 const COMMIT = "a".repeat(40);
-const PREPARED_COMMIT = "b".repeat(40);
 const TOMBSTONE = "c".repeat(40);
 const ACCOUNT_ID = "1".repeat(32);
 const ZONE_ID = "2".repeat(32);
@@ -106,7 +106,7 @@ function toolClosureFixture({ policy = {} } = {}) {
     },
   ];
   const basePolicy = {
-    format: "takoform.specification-schema-tool-closure@v1",
+    format: "takoform.schema-origin-tool-closure@v1",
     platform: process.platform,
     architecture: process.arch,
     runtimeExecutable: "/usr/local/bin/node",
@@ -123,14 +123,14 @@ function toolClosureFixture({ policy = {} } = {}) {
     root,
     "release",
     "authority",
-    "specification-schema-tool-closure.json",
+    "schema-origin-tool-closure.json",
   );
   mkdirSync(path.dirname(policyPath), { recursive: true });
   writeFileSync(policyPath, `${JSON.stringify(basePolicy, null, 2)}\n`);
   writeFileSync(
     path.join(root, WRITER_CLOSURE_MANIFEST_PATH),
     `${JSON.stringify({
-      format: "takoform.specification-writer-closure@v1",
+      format: "takoform.schema-origin-writer-closure@v1",
       paths: [...WRITER_EXECUTION_PATHS],
     }, null, 2)}\n`,
   );
@@ -150,39 +150,15 @@ function toolClosureFixture({ policy = {} } = {}) {
   const authorityPath = path.join(
     root,
     "release",
-    "specification-authority.json",
+    "schema-origin-authority.json",
   );
   const authority = preparedAuthority();
-  writeFileSync(authorityPath, `${JSON.stringify(authority, null, 2)}\n`);
-  execFileSync("git", ["init", "--quiet", "--initial-branch=main"], {
-    cwd: root,
-    stdio: ["ignore", "ignore", "pipe"],
-  });
-  execFileSync("git", ["config", "user.email", "fixture@example.com"], {
-    cwd: root,
-    stdio: ["ignore", "ignore", "pipe"],
-  });
-  execFileSync("git", ["config", "user.name", "Fixture"], {
-    cwd: root,
-    stdio: ["ignore", "ignore", "pipe"],
-  });
-  execFileSync("git", ["add", "."], { cwd: root, stdio: ["ignore", "ignore", "pipe"] });
-  execFileSync("git", ["commit", "--quiet", "-m", "fixture P0"], {
-    cwd: root,
-    stdio: ["ignore", "ignore", "pipe"],
-  });
-  const p0Commit = execFileSync("git", ["rev-parse", "HEAD"], {
-    cwd: root,
-    encoding: "utf8",
-  }).trim();
-  authority.successorPreparedCommit = p0Commit;
   writeFileSync(authorityPath, `${JSON.stringify(authority, null, 2)}\n`);
   return {
     root,
     sourceExecutable: path.join(wranglerRoot, "bin", "wrangler.js"),
     policyPath,
     authorityPath,
-    p0Commit,
   };
 }
 
@@ -246,25 +222,21 @@ function retiredSchemas() {
 
 function preparedAuthority(state = "prepared-writer-disabled") {
   const authority = {
-    format: "takoform.specification-authority-transfer@v1",
+    format: "takoform.schema-origin-authority-transfer@v1",
     state,
+    hostApi: "forms.takoform.com/v1",
+    hostApiClosure: "release/host-api-v1.json",
+    schemaLedger: "release/public-schema-identities.json",
     predecessorRepository: SCHEMA_ORIGIN.predecessorRepository,
     predecessorCutoffCommit: "1fa34160a4ed152443b4ea424a324f7677716e36",
     predecessorCutoffTree: "7e4a2578af2f50b826fba1004fdd4e430c761314",
     successorRepository: SCHEMA_ORIGIN.repository,
-    lastPredecessorSpecificationRelease: {
-      version: "1.1",
-      tag: "specification/1.1",
-      tagObject: "e2c1ba71766a6b25cae0826df99c8906a7f3f20b",
-      releaseId: 377480828,
-    },
     predecessorTombstoneCommit: state === "successor-active" ? TOMBSTONE : null,
-    successorPreparedCommit: PREPARED_COMMIT,
     schemaRouteCutover: null,
     predecessorWriterDisabledAt: state === "successor-active" ? "2026-08-27T11:40:00Z" : null,
     successorWriterEnabledAt: state === "successor-active" ? "2026-08-27T12:20:01Z" : null,
     writerOverlapAllowed: false,
-    rollback: "Before successor activation, abandon the prepared repository and leave the predecessor writer unchanged. After predecessor disablement, repair forward in the successor; never reopen the predecessor writer or recreate Specification 1.1.",
+    rollback: "Before successor activation, abandon the prepared repository and leave the predecessor schema writer unchanged. After predecessor disablement, repair forward in the successor; never reopen the predecessor schema writer.",
   };
   if (state === "successor-active") {
     authority.schemaRouteCutover = {
@@ -301,8 +273,12 @@ function localEvidence(authority = preparedAuthority()) {
     },
     authority: {
       document: authority,
-      path: "release/specification-authority.json",
+      path: "release/schema-origin-authority.json",
       sha256: digest(canonicalJSON(authority)),
+    },
+    hostApi: {
+      path: "release/host-api-v1.json",
+      sha256: digest("host-api-v1"),
     },
     ledger: {
       path: "release/public-schema-identities.json",
@@ -933,7 +909,7 @@ describe("sealed schema tool closure", () => {
     }
   });
 
-  test("rejects an authority P0 rotation before credential, network, or subprocess access", async () => {
+  test("rejects a prepared-authority rotation before credential, network, or subprocess access", async () => {
     const fixture = toolClosureFixture();
     const probe = subprocessProbe();
     const operations = createSchemaOriginOperations({
@@ -943,7 +919,7 @@ describe("sealed schema tool closure", () => {
       runner: probe.runner,
     });
     const authority = JSON.parse(readFileSync(fixture.authorityPath, "utf8"));
-    authority.successorPreparedCommit = "f".repeat(40);
+    authority.schemaLedger = "release/other-schema-identities.json";
     writeFileSync(fixture.authorityPath, `${JSON.stringify(authority, null, 2)}\n`);
     await expect(verifySchemaOrigin(
       { phase: "verify", candidate: CANDIDATE_PATH },
@@ -981,15 +957,9 @@ describe("sealed schema tool closure", () => {
     operations.cleanup();
   });
 
-  test("parses the pretty tracked policy bytes and compares them with the immutable P0 Git blob", () => {
+  test("parses the tracked schema-origin tool policy bytes", () => {
     const fixture = toolClosureFixture();
     const tracked = readFileSync(fixture.policyPath);
-    const p0 = execFileSync(
-      "git",
-      ["cat-file", "blob", `${fixture.p0Commit}:release/authority/specification-schema-tool-closure.json`],
-      { cwd: fixture.root },
-    );
-    expect(tracked).toEqual(p0);
     expect(parseSchemaToolClosurePolicy(tracked)).toMatchObject({
       fileCount: 3,
       manifestSha256: digest(Buffer.from(canonicalJSON([
@@ -1000,7 +970,7 @@ describe("sealed schema tool closure", () => {
     });
   });
 
-  test("rejects tracked tool-policy drift against the immutable P0 bytes", async () => {
+  test("rejects tracked tool-policy drift against the captured closure", async () => {
     const fixture = toolClosureFixture();
     const probe = subprocessProbe();
     const operations = createSchemaOriginOperations({
@@ -1757,8 +1727,8 @@ describe("authority activation preparation", () => {
     for (const [label, mutate] of mutations) {
       const changed = structuredClone(authority);
       mutate(changed.schemaRouteCutover);
-      expect(validateAuthorityTransfer(changed), label).toContain(
-        "active authority receipt has an invalid schema-route cutover closure",
+      expect(validateSchemaOriginAuthority(changed), label).toContain(
+        "schema-origin authority cutover closure is invalid",
       );
     }
   });

@@ -59,15 +59,12 @@ const CREDENTIAL_ENV_NAMES = Object.freeze([
   "GH_TOKEN",
   "TAKOFORM_CORE_REF_WRITE_TOKEN",
   "TAKOFORM_CORE_TAG_SIGNING_KEY",
-  "TAKOFORM_SPECIFICATION_REF_WRITE_TOKEN",
-  "TAKOFORM_SPECIFICATION_RULESET_AUDIT_TOKEN",
 ]);
 
 export const SEALED_FORBIDDEN_AMBIENT_ENV = Object.freeze(new Set([
   "GH_TOKEN", "GITHUB_TOKEN", "GH_ENTERPRISE_TOKEN", "GITHUB_ENTERPRISE_TOKEN", "GITHUB_PAT",
   "TAKOFORM_CORE_TAG_SIGNING_KEY", "TAKOFORM_CORE_REF_WRITE_TOKEN",
-  "TAKOFORM_SPECIFICATION_RULESET_AUDIT_TOKEN", "TAKOFORM_SPECIFICATION_REF_WRITE_TOKEN",
-  "TAKOFORM_SPECIFICATION_TAG_SIGNING_KEY", "CLOUDFLARE_API_TOKEN", "CLOUDFLARE_API_KEY",
+  "CLOUDFLARE_API_TOKEN", "CLOUDFLARE_API_KEY",
   "CLOUDFLARE_EMAIL", "CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_ZONE_ID", "CF_API_TOKEN",
   "CF_API_KEY", "CF_API_EMAIL", "NPM_TOKEN", "NODE_AUTH_TOKEN", "BUN_AUTH_TOKEN",
   "YARN_NPM_AUTH_TOKEN", "GOAUTH", "NETRC", "SSH_AUTH_SOCK", "SSH_ASKPASS",
@@ -418,11 +415,6 @@ function copyBoundInputs(root, args, inputFlags) {
   return { args: rewritten, inputs: records };
 }
 
-function flagValue(args, name) {
-  const index = args.indexOf(name);
-  return index === -1 ? undefined : args[index + 1];
-}
-
 export function expectedCredentialBinding(args) {
   const surface = args[0];
   const phase = args[1];
@@ -432,18 +424,6 @@ export function expectedCredentialBinding(args) {
   }
   if (surface === "takoform-schema-origin") {
     return { credentialClass: "broker-bound-exact-phase-authority-envelope", env: ["CLOUDFLARE_API_TOKEN"] };
-  }
-  if (surface === "takoform-specification-release") {
-    const lane = flagValue(args, "--lane");
-    let env;
-    if (phase === "prepare" && ["schema", "composed"].includes(lane)) env = ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_ZONE_ID"];
-    else if (["publish", "recover"].includes(phase) && lane === "specification") env = ["GH_TOKEN", "TAKOFORM_CORE_TAG_SIGNING_KEY", "TAKOFORM_SPECIFICATION_RULESET_AUDIT_TOKEN"];
-    else if (["publish", "recover"].includes(phase) && lane === "schema") env = ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ZONE_ID"];
-    else if (["publish", "recover"].includes(phase) && lane === "composed") env = ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ZONE_ID", "GH_TOKEN", "TAKOFORM_CORE_TAG_SIGNING_KEY", "TAKOFORM_SPECIFICATION_RULESET_AUDIT_TOKEN"];
-    else if (phase === "prepare-receipt") env = ["TAKOFORM_SPECIFICATION_RULESET_AUDIT_TOKEN"];
-    else if (phase === "record") env = ["TAKOFORM_SPECIFICATION_REF_WRITE_TOKEN", "TAKOFORM_SPECIFICATION_RULESET_AUDIT_TOKEN"];
-    else if (phase === "verify" && lane !== "schema") env = ["TAKOFORM_SPECIFICATION_RULESET_AUDIT_TOKEN"];
-    if (env) return { credentialClass: "broker-bound-exact-phase-authority-envelope", env };
   }
   throw new Error("sealed continuation invocation has no exact credentialed phase binding");
 }
@@ -520,7 +500,7 @@ export function prepareSealedProposal({
   if (runGit(["rev-parse", "--verify", "HEAD^{commit}"], join(root.path, "source"), join(root.path, "home")).trim() !== source) throw new Error("sealed proposal clone is not exact source S");
   runGit(["fsck", "--strict", "--full", "--no-reflogs"], join(root.path, "source"), join(root.path, "home"));
   if (runGit(["status", "--porcelain=v1", "--untracked-files=all"], join(root.path, "source"), join(root.path, "home")) !== "") throw new Error("sealed proposal clone is not exactly clean");
-  if (["takoform-specification-release", "takoform-schema-origin"].includes(args[0])) {
+  if (args[0] === "takoform-schema-origin") {
     runBunInstall(join(root.path, "source"), join(root.path, "home"));
     if (runGit(["status", "--porcelain=v1", "--untracked-files=all"], join(root.path, "source"), join(root.path, "home")) !== "") throw new Error("sealed proposal frozen install changed tracked source");
   }
@@ -545,7 +525,7 @@ export function prepareSealedProposal({
   const runtime = { continuationTools: { git, sshKeygen }, node };
   const preparationTools = {
     git,
-    ...(["takoform-specification-release", "takoform-schema-origin"].includes(args[0])
+    ...(args[0] === "takoform-schema-origin"
       ? { bun: trustedExecutable(SEALED_CONTINUATION_BUN, "proposal Bun") }
       : {}),
   };

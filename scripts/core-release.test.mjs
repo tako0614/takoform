@@ -587,7 +587,7 @@ describe("seven-phase contract and authority bootstrap", () => {
       ["publish", { GH_TOKEN: "x", CLOUDFLARE_API_TOKEN: "cf" }],
       ["record-prepare", { NODE_AUTH_TOKEN: "npm" }],
       ["record-push", { TAKOFORM_CORE_REF_WRITE_TOKEN: "x", GPG_TTY: "tty" }],
-      ["verify", { TAKOFORM_SPECIFICATION_REF_WRITE_TOKEN: "x" }],
+      ["verify", { TAKOFORM_SCHEMA_ORIGIN_TOKEN: "x" }],
     ]) {
       expect(() => assertCoreReleasePhaseAuthority(phase, env)).toThrow("forbidden");
     }
@@ -678,7 +678,7 @@ describe("seven-phase contract and authority bootstrap", () => {
           { expectedCommit: commit, receiptCommit: "2".repeat(40) },
           {
             repo: "/tmp",
-            env: { TAKOFORM_SPECIFICATION_REF_WRITE_TOKEN: "wrong" },
+            env: { TAKOFORM_SCHEMA_ORIGIN_TOKEN: "wrong" },
             runner,
             githubRequest,
           },

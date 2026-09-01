@@ -2,12 +2,10 @@
 
 import process from "node:process";
 import {
-  readFileSync,
   realpathSync,
   statSync,
-  writeFileSync,
 } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
@@ -38,29 +36,11 @@ import {
   parseSchemaOriginArgs,
   runSchemaOriginDeploy,
 } from "./schema-origin-deploy.mjs";
-import { createSpecificationReleaseOperations } from "./specification-release-adapter.mjs";
-import {
-  AUTHORITY_PATH as SPECIFICATION_AUTHORITY_PATH,
-  SpecificationReleaseError,
-  applySchemaReservation,
-  assertMutationAuthority as assertSpecificationMutationAuthority,
-  parseSpecificationReleaseArgs,
-  prepare as prepareSpecificationRelease,
-  prepareReceipt as prepareSpecificationReceipt,
-  publish as publishSpecificationRelease,
-  recover as recoverSpecificationRelease,
-  record as recordSpecificationRelease,
-  reserve as reserveSpecificationRelease,
-  sealRecordArtifact,
-  verify as verifySpecificationRelease,
-} from "./specification-release.mjs";
 
-export const SPECIFICATION_RELEASE_SURFACE = "takoform-specification-release";
 export const SCHEMA_ORIGIN_RELEASE_SURFACE = "takoform-schema-origin";
 export const DEPLOY_RUNTIME_EXECUTABLE = "/usr/local/bin/node";
 const DEPLOY_SURFACES = Object.freeze([
   CORE_RELEASE.surface,
-  SPECIFICATION_RELEASE_SURFACE,
   SCHEMA_ORIGIN_RELEASE_SURFACE,
 ]);
 const DEPLOY_USAGE = `usage: bun run deploy -- <${DEPLOY_SURFACES.join("|")}> <phase> [exact options]`;
@@ -271,154 +251,27 @@ export const DEPLOY_CONTRACT = Object.freeze({
       },
     },
     {
-      surface: SPECIFICATION_RELEASE_SURFACE,
-      target:
-        "dormant-future-specification-and-schema-release:tako0614/takoform",
-      covers: [
-        "release/specification-authority.json",
-        "release/specification-release-policy.md",
-        "release/specification-releases.json",
-        "release/authority/core-release-broker.json",
-        "release/authority/core-release-continuation-review.pub",
-        "release/broker",
-        "scripts/specification-release-adapter.mjs",
-        "scripts/specification-release.mjs",
-        "scripts/deploy.mjs",
-        "scripts/sealed-deploy-bootstrap.mjs",
-        "scripts/sealed-deploy-launcher.mjs",
-        "scripts/sealed-deploy-runner.mjs",
-      ],
-      requiresScripts: ["check"],
-      requiresTools: ["git", "node", "bun", "ssh-keygen"],
-      requiresEnv: [],
-      sealedContinuation: sealedContinuationContract(),
-      phaseAuthorities: {
-        reserve: { requiresEnv: [] },
-        "apply-reservation": { requiresEnv: [] },
-        seal: { requiresEnv: [] },
-        prepare: {
-          lanes: {
-            specification: { requiresEnv: [] },
-            schema: {
-              requiresEnv: ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_ZONE_ID"],
-            },
-            composed: {
-              requiresEnv: ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_ZONE_ID"],
-            },
-          },
-        },
-        publish: {
-          lanes: {
-            specification: {
-              requiresEnv: [
-                "GH_TOKEN",
-                "TAKOFORM_CORE_TAG_SIGNING_KEY",
-                "TAKOFORM_SPECIFICATION_RULESET_AUDIT_TOKEN",
-              ],
-            },
-            schema: {
-              requiresEnv: [
-                "CLOUDFLARE_API_TOKEN",
-                "CLOUDFLARE_ACCOUNT_ID",
-                "CLOUDFLARE_ZONE_ID",
-              ],
-            },
-            composed: {
-              requiresEnv: [
-                "GH_TOKEN",
-                "TAKOFORM_CORE_TAG_SIGNING_KEY",
-                "TAKOFORM_SPECIFICATION_RULESET_AUDIT_TOKEN",
-                "CLOUDFLARE_API_TOKEN",
-                "CLOUDFLARE_ACCOUNT_ID",
-                "CLOUDFLARE_ZONE_ID",
-              ],
-            },
-          },
-        },
-        recover: {
-          lanes: {
-            specification: {
-              requiresEnv: [
-                "GH_TOKEN",
-                "TAKOFORM_CORE_TAG_SIGNING_KEY",
-                "TAKOFORM_SPECIFICATION_RULESET_AUDIT_TOKEN",
-              ],
-            },
-            schema: {
-              requiresEnv: [
-                "CLOUDFLARE_API_TOKEN",
-                "CLOUDFLARE_ACCOUNT_ID",
-                "CLOUDFLARE_ZONE_ID",
-              ],
-            },
-            composed: {
-              requiresEnv: [
-                "GH_TOKEN",
-                "TAKOFORM_CORE_TAG_SIGNING_KEY",
-                "TAKOFORM_SPECIFICATION_RULESET_AUDIT_TOKEN",
-                "CLOUDFLARE_API_TOKEN",
-                "CLOUDFLARE_ACCOUNT_ID",
-                "CLOUDFLARE_ZONE_ID",
-              ],
-            },
-          },
-        },
-        "prepare-receipt": {
-          requiresEnv: ["TAKOFORM_SPECIFICATION_RULESET_AUDIT_TOKEN"],
-        },
-        record: {
-          requiresEnv: [
-            "TAKOFORM_SPECIFICATION_RULESET_AUDIT_TOKEN",
-            "TAKOFORM_SPECIFICATION_REF_WRITE_TOKEN",
-          ],
-        },
-        verify: {
-          lanes: {
-            specification: {
-              requiresEnv: ["TAKOFORM_SPECIFICATION_RULESET_AUDIT_TOKEN"],
-            },
-            schema: { requiresEnv: [] },
-            composed: {
-              requiresEnv: ["TAKOFORM_SPECIFICATION_RULESET_AUDIT_TOKEN"],
-            },
-          },
-        },
-      },
-      triggers: ["irreversible", "authority", "published-identity"],
-      obligations: {
-        provenance:
-          "The reviewed Specification writer, production adapter, policy, authority record, and this owning deploy route are retained as one source-pinned closure. The checked-in prepared-writer-disabled authority blocks every release phase before the adapter or any other release capability is constructed.",
-        "post-conditions":
-          "After a separately reviewed authority activation, the phase-specific Specification writer verifies the exact schema route, signed annotated tag, immutable asset-free Release, append-only records, and authoritative readback described by release/specification-release-policy.md.",
-        reversal:
-          "The dormant writer makes no production change. After activation, published Specification, schema, tag, Release, route, and receipt identities are append-only and recovery is forward-only under the retained Specification policy.",
-        "failure-handling":
-          "While authority is prepared-writer-disabled, reserve, apply-reservation, seal, prepare, publish, recover, prepare-receipt, record, and verify fail before credentials, signer execution, adapter construction, tracked writes, or network activity.",
-        "independent-review":
-          "Activation and every live publish or recover operation require the independently reviewed records and source-pinned execution closure defined by release/specification-release-policy.md.",
-        "pre-mutation-proof":
-          "The checked-in prepared-writer-disabled authority is the current fail-closed proof: every phase stops before credentials, adapter construction, or network work. A future activation must first bind the exact schema-origin candidate, staged/cutover readback, predecessor tombstone, authority transition, source closure, tag ruleset audit, and phase-specific dry-run/read-only evidence required by release/specification-release-policy.md; the dormant route cannot substitute a green local check for that proof.",
-        "no-overwrite":
-          "The deploy entrypoint delegates only exact parsed phases to the reviewed Specification module and adapter; it adds no alternate writer, CI authority, overwrite, deletion, or identity-recreation path.",
-      },
-    },
-    {
       surface: SCHEMA_ORIGIN_RELEASE_SURFACE,
       target: `cloudflare-worker:${SCHEMA_ORIGIN.worker} + route:${SCHEMA_ORIGIN.routePattern}`,
       covers: [
         "package.json",
         "bun.lock",
         "release/schema-origin-policy.md",
-        "release/specification-authority.json",
-        "release/authority/specification-schema-tool-closure.json",
+        "release/schema-origin-authority.json",
+        "release/authority/schema-origin-tool-closure.json",
+        "release/authority/schema-origin-writer-closure.json",
+        "release/host-api-v1.json",
+        "release/public-schema-identities.json",
         "release/authority/core-release-broker.json",
         "release/authority/core-release-continuation-review.pub",
         "release/broker",
         "schema-origin/wrangler.jsonc",
         "schema-origin/public",
+        "scripts/records.mjs",
         "scripts/schema-origin-projection.mjs",
         "scripts/schema-origin-deploy.mjs",
-        "scripts/specification-release-adapter.mjs",
+        "scripts/schema-tool-closure.mjs",
+        "scripts/version-axis.mjs",
         "scripts/deploy.mjs",
         "scripts/sealed-deploy-bootstrap.mjs",
         "scripts/sealed-deploy-launcher.mjs",
@@ -472,12 +325,6 @@ export function parseDeployInvocation(args) {
       options: parseSchemaOriginArgs(args.slice(1)),
     };
   }
-  if (args[0] === SPECIFICATION_RELEASE_SURFACE) {
-    return {
-      surface: SPECIFICATION_RELEASE_SURFACE,
-      options: parseSpecificationReleaseArgs(args.slice(1)),
-    };
-  }
   if (args[0] !== CORE_RELEASE.surface) {
     throw new Error(DEPLOY_USAGE);
   }
@@ -502,11 +349,6 @@ const SEALED_INPUT_FLAGS = Object.freeze({
     "--tag-bundle",
     "--artifact",
   ]),
-  [SPECIFICATION_RELEASE_SURFACE]: Object.freeze([
-    "--input",
-    "--review-record",
-    "--sealed-artifact",
-  ]),
   [SCHEMA_ORIGIN_RELEASE_SURFACE]: Object.freeze([
     "--candidate",
     "--review-record",
@@ -525,9 +367,6 @@ const FACADE_FORBIDDEN_ENV = Object.freeze(new Set([
   "GITHUB_PAT",
   "TAKOFORM_CORE_TAG_SIGNING_KEY",
   "TAKOFORM_CORE_REF_WRITE_TOKEN",
-  "TAKOFORM_SPECIFICATION_RULESET_AUDIT_TOKEN",
-  "TAKOFORM_SPECIFICATION_REF_WRITE_TOKEN",
-  "TAKOFORM_SPECIFICATION_TAG_SIGNING_KEY",
   "CLOUDFLARE_API_TOKEN",
   "CLOUDFLARE_API_KEY",
   "CLOUDFLARE_EMAIL",
@@ -589,29 +428,12 @@ function forbiddenFacadeEnvironmentClass(name) {
   return null;
 }
 
-function specificationSealedRequirement(options) {
-  const lane = options.lane;
-  if (options.phase === "prepare" && ["schema", "composed"].includes(lane)) {
-    return { credentialClass: "broker-bound-exact-phase-authority-envelope", env: ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_ZONE_ID"] };
-  }
-  if (["publish", "recover"].includes(options.phase)) {
-    if (lane === "specification") return { credentialClass: "broker-bound-exact-phase-authority-envelope", env: ["GH_TOKEN", "TAKOFORM_CORE_TAG_SIGNING_KEY", "TAKOFORM_SPECIFICATION_RULESET_AUDIT_TOKEN"] };
-    if (lane === "schema") return { credentialClass: "broker-bound-exact-phase-authority-envelope", env: ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ZONE_ID"] };
-    return { credentialClass: "broker-bound-exact-phase-authority-envelope", env: ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ZONE_ID", "GH_TOKEN", "TAKOFORM_CORE_TAG_SIGNING_KEY", "TAKOFORM_SPECIFICATION_RULESET_AUDIT_TOKEN"] };
-  }
-  if (options.phase === "prepare-receipt") return { credentialClass: "broker-bound-exact-phase-authority-envelope", env: ["TAKOFORM_SPECIFICATION_RULESET_AUDIT_TOKEN"] };
-  if (options.phase === "record") return { credentialClass: "broker-bound-exact-phase-authority-envelope", env: ["TAKOFORM_SPECIFICATION_REF_WRITE_TOKEN", "TAKOFORM_SPECIFICATION_RULESET_AUDIT_TOKEN"] };
-  if (options.phase === "verify" && lane !== "schema") return { credentialClass: "broker-bound-exact-phase-authority-envelope", env: ["TAKOFORM_SPECIFICATION_RULESET_AUDIT_TOKEN"] };
-  return null;
-}
-
 export function sealedRequirementForInvocation(
   surface,
   options,
   { authenticatedSchemaVerify = false } = {},
 ) {
   if (surface === CORE_RELEASE.surface) return CORE_SEALED_REQUIREMENTS[options.phase] ?? null;
-  if (surface === SPECIFICATION_RELEASE_SURFACE) return specificationSealedRequirement(options);
   if (surface === SCHEMA_ORIGIN_RELEASE_SURFACE) {
     if (options.phase === "verify" && !authenticatedSchemaVerify) return null;
     return { credentialClass: "broker-bound-exact-phase-authority-envelope", env: ["CLOUDFLARE_API_TOKEN"] };
@@ -671,24 +493,6 @@ export function prepareDeployContinuation({ args, repo, brokerExecutable, enviro
   return result;
 }
 
-function readSpecificationAuthority(repo) {
-  return JSON.parse(
-    readFileSync(join(repo, SPECIFICATION_AUTHORITY_PATH), "utf8"),
-  );
-}
-
-function writeExclusiveArtifact(path, bytes) {
-  writeFileSync(path, bytes, { flag: "wx", mode: 0o600 });
-}
-
-function signerEnvironment(env) {
-  return Object.fromEntries(
-    ["PATH", "LANG", "LC_ALL", "TZ", "TMPDIR"]
-      .filter((name) => typeof env[name] === "string")
-      .map((name) => [name, env[name]]),
-  );
-}
-
 export function assertDeployRuntime(
   executable = process.execPath,
   expected = DEPLOY_RUNTIME_EXECUTABLE,
@@ -720,83 +524,6 @@ export function assertDeployRuntime(
   });
 }
 
-export async function runSpecificationDeploy({
-  options,
-  repo,
-  env = process.env,
-  operationsFactory = createSpecificationReleaseOperations,
-}) {
-  const authority = readSpecificationAuthority(repo);
-  // This bootstrap guard deliberately precedes every capability construction,
-  // including read-only verification. The checked-in prepared authority
-  // therefore cannot expose any credential, signer, runner, tracked writer,
-  // or network callback for any release phase.
-  assertSpecificationMutationAuthority(authority, options.phase);
-  if (options.phase === "seal") {
-    const sealed = await sealRecordArtifact({
-      authority,
-      unsignedArtifactRaw: readFileSync(options.input),
-      signerCommand: options.signer,
-      repositoryRoot: repo,
-      environment: signerEnvironment(env),
-    });
-    writeExclusiveArtifact(options.output, sealed.raw);
-    return sealed.document;
-  }
-
-  const input = { ...options, authority };
-  const operations = operationsFactory({
-    phase: options.phase,
-    options: input,
-    repo,
-    env,
-  });
-  try {
-    switch (options.phase) {
-      case "reserve": {
-        const result = await reserveSpecificationRelease(input, operations);
-        if (result.unsignedArtifact !== null) {
-          writeExclusiveArtifact(options.output, result.unsignedArtifact.raw);
-        }
-        return result;
-      }
-      case "apply-reservation":
-        return await applySchemaReservation(
-          {
-            ...input,
-            sealedArtifactRaw: readFileSync(options.sealedArtifact),
-          },
-          operations,
-        );
-      case "prepare":
-        return await prepareSpecificationRelease(input, operations);
-      case "publish":
-        return await publishSpecificationRelease(input, operations);
-      case "recover":
-        return await recoverSpecificationRelease(input, operations);
-      case "prepare-receipt": {
-        const result = await prepareSpecificationReceipt(input, operations);
-        writeExclusiveArtifact(options.output, result.unsignedArtifact.raw);
-        return result;
-      }
-      case "record":
-        return await recordSpecificationRelease(
-          {
-            ...input,
-            sealedArtifactRaw: readFileSync(options.sealedArtifact),
-          },
-          operations,
-        );
-      case "verify":
-        return await verifySpecificationRelease(input, operations);
-      default:
-        throw new Error("unreachable Specification release phase");
-    }
-  } finally {
-    if (typeof operations.cleanup === "function") operations.cleanup();
-  }
-}
-
 async function dispatchDeploy({
   args,
   repo,
@@ -805,8 +532,6 @@ async function dispatchDeploy({
   runner,
   tools,
   githubRequest,
-  specificationOperationsFactory,
-  operationsFactory,
   schemaOperations,
   schemaDeploy,
   schemaRunner,
@@ -829,17 +554,6 @@ async function dispatchDeploy({
     // The schema owner writes its result exactly once. Do not serialize a
     // second copy here: runSchemaOriginDeploy already owns stdout handling.
     return await delegate(delegation);
-  }
-  if (surface === SPECIFICATION_RELEASE_SURFACE) {
-    const result = await runSpecificationDeploy({
-      options,
-      repo,
-      env,
-      operationsFactory:
-        specificationOperationsFactory ?? operationsFactory ?? createSpecificationReleaseOperations,
-    });
-    stdout.write(canonicalJSON(result));
-    return result;
   }
   const dependencies = {
     repo,
@@ -929,7 +643,6 @@ export async function runDeploy(options = {}) {
 export function failureJSON(error) {
   const releaseError =
     error instanceof ReleaseFailure ||
-    error instanceof SpecificationReleaseError ||
     error instanceof SchemaOriginFailure;
   return {
     status: "blocked",

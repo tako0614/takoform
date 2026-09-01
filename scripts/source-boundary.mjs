@@ -9,7 +9,6 @@ const predecessorRepository =
 
 const predecessorEvidenceSources = new Set([
   "scripts/schema-origin-deploy.mjs",
-  "scripts/specification-release-adapter.mjs",
 ]);
 
 const forbiddenTopLevelPrefixes = [

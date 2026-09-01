@@ -1,0 +1,58 @@
+{
+  "kind": "takoform.host-api-closure@v1",
+  "apiVersion": "forms.takoform.com/v1",
+  "compatibility": {
+    "incompatibleChange": "requires-api-v2",
+    "editorialErrata": "same-api-v1-identity"
+  },
+  "documents": [
+    {
+      "path": "spec/host-api/v1.md",
+      "sha256": "sha256:43396b25ea64651a373724c815f68bd3b0c67f6610d1af0006c6354fee441238"
+    },
+    {
+      "path": "spec/host-api/operations-v1.json",
+      "sha256": "sha256:7ca963517ca3aed1a2c90bf681745beac5fcde37e41b8a53a4877582abcdfb23"
+    },
+    {
+      "path": "spec/schemas/artifact-manifest-v1alpha1.schema.json",
+      "sha256": "sha256:9ebd0fcad6f25f513a8146de9ddda412e2d38ca2ac515f0d33b0e962ba1d2906"
+    },
+    {
+      "path": "spec/schemas/binding-ref-v1alpha2.schema.json",
+      "sha256": "sha256:a987fe339c6c0a9ef04b9ea9a2c8234f327b5d7dc294ba5304008fdbe830614a"
+    },
+    {
+      "path": "spec/schemas/form-definition-v1.schema.json",
+      "sha256": "sha256:5cfde9d7170e25ace10b56927f9b398598d66912f5d32f65254146232b4501fe"
+    },
+    {
+      "path": "spec/schemas/form-ref-v1.schema.json",
+      "sha256": "sha256:d2b7eda12d1767e346b858f884d676326b63c4072240b0a1d955897a30595831"
+    },
+    {
+      "path": "spec/schemas/host-api-wire-v1.schema.json",
+      "sha256": "sha256:89326baadf03ba22ba59a06cb9820b4d24e88dbde74f2a1965cf718a54625712"
+    },
+    {
+      "path": "spec/schemas/host-discovery-v1.schema.json",
+      "sha256": "sha256:8fbde5c4f34e0cf958a73202965d9f73b8d37dca46eb887e38fd3014458812ba"
+    },
+    {
+      "path": "spec/schemas/host-support-profile-v1.schema.json",
+      "sha256": "sha256:4f1b72787250564ccc7989c6a543bae8077964cf52070b02a48d7d4c551cf5b8"
+    },
+    {
+      "path": "spec/schemas/interface-ref-v1alpha1.schema.json",
+      "sha256": "sha256:b88fb231c93d707cac0fbd9f6948ee6ff7807e135bd25d53d2f6112c58259f61"
+    },
+    {
+      "path": "spec/schemas/operation-v1.schema.json",
+      "sha256": "sha256:26a421fcdaa768ffdcb16d37ee15e0bb75be4d83f29b1c4d88d668652a256ad6"
+    },
+    {
+      "path": "spec/schemas/standard-service-ref-v1.schema.json",
+      "sha256": "sha256:c7b3fc2833ab8afafa073a93818548cf443569bf55a1338234ac075f6e40d7f3"
+    }
+  ]
+}

@@ -65,9 +65,8 @@ after artifact parity and deletion gates close.
 - Terraform names, schemas, imports, state and diagnostics stay Provider-owned.
 - Provider 3.0.0 public/state/history behavior is locked before the Provider
   Adapter changes.
-- Specification 1.1 may record this compatible Core/API boundary independently
-  from Forms, packages, Provider, Host adoption and literal Host API v1
-  graduation.
+- Core/library SemVer may evolve this compiler boundary without changing Forms,
+  packages, Provider, Host adoption, or the Host API v1 identity.
 
 ## Rejected alternatives
 

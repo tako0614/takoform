@@ -1,6 +1,6 @@
 # Takoform
 
-Takoform is the independent home of the **Takoform Specification and Core**:
+Takoform is the independent home of the **Takoform contracts and Core**:
 the normative desired-state contract, neutral schemas, data-only Form Package
 verification, immutable Snapshot compilation, the Host API client, offline
 trust verification, and generic conformance.
@@ -33,17 +33,14 @@ the exact distribution bytes, while the Form's `definitionVersion` carries the
 desired-state compatibility version. A reverse-DNS Form group is a namespace,
 not a version.
 
-## Historical Specification receipt
+## Historical evidence
 
-Specification 1.1 is an immutable historical receipt, not a current version
-stream. Its exact source snapshot, tag, release, and evidence remain in the
-append-only [`Specification release ledger`](release/specification-releases.json)
-and the extracted predecessor evidence under
-[`docs/extraction/history/`](docs/extraction/history/README.md). Specification
-1.0 was never published, is withdrawn, and cannot be reused. There is no
-current Specification 1.0 or 1.1 release lane; the receipt did not publish the
-Host API v1, a Form, a package, a Provider, Host support, activation, or an
-Offering.
+Raw predecessor snapshots remain byte-pinned under
+[`docs/extraction/history/`](docs/extraction/history/README.md) and in immutable
+Git history. They record what older repositories published; they are not a
+current version stream, compatibility authority, selectable release, or input
+to new publication. Current compatibility is expressed only by the four axes
+above.
 
 ## Public Core packages
 
@@ -83,7 +80,7 @@ Support is not activation. Activation is not a commercial Offering.
 
 Core owns:
 
-- normative Specification source and active or verify-only schemas;
+- normative contract source and active or verify-only schemas;
 - package canonicalization, validation, trust formats, and generic conformance;
 - immutable Snapshot compilation and the Host API client;
 - append-only schema identities and historical publication receipts; these
@@ -112,8 +109,9 @@ bun run check
 ```
 
 The gate formats nothing and publishes nothing. It checks the final module and
-ownership boundary, schema and release records, Go formatting/static analysis,
-all portable tests, generic conformance, and standalone builds. No sibling
+ownership boundary, Host API/schema and software-release records, Go
+formatting/static analysis, all portable tests, generic conformance, and
+standalone builds. No sibling
 Provider checkout or `replace` directive is allowed.
 
 ## Release boundaries

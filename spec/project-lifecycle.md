@@ -22,7 +22,6 @@ These facts MUST remain separate:
 
 | Fact | Owning authority | Meaning |
 | --- | --- | --- |
-| Specification release | Core release ledger | One exact committed snapshot of normative specification source |
 | Form maturity | A scoped lifecycle record | Confidence in one portable contract |
 | Package publication | The publisher's release evidence | Exact bytes can be retrieved and authenticated |
 | Publisher trust | Operator-selected policy | Which provenance and signatures are accepted |
@@ -31,15 +30,9 @@ These facts MUST remain separate:
 | Service Offering | A commercial platform | Capacity, price, availability, and support |
 | Client projection | The client that provides it | Local schema, state, and migration behavior |
 
-No Specification release, package, trust policy, generated index, Host report,
-activation, or Service Offering MAY by itself promote Form maturity. A Host
+No package, trust policy, generated index, Host report, activation, or Service
+Offering MAY by itself promote Form maturity. A Host
 MUST NOT describe its support decision as Takoform approval or certification.
-
-Specification 1.1 is recorded in the append-only
-[`release/specification-releases.json`](../release/specification-releases.json)
-ledger. Its release is independent of Form, package, client, and Host
-adoption. The current Core tree may contain a later draft; changing that draft
-does not rewrite the immutable predecessor receipt.
 
 ## Form families
 
@@ -110,8 +103,8 @@ existence does not grant normative authority over Core or another publisher's
 Form.
 
 Stable does not guarantee that every Host supports the Form or that any
-commercial platform offers it. Publishing a Specification or Host protocol
-does not trigger a Form transition.
+commercial platform offers it. A Host API or Core/library release does not
+trigger a Form transition.
 
 ### Legacy
 

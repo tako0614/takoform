@@ -2,8 +2,8 @@
 
 This policy governs the one-time owner-operated move of the existing public
 schema bytes to the Core-owned static-assets Worker. It does not publish a new
-schema identity, enable the general Specification/schema writer, deploy a Host
-API, or create an API v2 surface.
+schema identity, authorize changes outside the closed schema ledger, deploy a
+Host API, or create an API v2 surface.
 
 ## Exact surface
 
@@ -16,7 +16,7 @@ The only permitted target is:
 - assets: the closed active projection in `schema-origin/public`;
 - pinned deploy client: repository-local Wrangler `4.115.0`, executed by the
   exact non-writable Node runtime recorded in
-  `authority/specification-schema-tool-closure.json`.
+  `authority/schema-origin-tool-closure.json`.
 
 The tool permanently refuses another hostname, path, zone name, Worker,
 route, `/v2` identity, redirect, partial 2xx response, retired projection,
@@ -184,12 +184,12 @@ alternates, a dirty tree, and an unpinned local Wrangler are rejected.
 ## Prepare: read-only pre-mutation proof
 
 Prepare performs no Cloudflare mutation. Its only write is the requested
-outside-repository candidate. It requires Core authority to remain
-`prepared-writer-disabled` and already pin the exact P0 prepared commit. It
-captures:
+outside-repository candidate. It requires schema-origin authority to remain
+`prepared-writer-disabled` and to bind Host API v1 and the exact schema ledger.
+It captures:
 
-- exact canonical Core `main` commit and authority-record digest;
-- schema ledger, active projection, and Wrangler config digests;
+- exact canonical repository `main` commit and authority-record digest;
+- Host API v1 closure, schema ledger, active projection, and Wrangler config digests;
 - the complete 31-URL source/projection/body-digest/byte inventory;
 - the complete 15-URL retired inventory and fixed unknown URL;
 - public active, retired, unknown, and non-schema sentinel readbacks;
@@ -244,9 +244,9 @@ deployment, or assets are not deleted automatically.
 
 ## Cutover: predecessor disabled first, one exact trigger
 
-Cutover is permitted only while local Core authority is still
+Cutover is permitted only while local schema-origin authority is still
 `prepared-writer-disabled`. It does not edit the authority record and reports
-`specificationWriterActivated: false`.
+`schemaWriterActivated: false`.
 
 Before the route mutation, the operator supplies a canonical record of kind
 `takoform.schema-origin-predecessor-tombstone-readback@v1`. It must bind the
@@ -258,8 +258,8 @@ the readback instant, and this exact `checks` array:
 [
   "canonical-main-is-tombstone",
   "predecessor-schema-writer-disabled",
-  "predecessor-specification-writer-disabled",
-  "successor-prepared-commit-pinned"
+  "predecessor-schema-identity-writer-disabled",
+  "successor-source-commit-pinned"
 ]
 ```
 
@@ -284,7 +284,7 @@ Post-conditions are all mandatory:
 - all retired and unknown URLs remain 404;
 - the non-schema sentinel is byte-exact and unchanged;
 - the staged version/deployment remains the sole current 100% deployment;
-- general Specification writer authority remains disabled.
+- schema-origin writer authority remains disabled.
 
 The cutover record has a canonical `completedReadbackAt` strictly after the
 predecessor tombstone readback. It includes the exact route ID/pattern/script,
@@ -292,10 +292,11 @@ custom domains, public and schema-count closure, version, deployment, Worker
 state, and SHA-256 closure over the candidate, stage record, predecessor
 readback, ledger, projection, config, dry-run bundle, 31-active inventory,
 15-retired inventory, public readback, route, domains, version, deployment, and
-Worker state. Missing, additional, or changed closure fields fail closed.
+Worker state. The digest closure also binds the Host API v1 closure manifest.
+Missing, additional, or changed closure fields fail closed.
 
 Failure of a post-condition is a failed cutover, not permission to activate the
-Specification writer.
+schema-origin writer.
 
 ## Prepare activation: fresh evidence immediately before A
 
@@ -328,7 +329,6 @@ with only these authority-transition fields changed:
 {
   "state": "successor-active",
   "predecessorTombstoneCommit": "T",
-  "successorPreparedCommit": "P0_FROM_PREPARED_RECEIPT",
   "schemaRouteCutover": {
     "format": "takoform.schema-origin-authority-cutover@v1",
     "sourceCommit": "P",
@@ -357,19 +357,19 @@ the 15 fields above. The activation evidence embeds that same exact object,
 and its activation closure separately hashes the canonical object so neither
 copy can drift from the active authority receipt.
 
-All other authority fields, including cutoff/release identity,
+All other authority fields, including Host API and schema-ledger identity,
 `writerOverlapAllowed: false`, and the forward-only rollback text, remain
 byte-for-byte equivalent as JSON values. The full object is
 `evidence.authority`; `evidence.authoritySha256` closes its canonical bytes.
 `activationChange.parentCommit` is exactly source P and
 `activationChange.changedPaths` is exactly
-`["release/specification-authority.json"]`, both `externalMutation` and
+`["release/schema-origin-authority.json"]`, both `externalMutation` and
 `apiV2Mutation` are false, and `activationChange.notBefore` equals the proposed
 enable instant.
 
 A is a later, separately reviewed direct child of that parent P and an
 authority-only commit that copies exactly
-`evidence.authority` into `release/specification-authority.json`. It must not be
+`evidence.authority` into `release/schema-origin-authority.json`. It must not be
 created before `activationChange.notBefore`, change any other path, invoke a
 credential/signer before the prepared-state fence, mutate Cloudflare, activate
 an API v2 surface, or rerun cutover. The evidence itself does not enable the
@@ -396,7 +396,7 @@ public command is rejected:
 ## Revert before successor activation
 
 Revert is an explicit, operator-authorized emergency action and is allowed only
-while Core authority remains `prepared-writer-disabled`:
+while schema-origin authority remains `prepared-writer-disabled`:
 
 ```text
 /usr/bin/env -i /usr/local/bin/bun run deploy -- --prepare-sealed-continuation /absolute/operator-records/revert.continuation --source COMMIT --continuation-review /absolute/operator-records/continuation-review.json -- takoform-schema-origin revert \

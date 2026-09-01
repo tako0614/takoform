@@ -32,8 +32,8 @@ node scripts/schema-origin-projection.mjs --write
 
 At the initial cutover the check reports exactly 31 active schema assets and
 their exact source bytes. The imported 31-entry prefix can never shrink;
-future Specification releases may append active identities without changing
-this projection code. The initial count is the 31-live-byte preflight for a
+future Host API v1 schema additions may append active identities without
+changing this projection code. The initial count is the 31-live-byte preflight for a
 future route change; this task does not deploy or mutate routes.
 
 ## Route coexistence and scope

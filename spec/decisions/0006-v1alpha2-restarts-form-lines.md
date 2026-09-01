@@ -25,7 +25,7 @@ identity.
 ## Decision
 
 `forms.takoform.com/v1alpha1` is the frozen Legacy specification epoch.
-`forms.takoform.com/v1alpha2` is the current Specification epoch. The epoch is
+`forms.takoform.com/v1alpha2` is the later retained pre-family Form epoch. It is
 not itself a maturity state: each definition remains a Proposal until its own
 lifecycle record transitions to Experimental.
 

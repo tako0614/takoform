@@ -9,7 +9,8 @@ const (
 	// package and provider-v1 verifier surface. New code must select the epoch
 	// explicitly instead of treating this alias as current authority.
 	FormAPIVersion = LegacyFormAPIVersion
-	// CurrentFormAPIVersion identifies the current Form specification epoch.
+	// CurrentFormAPIVersion is the retained name for the later pre-family Form
+	// epoch.
 	// An epoch does not imply that any Form has reached Experimental maturity.
 	CurrentFormAPIVersion = "forms.takoform.com/v1alpha2"
 	// PackageAPIVersion is the retained v1alpha1 package profile. Its

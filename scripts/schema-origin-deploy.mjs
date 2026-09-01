@@ -26,20 +26,16 @@ import {
 } from "./schema-origin-projection.mjs";
 import {
   schemaRouteCutoverClosureSha256,
-  specificationWriterClosurePaths,
-  validateAuthorityTransfer,
-  validateSpecificationWriterClosureManifest,
+  schemaOriginWriterClosurePaths,
+  validateSchemaOriginAuthority,
+  validateSchemaOriginWriterClosureManifest,
 } from "./records.mjs";
 import {
   parseSchemaToolClosurePolicy,
   sealInstalledToolClosure,
   validateSchemaToolRuntimePolicy,
-} from "./specification-release-adapter.mjs";
-import {
-  WRITER_CLOSURE_MANIFEST_PATH,
-  WRITER_EXECUTION_PATHS,
-  WRITER_TOOL_CLOSURE_POLICY_PATH,
-} from "./specification-release.mjs";
+} from "./schema-tool-closure.mjs";
+import { validateHostApiClosure } from "./version-axis.mjs";
 
 const moduleRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SHA256 = /^sha256:[0-9a-f]{64}$/u;
@@ -55,6 +51,11 @@ const CUTOVER_KIND = "takoform.schema-origin-cutover-record@v1";
 const ACTIVATION_KIND =
   "takoform.schema-origin-authority-activation-evidence@v1";
 const REVERT_KIND = "takoform.schema-origin-revert-record@v1";
+const WRITER_CLOSURE_MANIFEST_PATH =
+  "release/authority/schema-origin-writer-closure.json";
+const WRITER_TOOL_CLOSURE_POLICY_PATH =
+  "release/authority/schema-origin-tool-closure.json";
+const WRITER_EXECUTION_PATHS = schemaOriginWriterClosurePaths;
 
 const requiredReviewChecks = Object.freeze([
   "candidate-and-source-closure",
@@ -66,8 +67,8 @@ const requiredReviewChecks = Object.freeze([
 const requiredTombstoneChecks = Object.freeze([
   "canonical-main-is-tombstone",
   "predecessor-schema-writer-disabled",
-  "predecessor-specification-writer-disabled",
-  "successor-prepared-commit-pinned",
+  "predecessor-schema-identity-writer-disabled",
+  "successor-source-commit-pinned",
 ]);
 const customDomainHosts = Object.freeze([
   "takoform.com",
@@ -86,7 +87,8 @@ export const SCHEMA_ORIGIN = Object.freeze({
   origin: "https://forms.takoform.com",
   configPath: "schema-origin/wrangler.jsonc",
   ledgerPath: "release/public-schema-identities.json",
-  authorityPath: "release/specification-authority.json",
+  hostApiClosurePath: "release/host-api-v1.json",
+  authorityPath: "release/schema-origin-authority.json",
   projectionRoot: "schema-origin/public",
   wranglerVersion: "4.115.0",
   activeSchemaCount: 31,
@@ -563,7 +565,7 @@ function validateBundle(bundle) {
 }
 
 function validateLocalEvidence(local, expectedCommit) {
-  if (!exactKeys(local, ["authority", "config", "dryRunBundle", "ledger", "projection", "retired", "source"])) {
+  if (!exactKeys(local, ["authority", "config", "dryRunBundle", "hostApi", "ledger", "projection", "retired", "source"])) {
     throw new Error("local evidence has an unexpected field set");
   }
   if (!exactKeys(local.source, ["branch", "canonicalMainCommit", "clean", "commit", "repository"]) ||
@@ -578,14 +580,19 @@ function validateLocalEvidence(local, expectedCommit) {
     throw new Error("authority evidence is invalid");
   }
   validateDigest(local.authority.sha256, "authority digest");
-  const authorityProblems = validateAuthorityTransfer(local.authority.document);
+  const authorityProblems = validateSchemaOriginAuthority(local.authority.document);
   if (authorityProblems.length !== 0) throw new Error(`authority receipt is invalid (${authorityProblems.join("; ")})`);
   if (local.authority.document.state !== "prepared-writer-disabled") {
-    throw new Error(`Core authority must remain prepared-writer-disabled, observed ${local.authority.document.state}`);
+    throw new Error(`schema-origin authority must remain prepared-writer-disabled, observed ${local.authority.document.state}`);
   }
-  if (!COMMIT.test(local.authority.document.successorPreparedCommit ?? "")) {
-    throw new Error("prepared Core authority must already pin its exact P0 commit");
+  if (
+    !exactKeys(local.hostApi, ["path", "sha256"]) ||
+    local.hostApi.path !== SCHEMA_ORIGIN.hostApiClosurePath ||
+    local.authority.document.hostApiClosure !== local.hostApi.path
+  ) {
+    throw new Error("Host API v1 closure evidence is invalid");
   }
+  validateDigest(local.hostApi.sha256, "Host API v1 closure digest");
   if (!exactKeys(local.ledger, ["path", "sha256"]) || local.ledger.path !== SCHEMA_ORIGIN.ledgerPath) {
     throw new Error("schema ledger evidence is invalid");
   }
@@ -897,10 +904,10 @@ function candidateFrom(local, target, sentinelUrl, publicReadback, domains) {
       path: local.authority.path,
       sha256: local.authority.sha256,
       state: local.authority.document.state,
-      successorPreparedCommit: local.authority.document.successorPreparedCommit,
     },
     target,
     artifacts: {
+      hostApi: local.hostApi,
       ledger: local.ledger,
       projection: local.projection,
       config: local.config,
@@ -923,7 +930,7 @@ function candidateFrom(local, target, sentinelUrl, publicReadback, domains) {
 
 // Candidate validation cannot call the authority validator without copying the
 // whole mutable authority document into an operator record. Keep that document
-// local and close the candidate over only its raw digest and prepared P0 pin.
+// local and close the candidate over only its raw digest and dormant state.
 function validateCandidateRecord(candidate) {
   if (!exactKeys(candidate, ["artifacts", "authority", "kind", "preflight", "schemas", "sentinelUrl", "source", "target"]) || candidate.kind !== CANDIDATE_KIND) {
     throw new Error("candidate has an unknown kind or field set");
@@ -936,16 +943,17 @@ function validateCandidateRecord(candidate) {
       !COMMIT.test(candidate.source.commit ?? "")) {
     throw new Error("candidate source is not an exact clean canonical main commit");
   }
-  if (!exactKeys(candidate.authority, ["path", "sha256", "state", "successorPreparedCommit"]) ||
+  if (!exactKeys(candidate.authority, ["path", "sha256", "state"]) ||
       candidate.authority.path !== SCHEMA_ORIGIN.authorityPath ||
-      candidate.authority.state !== "prepared-writer-disabled" ||
-      !COMMIT.test(candidate.authority.successorPreparedCommit ?? "")) {
-    throw new Error("candidate authority is not prepared-writer-disabled with an exact P0 pin");
+      candidate.authority.state !== "prepared-writer-disabled") {
+    throw new Error("candidate authority is not prepared-writer-disabled");
   }
   validateDigest(candidate.authority.sha256, "candidate authority digest");
   validateTarget(candidate.target);
   validateSentinelUrl(candidate.sentinelUrl);
-  if (!exactKeys(candidate.artifacts, ["config", "dryRunBundle", "ledger", "projection"])) throw new Error("candidate artifacts have an unexpected field set");
+  if (!exactKeys(candidate.artifacts, ["config", "dryRunBundle", "hostApi", "ledger", "projection"])) throw new Error("candidate artifacts have an unexpected field set");
+  if (!exactKeys(candidate.artifacts.hostApi, ["path", "sha256"]) || candidate.artifacts.hostApi.path !== SCHEMA_ORIGIN.hostApiClosurePath) throw new Error("candidate Host API v1 closure evidence is invalid");
+  validateDigest(candidate.artifacts.hostApi.sha256, "candidate Host API v1 closure digest");
   if (!exactKeys(candidate.artifacts.ledger, ["path", "sha256"]) || candidate.artifacts.ledger.path !== SCHEMA_ORIGIN.ledgerPath) throw new Error("candidate ledger evidence is invalid");
   validateDigest(candidate.artifacts.ledger.sha256, "candidate ledger digest");
   if (!exactKeys(candidate.artifacts.config, ["path", "sha256"]) || candidate.artifacts.config.path !== SCHEMA_ORIGIN.configPath) throw new Error("candidate config evidence is invalid");
@@ -998,7 +1006,7 @@ function assertCandidateMatchesLocal(phase, candidate, local, tracker) {
     failure(
       phase,
       "candidate-current-source",
-      "candidate no longer matches the exact clean canonical prepared Core source, authority, ledger, projection, config, or dry-run bundle",
+      "candidate no longer matches the exact clean canonical prepared source, authority, ledger, projection, config, or dry-run bundle",
       tracker,
     );
   }
@@ -1153,6 +1161,7 @@ function cutoverClosure({
     customDomainsSha256: sha256(canonicalJSON(customDomains)),
     deploymentSha256: sha256(canonicalJSON(deployment)),
     dryRunBundleSha256: candidate.artifacts.dryRunBundle.sha256,
+    hostApiSha256: candidate.artifacts.hostApi.sha256,
     ledgerSha256: candidate.artifacts.ledger.sha256,
     predecessorReadbackSha256,
     projectionSha256: candidate.artifacts.projection.sha256,
@@ -1207,7 +1216,7 @@ function validateCutoverRecord(
     "route",
     "schemaClosure",
     "sourceCommit",
-    "specificationWriterActivated",
+    "schemaWriterActivated",
     "stageRecordSha256",
     "target",
     "version",
@@ -1226,7 +1235,7 @@ function validateCutoverRecord(
     record.versionId !== stageRecord.versionId ||
     record.deploymentId !== stageRecord.deploymentId ||
     record.authorityState !== "prepared-writer-disabled" ||
-    record.specificationWriterActivated !== false ||
+    record.schemaWriterActivated !== false ||
     !canonicalInstant(record.completedReadbackAt) ||
     Date.parse(record.completedReadbackAt) <= Date.parse(tombstone.readBackAt)
   ) {
@@ -1661,7 +1670,7 @@ export async function cutoverSchemaOrigin(options, operations, env = process.env
     completedReadbackAt,
     closure,
     authorityState: "prepared-writer-disabled",
-    specificationWriterActivated: false,
+    schemaWriterActivated: false,
   };
   try {
     validateCutoverRecord(
@@ -1686,7 +1695,7 @@ export async function cutoverSchemaOrigin(options, operations, env = process.env
     deploymentId: stageRecord.deploymentId,
     completedReadbackAt,
     closure,
-    specificationWriterActivated: false,
+    schemaWriterActivated: false,
     output: options.output,
   };
 }
@@ -1966,7 +1975,7 @@ export async function prepareSchemaOriginAuthorityActivation(
     predecessorWriterDisabledAt: tombstone.disabledAt,
     successorWriterEnabledAt,
   };
-  const authorityProblems = validateAuthorityTransfer(authority);
+  const authorityProblems = validateSchemaOriginAuthority(authority);
   if (authorityProblems.length !== 0) {
     failure(
       phase,
@@ -2203,77 +2212,79 @@ function parseJSONDocument(raw, label) {
   }
 }
 
-function gitBlob(repositoryRoot, commit, relativePath) {
-  try {
-    return execFileSync("git", ["cat-file", "blob", `${commit}:${relativePath}`], {
-      cwd: repositoryRoot,
-      encoding: null,
-      maxBuffer: 64 * 1024 * 1024,
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-  } catch (error) {
-    throw new Error(
-      `P0 Git blob ${commit}:${relativePath} is unavailable (${error.status ?? "unknown status"})`,
-    );
+function inspectHostApiClosure(repositoryRoot) {
+  const manifestFile = regularRepositoryFile(
+    repositoryRoot,
+    SCHEMA_ORIGIN.hostApiClosurePath,
+  );
+  const manifest = parseJSONDocument(
+    manifestFile.bytes,
+    "Host API v1 closure",
+  );
+  const entries = new Map([
+    [SCHEMA_ORIGIN.hostApiClosurePath, manifestFile.bytes.toString("utf8")],
+  ]);
+  if (!Array.isArray(manifest.documents)) {
+    throw new Error("Host API v1 closure has no document inventory");
   }
+  for (const document of manifest.documents) {
+    if (typeof document?.path !== "string") continue;
+    const file = regularRepositoryFile(repositoryRoot, document.path);
+    entries.set(document.path, file.bytes.toString("utf8"));
+  }
+  const problems = validateHostApiClosure(entries);
+  if (problems.length !== 0) {
+    throw new Error(`Host API v1 closure is invalid (${problems.join("; ")})`);
+  }
+  return {
+    path: SCHEMA_ORIGIN.hostApiClosurePath,
+    sha256: sha256(manifestFile.bytes),
+  };
 }
 
-function resolveP0ToolClosure(repositoryRoot) {
+function resolvePreparedToolClosure(repositoryRoot) {
   const authorityFile = regularRepositoryFile(
     repositoryRoot,
     SCHEMA_ORIGIN.authorityPath,
   );
   const authority = parseJSONDocument(
     authorityFile.bytes,
-    "Specification authority",
+    "schema-origin authority",
   );
-  const authorityProblems = validateAuthorityTransfer(authority);
+  const authorityProblems = validateSchemaOriginAuthority(authority);
   if (authorityProblems.length !== 0) {
     throw new Error(
-      `prepared Core authority is invalid (${authorityProblems.join("; ")})`,
+      `prepared schema-origin authority is invalid (${authorityProblems.join("; ")})`,
     );
   }
   if (authority.state !== "prepared-writer-disabled") {
     throw new Error(
-      `prepared Core authority must remain dormant, observed ${authority.state}`,
+      `prepared schema-origin authority must remain dormant, observed ${authority.state}`,
     );
   }
-  const p0 = validateCommit(
-    authority.successorPreparedCommit,
-    "prepared Core P0 commit",
-  );
-  const resolved = gitOutput(repositoryRoot, [
-    "rev-parse",
-    "--verify",
-    `${p0}^{commit}`,
-  ]);
-  if (resolved !== p0) {
-    throw new Error("prepared Core P0 commit does not resolve to itself");
-  }
-
-  const writerManifestBytes = gitBlob(
+  const writerManifestFile = regularRepositoryFile(
     repositoryRoot,
-    p0,
     WRITER_CLOSURE_MANIFEST_PATH,
   );
+  const writerManifestBytes = writerManifestFile.bytes;
   const writerManifest = parseJSONDocument(
     writerManifestBytes,
-    "P0 Specification writer closure manifest",
+    "schema-origin writer closure manifest",
   );
-  const manifestProblems = validateSpecificationWriterClosureManifest(
+  const manifestProblems = validateSchemaOriginWriterClosureManifest(
     writerManifest,
   );
   if (manifestProblems.length !== 0) {
     throw new Error(
-      `P0 Specification writer closure manifest is invalid (${manifestProblems.join("; ")})`,
+      `schema-origin writer closure manifest is invalid (${manifestProblems.join("; ")})`,
     );
   }
   if (
     canonicalJSON(writerManifest.paths) !==
-    canonicalJSON(specificationWriterClosurePaths) ||
+    canonicalJSON(schemaOriginWriterClosurePaths) ||
     canonicalJSON(writerManifest.paths) !== canonicalJSON(WRITER_EXECUTION_PATHS)
   ) {
-    throw new Error("P0 Specification writer closure paths differ from the exact ownership manifest");
+    throw new Error("schema-origin writer closure paths differ from the exact ownership manifest");
   }
 
   const uniquePaths = [...writerManifest.paths];
@@ -2285,19 +2296,10 @@ function resolveP0ToolClosure(repositoryRoot) {
   ]) {
     if (!uniquePaths.includes(requiredPath)) {
       throw new Error(
-        `P0 Specification writer closure is missing required path: ${requiredPath}`,
+        `schema-origin writer closure is missing required path: ${requiredPath}`,
       );
     }
   }
-  const p0Records = Object.fromEntries(
-    uniquePaths.map((relativePath) => {
-      const bytes = gitBlob(repositoryRoot, p0, relativePath);
-      return [relativePath, {
-        sha256: sha256(bytes),
-        bytes,
-      }];
-    }),
-  );
   const currentRecords = Object.fromEntries(
     uniquePaths.map((relativePath) => {
       const file = regularRepositoryFile(repositoryRoot, relativePath);
@@ -2307,21 +2309,10 @@ function resolveP0ToolClosure(repositoryRoot) {
       }];
     }),
   );
-  for (const relativePath of uniquePaths) {
-    if (
-      p0Records[relativePath].sha256 !== currentRecords[relativePath].sha256 ||
-      !p0Records[relativePath].bytes.equals(currentRecords[relativePath].bytes)
-    ) {
-      throw new Error(
-        `current Specification writer path differs from immutable P0: ${relativePath}`,
-      );
-    }
-  }
   const policy = parseSchemaToolClosurePolicy(
-    p0Records[WRITER_TOOL_CLOSURE_POLICY_PATH].bytes,
+    currentRecords[WRITER_TOOL_CLOSURE_POLICY_PATH].bytes,
   );
   return Object.freeze({
-    commit: p0,
     authoritySha256: sha256(authorityFile.bytes),
     policy,
     manifestSha256: sha256(writerManifestBytes),
@@ -2331,8 +2322,8 @@ function resolveP0ToolClosure(repositoryRoot) {
         uniquePaths.map((relativePath) => [
           relativePath,
           Object.freeze({
-            sha256: p0Records[relativePath].sha256,
-            bytes: Buffer.from(p0Records[relativePath].bytes),
+            sha256: currentRecords[relativePath].sha256,
+            bytes: Buffer.from(currentRecords[relativePath].bytes),
           }),
         ]),
       ),
@@ -2340,35 +2331,29 @@ function resolveP0ToolClosure(repositoryRoot) {
   });
 }
 
-function verifyP0ToolClosure(repositoryRoot, p0Closure) {
+function verifyPreparedToolClosure(repositoryRoot, preparedClosure) {
   const authorityFile = regularRepositoryFile(
     repositoryRoot,
     SCHEMA_ORIGIN.authorityPath,
   );
   const authority = parseJSONDocument(
     authorityFile.bytes,
-    "Specification authority",
+    "schema-origin authority",
   );
+  const authorityProblems = validateSchemaOriginAuthority(authority);
   if (
+    authorityProblems.length !== 0 ||
     authority.state !== "prepared-writer-disabled" ||
-    authority.successorPreparedCommit !== p0Closure.commit
+    sha256(authorityFile.bytes) !== preparedClosure.authoritySha256
   ) {
-    throw new Error("prepared Core authority rotated or no longer pins immutable P0");
+    throw new Error("prepared schema-origin authority rotated during execution");
   }
-  const resolved = gitOutput(repositoryRoot, [
-    "rev-parse",
-    "--verify",
-    `${p0Closure.commit}^{commit}`,
-  ]);
-  if (resolved !== p0Closure.commit) {
-    throw new Error("immutable P0 commit no longer resolves to itself");
-  }
-  for (const relativePath of p0Closure.paths) {
+  for (const relativePath of preparedClosure.paths) {
     const current = regularRepositoryFile(repositoryRoot, relativePath).bytes;
-    const expected = p0Closure.records[relativePath];
+    const expected = preparedClosure.records[relativePath];
     if (sha256(current) !== expected.sha256 || !current.equals(expected.bytes)) {
       throw new Error(
-        `current Specification writer path differs from immutable P0: ${relativePath}`,
+        `schema-origin writer path changed after closure capture: ${relativePath}`,
       );
     }
   }
@@ -2675,8 +2660,8 @@ function runPinnedWrangler(sealedToolClosure, repositoryRoot, baseEnv, args, {
   // This verification is intentionally the first operation in the
   // credentialed path. It must precede reading or passing Cloudflare
   // authority to the subprocess and precede every spawn.
-  if (!sealedToolClosure.p0Closure) {
-    throw new Error("sealed Wrangler closure lacks its immutable P0 authority proof");
+  if (!sealedToolClosure.preparedClosure) {
+    throw new Error("sealed Wrangler closure lacks its prepared source-closure proof");
   }
   const runtimeExecutable = runner === spawnSync
     ? validatedNodeExecutable()
@@ -2694,7 +2679,7 @@ function runPinnedWrangler(sealedToolClosure, repositoryRoot, baseEnv, args, {
     sealedToolClosure.policy,
     repositoryRoot,
   );
-  verifyP0ToolClosure(repositoryRoot, sealedToolClosure.p0Closure);
+  verifyPreparedToolClosure(repositoryRoot, sealedToolClosure.preparedClosure);
   const resolvedAccountId = typeof accountId === "function" ? accountId() : accountId;
   const resolvedToken = typeof token === "function" ? token() : token;
   const executionRoot = mkdtempSync(
@@ -2767,7 +2752,8 @@ function runPinnedWrangler(sealedToolClosure, repositoryRoot, baseEnv, args, {
       fileCount: sealedToolClosure.policy.fileCount,
       manifestSha256: sealedToolClosure.policy.manifestSha256,
       wranglerVersion: sealedToolClosure.policy.wranglerVersion,
-      p0Commit: sealedToolClosure.p0Closure?.commit ?? null,
+      authoritySha256:
+        sealedToolClosure.preparedClosure?.authoritySha256 ?? null,
     },
     runtime: runtimeEvidence,
     recovery: false,
@@ -2939,6 +2925,7 @@ function inspectLocalRepository(
   }
 
   const authorityFile = regularRepositoryFile(root, SCHEMA_ORIGIN.authorityPath);
+  const hostApi = inspectHostApiClosure(root);
   const ledgerFile = regularRepositoryFile(root, SCHEMA_ORIGIN.ledgerPath);
   const configFile = regularRepositoryFile(root, SCHEMA_ORIGIN.configPath);
   let authority;
@@ -2984,6 +2971,7 @@ function inspectLocalRepository(
       path: SCHEMA_ORIGIN.authorityPath,
       sha256: sha256(authorityFile.bytes),
     },
+    hostApi,
     ledger: {
       path: SCHEMA_ORIGIN.ledgerPath,
       sha256: sha256(ledgerFile.bytes),
@@ -3193,18 +3181,22 @@ export function createSchemaOriginOperations({
       policyAtSeal,
       repositoryRoot,
     );
-    const p0Closure = resolveP0ToolClosure(repositoryRoot);
+    const preparedClosure = resolvePreparedToolClosure(repositoryRoot);
     if (
-      p0Closure.policy.manifestSha256 !== policy.manifestSha256 ||
-      p0Closure.policy.fileCount !== policy.fileCount ||
-      p0Closure.policy.wranglerVersion !== policy.wranglerVersion ||
-      p0Closure.policy.runtimeExecutable !== policy.runtimeExecutable ||
-      p0Closure.policy.runtimeVersion !== policy.runtimeVersion ||
-      p0Closure.policy.runtimeSha256 !== policy.runtimeSha256
+      preparedClosure.policy.manifestSha256 !== policy.manifestSha256 ||
+      preparedClosure.policy.fileCount !== policy.fileCount ||
+      preparedClosure.policy.wranglerVersion !== policy.wranglerVersion ||
+      preparedClosure.policy.runtimeExecutable !== policy.runtimeExecutable ||
+      preparedClosure.policy.runtimeVersion !== policy.runtimeVersion ||
+      preparedClosure.policy.runtimeSha256 !== policy.runtimeSha256
     ) {
-      throw new Error("current tool policy differs from immutable P0 authority");
+      throw new Error("current tool policy differs from the captured schema-origin closure");
     }
-    const sealedToolClosure = Object.freeze({ ...sealed, policy, p0Closure });
+    const sealedToolClosure = Object.freeze({
+      ...sealed,
+      policy,
+      preparedClosure,
+    });
     verifySealedToolClosure(sealedToolClosure, policy, repositoryRoot);
     const policyAfter = regularRepositoryFile(
       repositoryRoot,
@@ -3278,11 +3270,11 @@ export function createSchemaOriginOperations({
       getRecoveryEvidence,
       verifyToolClosure() {
         verifySealedToolClosure(sealedToolClosure, policy, repositoryRoot);
-        verifyP0ToolClosure(repositoryRoot, p0Closure);
+        verifyPreparedToolClosure(repositoryRoot, preparedClosure);
       },
       async inspectLocalState(expectedCommit) {
         verifySealedToolClosure(sealedToolClosure, policy, repositoryRoot);
-        verifyP0ToolClosure(repositoryRoot, p0Closure);
+        verifyPreparedToolClosure(repositoryRoot, preparedClosure);
         return inspectLocalRepository(
           repositoryRoot,
           env,

@@ -117,9 +117,9 @@ const PHASE_AUTHORITY = Object.freeze({
   verify: Object.freeze({ required: [], allowed: [] }),
 });
 
-// This is intentionally broader than the three current Core credentials.  A
+// This is intentionally broader than the three current Core credentials. A
 // phase fails before reading source, artifacts, tools, or the network whenever
-// another release lane's authority is ambient.
+// off-phase authority is ambient.
 const KNOWN_AUTHORITY_ENV = Object.freeze([
   "GH_TOKEN",
   "GITHUB_TOKEN",
@@ -133,9 +133,6 @@ const KNOWN_AUTHORITY_ENV = Object.freeze([
   "TAKOFORM_CORE_RULESET_AUDIT_TOKEN",
   "TAKOFORM_CORE_SIGNER_COMMAND",
   "TAKOFORM_CORE_GITHUB_WRITE_TOKEN",
-  "TAKOFORM_SPECIFICATION_RULESET_AUDIT_TOKEN",
-  "TAKOFORM_SPECIFICATION_REF_WRITE_TOKEN",
-  "TAKOFORM_SPECIFICATION_TAG_SIGNING_KEY",
   "TAKOFORM_SCHEMA_ORIGIN_TOKEN",
   "CLOUDFLARE_API_TOKEN",
   "CLOUDFLARE_API_KEY",

@@ -67,6 +67,9 @@ source, and public projection; a withdrawn identity moves to the ledger's
 `retired` list with the bytes it had and the reason, and can never be reused
 for different bytes. The repository gate requires the complete schema set to
 equal that ledger. Publication additionally reads back every retained URL and
-refuses to overwrite a differing or unavailable identity. The one-way writer
-handoff and rollback/fork boundary are recorded in
+refuses to overwrite a differing or unavailable identity. The one-way
+schema-origin handoff and forward-repair boundary are governed by
+[`release/schema-origin-authority.json`](../../release/schema-origin-authority.json)
+and [`release/schema-origin-policy.md`](../../release/schema-origin-policy.md).
+The original extraction facts remain in
 [`docs/extraction/w10-core-cutover.md`](../../docs/extraction/w10-core-cutover.md).

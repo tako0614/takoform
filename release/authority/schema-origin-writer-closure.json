@@ -1,0 +1,18 @@
+{
+  "format": "takoform.schema-origin-writer-closure@v1",
+  "paths": [
+    "bun.lock",
+    "package.json",
+    "release/authority/schema-origin-tool-closure.json",
+    "release/authority/schema-origin-writer-closure.json",
+    "release/host-api-v1.json",
+    "release/schema-origin-policy.md",
+    "schema-origin/wrangler.jsonc",
+    "scripts/deploy.mjs",
+    "scripts/records.mjs",
+    "scripts/schema-origin-deploy.mjs",
+    "scripts/schema-origin-projection.mjs",
+    "scripts/schema-tool-closure.mjs",
+    "scripts/version-axis.mjs"
+  ]
+}

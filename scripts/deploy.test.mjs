@@ -224,22 +224,7 @@ describe("owner-operated brokered deploy entrypoint", () => {
     expect(() => parseDeployInvocation(["takoform-core-release", "recover"])).toThrow();
   });
 
-  test("retains credentialless dormant Specification and public schema verification routes", async () => {
-    let factoryCalls = 0;
-    await expect(runDeploy({
-      args: [
-        "takoform-specification-release", "prepare", "--lane", "specification",
-        "--version", "1.2", "--expected-d-commit", commit,
-        "--expected-n-commit", receipt, "--output", "/tmp/specification-candidate",
-      ],
-      repo: repositoryRoot,
-      env: {},
-      runtimeExecutable: nodeRuntime,
-      specificationOperationsFactory() { factoryCalls += 1; },
-      stdout: { write() {} },
-    })).rejects.toThrow("writer is dormant");
-    expect(factoryCalls).toBe(0);
-
+  test("retains credentialless public schema verification", async () => {
     let schemaCalls = 0;
     await runDeploy({
       args: ["takoform-schema-origin", "verify", "--candidate", "/tmp/candidate.json"],
@@ -268,10 +253,6 @@ describe("owner-operated brokered deploy entrypoint", () => {
   test("maps every authority phase to one aggregate class with exact private keys", () => {
     expect(sealedRequirementForInvocation("takoform-core-release", { phase: "audit" })).toEqual({ credentialClass: aggregateClass, env: ["GH_TOKEN"] });
     expect(sealedRequirementForInvocation("takoform-core-release", { phase: "sign-tag" })).toEqual({ credentialClass: aggregateClass, env: ["TAKOFORM_CORE_TAG_SIGNING_KEY"] });
-    expect(sealedRequirementForInvocation("takoform-specification-release", { phase: "publish", lane: "composed" })).toEqual({
-      credentialClass: aggregateClass,
-      env: ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ZONE_ID", "GH_TOKEN", "TAKOFORM_CORE_TAG_SIGNING_KEY", "TAKOFORM_SPECIFICATION_RULESET_AUDIT_TOKEN"],
-    });
     expect(sealedRequirementForInvocation("takoform-schema-origin", { phase: "stage" })).toEqual({ credentialClass: aggregateClass, env: ["CLOUDFLARE_API_TOKEN"] });
   });
 

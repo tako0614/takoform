@@ -4,7 +4,7 @@
 
 ## Repository
 
-- Scope: Independent Takoform Specification and publisher-neutral Core, schemas, SDK/CLI, verifier, trust contracts, and generic conformance.
+- Scope: Independent Takoform Host API contract, public schemas and documentation, SDK/CLI verifiers, trust contracts, and generic conformance.
 - Repository kind: `product`
 - Direct sibling dependencies: なし
 - Repository gate: `bun run check`
@@ -12,9 +12,9 @@
 
 ## Ownership
 
-- Owns: Normative Takoform Specification, exact public schemas, identity grammar, and release ledgers / Publisher-neutral Go SDK/CLI, package verifier, Snapshot compiler, trust and revocation contracts / Generic Form-neutral conformance and schema-origin projection
-- Does not own: Any Form family, Form definition, package release, publisher catalog, or publisher trust / Terraform or OpenTofu mappings, state, import, codecs, diagnostics, or Provider history / Host implementation, backend lifecycle, targets, credentials, pricing, capacity, or SLA
-- Hazards: Official and external publishers use the same package, verification, trust, installation, support, and activation mechanism; never add a publisher class or bypass. / Specification 1.1 is immutable predecessor history, and no Host API or package v2 identity is published by the W10 cutover. / Do not claim a release, schema cutover, admission, or activation without its exact signed live evidence.
+- Owns: Normative Takoform Host API contract, exact public schemas, identity grammar, versioning rules, and public documentation / Publisher-neutral Go SDK/CLI, package verifier, Snapshot compiler, and trust and revocation contracts / Generic Form-neutral conformance, reference test harnesses, and proportionate release validation / Source, build, and owning-repository deploy entrypoint for the API and common-model-only takoform.com website
+- Does not own: Any Form family, Form definition, package release, publisher catalog, or publisher trust / Terraform or OpenTofu mappings, state, import, codecs, diagnostics, or Provider history / Host implementation, backend lifecycle, targets, credentials, pricing, capacity, or SLA / Realized Cloudflare account/zone/route control, deployment credentials, credential brokers, or operator-private state machines
+- Hazards: The takoform-forms publisher and every other publisher use the same package, verification, trust, installation, support, and activation mechanism; never add a publisher class, badge, or bypass. / Past separately numbered document-set commits and tags are immutable evidence only; no document-version release lane, Host API /v1.1 lane, or package v2 identity exists. / Release claims require the exact immutable tag and public release readback; hosting and product activation remain outside this repository.
 
 ## Required workflow
 

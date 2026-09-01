@@ -1,5 +1,5 @@
 {
-  "format": "takoform.specification-schema-tool-closure@v1",
+  "format": "takoform.schema-origin-tool-closure@v1",
   "platform": "linux",
   "architecture": "x64",
   "runtimeExecutable": "/usr/local/bin/node",

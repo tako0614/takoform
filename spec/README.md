@@ -13,26 +13,21 @@ separate authored, published, installed, supported, activated, provisioned,
 client-supported, and offered facts are defined in
 [`project-lifecycle.md`](project-lifecycle.md).
 
-## Publication status
+## Version authority
 
-Takoform Specification 1.1 is the first numbered release. It was published as
-an immutable source snapshot by the predecessor repository before Core
-ownership moved. Its exact source commit, annotated tag object, release,
-snapshot digest, and asset digest remain in the imported append-only
-[`Specification release ledger`](../release/specification-releases.json).
-Identity 1.0 was never published, is withdrawn, and is never reused.
+The literal Host API is `forms.takoform.com/v1`. Its normative prose and
+machine-document closure are pinned by
+[`release/host-api-v1.json`](../release/host-api-v1.json). Editorial errata may
+clarify the v1 prose only when observable behavior is unchanged; an
+incompatible contract change requires a separately justified API v2.
 
-The current repository tree is an unreleased post-1.1 draft. A source change in
-this tree does not alter the published 1.1 snapshot and does not itself publish
-any protocol, Form, package, SDK, Provider, support, activation, or Offering
-fact. The current publication and writer boundary is
-[`publication-freeze.md`](publication-freeze.md); the one-way authority record
-is [`release/specification-authority.json`](../release/specification-authority.json).
-
-The literal Host API `forms.takoform.com/v1` is a separate unpublished
-candidate. Specification 1.1 did not publish it. There is no `/v1.1` Host lane,
-and API v2 remains proposal-only: no v2 route, schema, tag, or receipt is minted
-by this tree.
+There is no numbered document version, document release train, selectable
+document maturity label, or lockstep project release. A source change does not
+itself publish a Form, package, Core library, Provider, Host support,
+activation, or Offering fact. The current change boundary is
+[`publication-freeze.md`](publication-freeze.md), and the one-way schema-origin
+authority record is
+[`release/schema-origin-authority.json`](../release/schema-origin-authority.json).
 
 ## Contract map
 
@@ -59,11 +54,11 @@ Takoform has five independent contract areas.
    [`artifact-transport/`](artifact-transport/), and
    [`standard-services/`](standard-services/) define digest-bound data
    contracts. They do not carry executable implementations or credentials.
-5. **Trust, lifecycle, and release identity.**
+5. **Trust, lifecycle, and exact identity.**
    [`trust/`](trust/) defines caller-supplied publisher provenance and offline
    verification inputs. [`schemas/`](schemas/) carries active authoring schemas
-   and byte-exact verify-only history. The append-only release ledgers bind
-   published identities without advancing another version axis.
+   and byte-exact verify-only history. Append-only schema and software records
+   bind exact identities without advancing another version axis.
 
 ## Publisher equality
 

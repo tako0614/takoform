@@ -19,21 +19,21 @@ function baseEntries() {
 }
 
 describe("current documentation boundary", () => {
-  test("current version docs expose four streams and retain Specification 1.1 as history", () => {
+  test("current version docs expose only the four product version axes", () => {
     const readme = currentDoc("README.md");
     const versioning = currentDoc("spec/versioning.md");
     const publication = currentDoc("spec/publication-freeze.md");
 
     expect(readme).toContain("Takoform has exactly four named version streams");
-    expect(readme).not.toMatch(/^\|\s*Specification\s*\|/mu);
+    expect(readme).not.toMatch(/^\|\s*Document release\s*\|/mu);
     expect(readme).not.toMatch(/^\|\s*Form Package(?: format)?\s*\|/mu);
     expect(versioning).toContain("Host API major, each Form's");
     expect(versioning).toContain("Core/library SemVer, and Provider SemVer");
-    expect(versioning).toMatch(/There is no current\s+Specification 1\.0 or 1\.1 release lane/iu);
+    expect(versioning).toMatch(/There is no independent\s+numbered document version/iu);
     expect(versioning).toMatch(/package envelope[\s\S]+not a\s+fifth product release stream/iu);
-    expect(publication).toMatch(/Specification 1\.1 is immutable history/iu);
-    expect(publication).toMatch(/There is no current Specification 1\.0 or 1\.1 release lane/iu);
-    expect(publication).toMatch(/Host API v1[\s\S]+semantics are frozen/iu);
+    expect(publication).toMatch(/It has no\s+independent numbered document version/iu);
+    expect(publication).toMatch(/Editorial corrections MAY clarify prose/iu);
+    expect(publication).toMatch(/changed lifecycle meaning is incompatible[\s\S]+Host API v2/iu);
   });
 
   test("accepts neutral docs and existing local links", () => {

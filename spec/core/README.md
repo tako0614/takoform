@@ -1,9 +1,7 @@
 # Takoform neutral Core and compiled Snapshot
 
-This document is the current unreleased post-1.1 draft of the family-neutral
-compiler boundary. The immutable [Specification 1.1 predecessor release evidence](../../release/specification-releases.json)
-remains unchanged; this draft does not amend or attribute its rewritten text
-to that release. It does not publish a Core SDK, select a publisher, mint a
+This document defines the current compiler boundary. It is family-neutral and
+does not publish a Core SDK, select a publisher, mint a
 Host API lane, install a Form, or decide Host support.
 
 ## Purpose
@@ -112,8 +110,8 @@ publisher enum, trust bypass, or namespace shortcut.
 
 ## Compatibility boundary
 
-This contract is compatible Specification-minor work because it fixes how
-existing exact packages and Definitions compile without rewriting their bytes
+This compiler contract preserves how existing exact packages and Definitions
+are identified while fixing how they compile. It does not rewrite their bytes
 or the Host API v1 wire. Adding a required envelope field, changing FormRef
 equality, adding an executable family hook, or requiring independently
 installable Interface/Binding package kinds is a new identity decision.
