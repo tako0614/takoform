@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 
 import { DEPLOY_CONTRACT, parseDeployArgs, runDeploy } from "./deploy.mjs";
+import {
+  CLOUDFLARE_ACCOUNT_ENV,
+  CLOUDFLARE_TOKEN_ENV,
+  SITE_SURFACE,
+} from "./site-deploy.mjs";
 
 describe("Takoform deploy entrypoint", () => {
   test("answers the v2 contract without invoking the release implementation", async () => {
@@ -14,7 +19,11 @@ describe("Takoform deploy entrypoint", () => {
 
     expect(result).toBe(DEPLOY_CONTRACT);
     expect(invoked).toBe(false);
-    expect(DEPLOY_CONTRACT.surfaces).toHaveLength(1);
+    expect(DEPLOY_CONTRACT.surfaces).toHaveLength(2);
+    expect(DEPLOY_CONTRACT.surfaces.map((surface) => surface.surface)).toEqual([
+      "core",
+      SITE_SURFACE,
+    ]);
     expect(DEPLOY_CONTRACT.surfaces[0]).toMatchObject({
       surface: "core",
       target:
@@ -84,6 +93,56 @@ describe("Takoform deploy entrypoint", () => {
   test("fails closed before delegation for the abandoned v0 stream", () => {
     expect(() => parseDeployArgs(["core", "v0.1.0"])).toThrow(
       "current v1 line",
+    );
+  });
+
+  test("keeps the site surface in the routine static lane, separate from the release", () => {
+    const site = DEPLOY_CONTRACT.surfaces.find((surface) => surface.surface === SITE_SURFACE);
+    expect(site).toMatchObject({
+      target: "takoform.com -> cloudflare-pages:takoform-site",
+      covers: ["website"],
+      requiresScripts: ["check:site", "build:site"],
+      triggers: [],
+    });
+    expect(site.requiresTools).toContain("wrangler");
+    expect(site.requiresEnv).toEqual([CLOUDFLARE_TOKEN_ENV, CLOUDFLARE_ACCOUNT_ENV]);
+  });
+
+  test("lets an operator discover every variable the site surface requires", () => {
+    const site = DEPLOY_CONTRACT.surfaces.find((surface) => surface.surface === SITE_SURFACE);
+    const answers = Object.values(site.obligations).join("\n");
+    for (const variable of site.requiresEnv) expect(answers).toContain(variable);
+  });
+
+  test("answers the site surface with a gate scoped to the bytes it publishes", () => {
+    const site = DEPLOY_CONTRACT.surfaces.find((surface) => surface.surface === SITE_SURFACE);
+    expect(site.obligations.provenance).toContain("check:site");
+    expect(site.obligations.provenance).toContain("credential-free read of the public refs/heads/main");
+    expect(site.obligations["post-conditions"]).toContain("immutable per-deployment URL");
+    expect(site.obligations["post-conditions"]).toContain("https://takoform.com");
+    expect(site.obligations.reversal).toContain("previous production deployment");
+    expect(site.obligations["failure-handling"]).toContain("never retries");
+    expect(site.obligations["no-overwrite"]).toContain("names no ledger identity");
+  });
+
+  test("delegates the site surface without reaching the release implementation", async () => {
+    const calls = [];
+    const result = await runDeploy(parseDeployArgs([SITE_SURFACE, "--status"]), {
+      runSiteDeploy: async (site) => {
+        calls.push(site);
+        return { delegated: "site" };
+      },
+      runCoreRelease: async () => {
+        throw new Error("the site surface must never reach the Core release");
+      },
+    });
+    expect(calls).toEqual([{ mode: "status" }]);
+    expect(result).toEqual({ delegated: "site" });
+  });
+
+  test("refuses a site mutation that names no exact environment", () => {
+    expect(() => parseDeployArgs([SITE_SURFACE, "--apply"])).toThrow(
+      "an exact environment is required",
     );
   });
 

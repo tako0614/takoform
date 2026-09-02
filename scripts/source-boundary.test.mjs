@@ -137,4 +137,42 @@ describe("Core source boundary", () => {
       expect(inspectSource(entries)).not.toEqual([]);
     }
   });
+
+  function siteEntries() {
+    const entries = validEntries();
+    entries.set("scripts/site.mjs", "export const SITE_ROOT = \"website\";\n");
+    entries.set("scripts/site-status.mjs", "export const SITE_STATUS_ROUTE = \"/x\";\n");
+    entries.set("website/.vitepress/config.mts", "export default {};\n");
+    return entries;
+  }
+
+  test("lets only the deploy entrypoint name the platform it publishes the site to", () => {
+    const entries = siteEntries();
+    entries.set("scripts/site-deploy.mjs", 'const token = "CLOUDFLARE_API_TOKEN";\nconst tool = "wrangler";\n');
+    expect(inspectSource(entries)).toEqual([]);
+
+    const sibling = siteEntries();
+    sibling.set("scripts/publish.mjs", 'const token = "CLOUDFLARE_API_TOKEN";\n');
+    expect(inspectSource(sibling)).toContain(
+      "scripts/publish.mjs names the publishing platform outside the deploy entrypoint: CLOUDFLARE_",
+    );
+  });
+
+  test("keeps the retired schema-origin identity forbidden inside the entrypoint too", () => {
+    const entries = siteEntries();
+    entries.set("scripts/site-deploy.mjs", 'const surface = "takoform-schema-origin";\n');
+    expect(inspectSource(entries)).not.toEqual([]);
+  });
+
+  test("refuses a platform-naming entrypoint once the site it publishes is gone", () => {
+    const entries = validEntries();
+    entries.set("scripts/site-deploy.mjs", 'const token = "CLOUDFLARE_API_TOKEN";\n');
+    const problems = inspectSource(entries);
+    expect(problems).toContain(
+      "the deploy entrypoint names a publishing platform but the site it publishes is missing: scripts/site.mjs",
+    );
+    expect(problems).toContain(
+      "the deploy entrypoint names a publishing platform but the site it publishes is missing: website/.vitepress/config.mts",
+    );
+  });
 });
