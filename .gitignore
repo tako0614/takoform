@@ -13,3 +13,5 @@ crash.*.log
 node_modules
 /coverage.out
 .claude/
+/website/.vitepress/cache/
+/website/.vitepress/dist/

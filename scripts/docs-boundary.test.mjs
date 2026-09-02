@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { inspectDocs } from "./docs-boundary.mjs";
+import { inspectDocs, publishingPlatformDocPaths } from "./docs-boundary.mjs";
 
 function baseEntries() {
   return new Map([
@@ -39,7 +39,8 @@ describe("current documentation boundary", () => {
     ["unreleased successor draft", "This tree is an unreleased draft after the historical Specification 1.1 snapshot."],
     ["Provider implementation authority", "Core owns the Provider projection and Terraform resource schema."],
     ["future numbered writer", "Core owns the future Specification writer."],
-    ["schema hosting platform", "Core deploys the schema-origin with Wrangler."],
+    ["retired schema-origin authority", "Core deploys the schema-origin projection."],
+    ["publishing platform in a contract document", "The schemas are served from Cloudflare Pages."],
   ])("rejects %s", (_name, text) => {
     const entries = baseEntries();
     entries.set("spec/current.md", text);
@@ -137,6 +138,28 @@ describe("current documentation boundary", () => {
     expect(inspectDocs(entries)).toEqual([]);
     entries.set("spec/current.md", "The official family roster is fixed.\n");
     expect(inspectDocs(entries)).not.toEqual([]);
+  });
+
+  test("lets only the site operator document name the publishing platform", () => {
+    const entries = baseEntries();
+    const sentence = "The site is published to a Cloudflare Pages project with Wrangler.\n";
+    entries.set("docs/site.md", sentence);
+    expect(inspectDocs(entries)).toEqual([]);
+    expect(publishingPlatformDocPaths.has("docs/site.md")).toBe(true);
+
+    entries.delete("docs/site.md");
+    entries.set("spec/current.md", sentence);
+    expect(inspectDocs(entries)).toContain(
+      "spec/current.md:1 names a publishing platform outside the site operator document: Cloudflare",
+    );
+  });
+
+  test("keeps the retired schema-origin authority forbidden even in the operator document", () => {
+    const entries = baseEntries();
+    entries.set("docs/site.md", "The schema-origin authority publishes the identities.\n");
+    expect(inspectDocs(entries)).toContain(
+      "docs/site.md:1 retains retired schema-origin hosting authority vocabulary: schema-origin",
+    );
   });
 
   test("a preceding historical sentence cannot bless a following authority claim", () => {

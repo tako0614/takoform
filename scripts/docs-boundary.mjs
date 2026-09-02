@@ -76,7 +76,25 @@ const unreleasedCurrentHostAPITokens = Object.freeze([
 const futureSpecificationWriterToken =
   /\b(?:current|future|continuing|new)\s+(?:numbered\s+)?Specification(?:\s+1\.x)?\s+(?:writer|release|stream)\b/iu;
 
-const platformSchemaHostingToken = /\b(?:Cloudflare|Wrangler|schema-origin)\b/iu;
+// Schema hosting once had a bespoke authority in this repository: its own
+// ledger, its own writer, its own deploy path. It was removed because an
+// append-only identity ledger is not a hosting product, and that removal is
+// permanent — `schema-origin` names the retired machinery and stays forbidden
+// in every document.
+//
+// Naming the publishing platform is a different question with a different
+// answer. This repository now owns the source, build, and deploy entrypoint of
+// the site that serves those identities, so the one operator document that
+// explains how to publish it must be able to say what it publishes to. No
+// other current document may: a portable contract that names a platform has
+// stopped being portable, and a specification page that names one invites a
+// reader to treat the operator's choice as part of the contract.
+const retiredSchemaOriginToken = /\bschema-origin\b/iu;
+const publishingPlatformToken = /\b(?:Cloudflare|Wrangler)\b/iu;
+
+export const publishingPlatformDocPaths = Object.freeze(new Set([
+  "docs/site.md",
+]));
 
 const exceptionWords = /\b(?:histor(?:y|ical)|predecessor|retained|withdrawn|legacy|proposal|proposed|verify-only|compatibility[- ]only|not\s+current|not\s+a\s+current|old\s+repository|former|superseded|unserved|forbidden|never\s+reuse)\b/iu;
 const negationWords = /\b(?:no|not|never|without|neither|nor|cannot|does\s+not|do\s+not|doesn't|don't|isn't|aren't|none)\b/iu;
@@ -209,8 +227,13 @@ function checkVocabulary(path, content, problems) {
         problems.push(`${path}:${index + 1} claims retired numbered Specification authority: ${writer[0]}`);
       }
     }
-    for (const hosting of matchesInLine(line, platformSchemaHostingToken)) {
-      problems.push(`${path}:${index + 1} retains platform-specific schema hosting vocabulary: ${hosting[0]}`);
+    for (const retired of matchesInLine(line, retiredSchemaOriginToken)) {
+      problems.push(`${path}:${index + 1} retains retired schema-origin hosting authority vocabulary: ${retired[0]}`);
+    }
+    if (!publishingPlatformDocPaths.has(path)) {
+      for (const hosting of matchesInLine(line, publishingPlatformToken)) {
+        problems.push(`${path}:${index + 1} names a publishing platform outside the site operator document: ${hosting[0]}`);
+      }
     }
     lineOffset += line.length + 1;
   }

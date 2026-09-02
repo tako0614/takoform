@@ -117,6 +117,28 @@ tools expose the same libraries and fail closed on invalid input. Form source,
 Host implementation, client projection, backend state, and commercial policy
 are outside this neutral contract.
 
+## The takoform.com site
+
+This repository owns the source, build, and deploy entrypoint of the API and
+common-model-only `takoform.com` site. It publishes the Host API v1 contract,
+the publisher-neutral common model, the exact bytes of every public schema at
+the path its `$id` names, the conformance language, the public Core release
+history, and the decision index.
+
+It does not publish Form definitions, per-Form examples, publisher catalogs,
+Form-specific conformance, or client adapter pages; each belongs to the
+publisher or adapter that owns it. Realized CDN, DNS, account, zone, and
+credential state belong to the publishing operator, not to this repository.
+
+```console
+bun run site:dev                    # read it locally
+bun run build:site                  # build and verify the served surfaces
+bun run deploy -- takoform-site --status
+```
+
+Layout, the generated trees, and the operator publishing procedure are in
+[`docs/site.md`](docs/site.md).
+
 ## Development
 
 ```console
