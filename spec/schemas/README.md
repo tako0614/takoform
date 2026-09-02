@@ -80,18 +80,21 @@ and is consumed by host/provider conformance rather than embedded in the
 data-only package verifier. `go test ./spec` compiles every schema and proves
 every implementation copy is byte-identical to its normative source.
 
-Every schema `$id` is a logical URI and may be used as a retrieval URL by an
-external publisher or operator. The files in this directory are the only
-current Core source. `bun run check:records` requires every non-retired and
-verify-only file, `$id`, raw SHA-256 digest, and ledger entry to agree. Core
-contains no hosting projection, platform configuration, credential, or deploy
-path for those URLs.
+Every schema `$id` is a logical URI. The files in this directory are the only
+current Core source, and `bun run check:records` requires every non-retired and
+verify-only file, `$id`, raw SHA-256 digest, and ledger entry to agree.
+
+This repository also publishes those bytes. The `takoform.com` site it owns
+serves each identity at the exact path its `$id` names, and `bun run check:site`
+requires every served copy to equal its normative source byte for byte. It
+holds no account, zone, credential, or DNS state for those URLs: which
+hostnames resolve to that site is the publishing operator's authority, and the
+procedure is in [`docs/site.md`](../../docs/site.md).
 
 [`release/public-schema-identities.json`](../../release/public-schema-identities.json)
 is the append-only identity ledger: it preserves each exact digest, normative
-source, and historical public path without asserting that Core operates a
-server. A withdrawn identity moves to the ledger's `retired` list with the
-bytes it had and the reason, and can never be reused for different bytes. The
-repository gate requires the complete schema source set to equal that ledger;
-availability and hosted-byte readback belong to the external publisher or
-operator.
+source, and public path. A withdrawn identity moves to the ledger's `retired`
+list with the bytes it had and the reason, and can never be reused for
+different bytes. The repository gate requires the complete schema source set to
+equal that ledger; realized availability and hosted-byte readback remain
+outside it.

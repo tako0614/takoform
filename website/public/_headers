@@ -1,0 +1,10 @@
+# Published schema bytes are resolved by machines from other origins. Without
+# an explicit allow, a browser-based validator resolving a $id gets an opaque
+# failure that looks like the schema being absent.
+/schemas/*
+  access-control-allow-origin: *
+  cache-control: public, max-age=3600
+
+/.well-known/takoform-site.json
+  access-control-allow-origin: *
+  cache-control: public, max-age=300
