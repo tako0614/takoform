@@ -11,7 +11,7 @@
     "check:extraction": "bun scripts/extraction-map.mjs --check",
     "check:records": "bun test scripts/records.test.mjs && bun scripts/records.mjs",
     "check:docs": "bun test scripts/docs-boundary.test.mjs && bun scripts/docs-boundary.mjs",
-    "check:deploy": "node --check scripts/deploy.mjs && bun test scripts/deploy.test.mjs",
+    "check:deploy": "node --check scripts/deploy.mjs && node --check scripts/site-deploy.mjs && bun test scripts/deploy.test.mjs scripts/site-deploy.test.mjs",
     "check:core-release": "node --check scripts/core-release.mjs && bun test scripts/core-release.test.mjs",
     "check:site": "bun test scripts/site.test.mjs scripts/site-status.test.mjs && bun scripts/site-status.mjs --check && bun scripts/site.mjs --check",
     "build:site": "bun scripts/site.mjs --build",

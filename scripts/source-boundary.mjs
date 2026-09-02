@@ -64,8 +64,27 @@ const forbiddenSchemaHostingPaths = new Set([
 
 const forbiddenSchemaHostingTokens = [
   "takoform-schema-origin",
-  "CLOUDFLARE_",
-  "wrangler",
+  "schema-origin",
+];
+
+// The site that serves the public schema identities is now built and deployed
+// from this repository, so its one entrypoint has to name the platform it
+// publishes to and the operator variables it needs. Nothing else may. A
+// platform token anywhere else is one of two defects: a second way to mutate
+// the same target, or a portable contract that quietly stopped being portable.
+const publishingEntrypointPaths = new Set([
+  "scripts/deploy.mjs",
+  "scripts/site-deploy.mjs",
+]);
+const publishingPlatformTokens = ["CLOUDFLARE_", "wrangler"];
+
+// The exemption above is only true while the site exists. If the entrypoint
+// still names a platform after the site it publishes is gone, the exemption
+// has outlived its reason and is protecting a stale credential path.
+const publishedSitePaths = [
+  "scripts/site.mjs",
+  "scripts/site-status.mjs",
+  "website/.vitepress/config.mts",
 ];
 
 const forbiddenTopLevelPrefixes = [
@@ -180,7 +199,14 @@ export function inspectSource(entries) {
     }
     for (const token of forbiddenSchemaHostingTokens) {
       if (content.toLowerCase().includes(token.toLowerCase())) {
-        problems.push(`${path} retains platform-specific schema hosting token ${token}`);
+        problems.push(`${path} retains retired schema-origin hosting token ${token}`);
+      }
+    }
+    if (!publishingEntrypointPaths.has(path)) {
+      for (const token of publishingPlatformTokens) {
+        if (content.toLowerCase().includes(token.toLowerCase())) {
+          problems.push(`${path} names the publishing platform outside the deploy entrypoint: ${token}`);
+        }
       }
     }
   }
@@ -206,6 +232,21 @@ export function inspectSource(entries) {
 
   for (const required of ["formpackage/model.go", "hostclient/hostclient.go", "snapshot/snapshot.go"]) {
     if (!entries.has(required)) problems.push(`required public Core package path is missing: ${required}`);
+  }
+
+  const entrypointNamesPlatform = [...publishingEntrypointPaths].some((entrypoint) =>
+    publishingPlatformTokens.some((token) =>
+      (entries.get(entrypoint) ?? "").toLowerCase().includes(token.toLowerCase())
+    )
+  );
+  if (entrypointNamesPlatform) {
+    for (const required of publishedSitePaths) {
+      if (!entries.has(required)) {
+        problems.push(
+          `the deploy entrypoint names a publishing platform but the site it publishes is missing: ${required}`,
+        );
+      }
+    }
   }
 
   return problems;

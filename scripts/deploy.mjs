@@ -4,11 +4,22 @@ import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { parseCoreReleaseArgs, runCoreRelease } from "./core-release.mjs";
+import {
+  CLOUDFLARE_ACCOUNT_ENV,
+  CLOUDFLARE_TOKEN_ENV,
+  SITE_ENVIRONMENTS,
+  SITE_PROJECT,
+  SITE_SURFACE,
+  parseSiteDeployArgs,
+  runSiteDeploy,
+} from "./site-deploy.mjs";
 
 const SURFACE = "core";
 const USAGE = [
   "usage: bun run deploy -- --contract",
   "       bun run deploy -- core v1.MINOR.PATCH [--dry-run|--verify]",
+  `       bun run deploy -- ${SITE_SURFACE} --status`,
+  `       bun run deploy -- ${SITE_SURFACE} --apply --environment <${SITE_ENVIRONMENTS.join("|")}> [--branch <name>] [--execute]`,
 ].join("\n");
 
 export const DEPLOY_CONTRACT = Object.freeze({
@@ -36,12 +47,48 @@ export const DEPLOY_CONTRACT = Object.freeze({
           "reads the exact public tag before evaluating main, re-reads the action-specific tag/main state and Release absence after the owner gate, rejects any changed or conflicting tag and any existing Release, and uses only ordinary create operations without force, edit, delete, or retag paths",
       }),
     }),
+    // Two failure modes, two surfaces. The Core release above mints an
+    // identity a consumer resolves forever; this one replaces reversible
+    // static bytes. Folding them together would drag a module publication's
+    // controls onto a typo fix and, worse, make the typo fix look like the
+    // safer half of a procedure that mints a tag.
+    Object.freeze({
+      surface: SITE_SURFACE,
+      target: `takoform.com -> cloudflare-pages:${SITE_PROJECT}`,
+      covers: Object.freeze(["website"]),
+      requiresScripts: Object.freeze(["check:site", "build:site"]),
+      requiresTools: Object.freeze(["git", "bun", "node", "wrangler"]),
+      requiresEnv: Object.freeze([CLOUDFLARE_TOKEN_ENV, CLOUDFLARE_ACCOUNT_ENV]),
+      // Routine static bytes. The published schema bytes are a consumer-pinned
+      // identity, but the append-only ledger and the site gate mint them, not
+      // this upload, so the no-overwrite answer below is volunteered, not owed.
+      triggers: Object.freeze([]),
+      obligations: Object.freeze({
+        provenance:
+          "runs one scoped gate over the bytes it publishes and nothing else: bun run check:site re-derives every generated page, every served schema byte, and the /.well-known/takoform-site.json document from this repository's own records, then bun run build:site rebuilds and re-verifies website/.vitepress/dist so the uploaded tree is the tree just proved. production additionally refuses a dirty worktree and any HEAD that is not a credential-free read of the public refs/heads/main, and records that commit, the sha256 tree digest of the built output, and the immutable deployment URL on stdout; integration and rehearsal allow a dirty worktree and publish a preview branch that is never main",
+        "post-conditions":
+          "reads back the exact bytes rather than a status code: after the single upload it fetches /.well-known/takoform-site.json and two published schema $id paths from the immutable per-deployment URL and compares each sha256 against the locally built file, and for production repeats the same three routes against https://takoform.com so a stale alias cannot pass as a live publication. Both readbacks refuse on any mismatch",
+        reversal:
+          `the provider keeps every previous deployment; roll back by promoting the previous production deployment of the ${SITE_PROJECT} project from that history. The published schema bytes are byte-identical to the spec/schemas sources an append-only ledger pins, so an older deployment still serves every already-minted $id`,
+        "failure-handling":
+          `refuses before touching the target on a missing or unknown environment, an unset ${CLOUDFLARE_TOKEN_ENV} or ${CLOUDFLARE_ACCOUNT_ENV}, an unreadable public ref, a dirty or non-main production source, or a failed scoped gate, and says so in those words. An upload that fails prints the provider output verbatim, states that the target may or may not have changed, and never retries. A finished upload that prints no single immutable deployment URL, and any readback whose digests differ, halt and direct the operator to the provider deployment history instead of guessing`,
+        "no-overwrite":
+          "a served schema path only ever carries the bytes its ledger entry digests, and bun run check:site fails if a published path drifts from its normative source or if the built tree serves any file under /schemas/ that names no ledger identity, so republishing cannot change an already-minted $id in place",
+      }),
+    }),
   ]),
 });
 
 export function parseDeployArgs(args) {
   if (args.length === 1 && args[0] === "--contract") {
     return Object.freeze({ mode: "contract" });
+  }
+  if (args[0] === SITE_SURFACE) {
+    return Object.freeze({
+      mode: "site",
+      surface: SITE_SURFACE,
+      site: parseSiteDeployArgs(args.slice(1)),
+    });
   }
   if (args[0] !== SURFACE) throw new Error(USAGE);
   return Object.freeze({
@@ -53,6 +100,10 @@ export function parseDeployArgs(args) {
 
 export async function runDeploy(parsed, options = {}) {
   if (parsed.mode === "contract") return DEPLOY_CONTRACT;
+  if (parsed.mode === "site") {
+    const site = options.runSiteDeploy ?? runSiteDeploy;
+    return site(parsed.site, options.siteDeployOptions);
+  }
   const release = options.runCoreRelease ?? runCoreRelease;
   return release(parsed.release, options.coreReleaseOptions);
 }
