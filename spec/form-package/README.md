@@ -12,7 +12,7 @@ FormRef. There is no `packageId` and no multi-Form `definitions` collection. A
 catalog or compatibility set is an external mapping of exact
 `(FormRef, packageDigest)` pairs, not a wider package.
 
-A Form Package carries a Form Definition and data-only supporting files. Core
+A Form Package carries a Form Definition and data-only supporting files. Takoform
 does not define a separate Interface or Binding Package envelope; those
 contracts are acquired and pinned independently by a caller
 ([`interface-contract/`](../interface-contract/),
@@ -88,7 +88,7 @@ go run ./cmd/form-package validate-revocation-checkpoint CHECKPOINT.json
 
 The current `trust.forms.takoform.com/v1` statement and checkpoint schemas use
 stable versionless FormRefs. A new checkpoint chain begins with the signed
-sequence-zero genesis defined in [`../trust/`](../trust/). Core derives a
+sequence-zero genesis defined in [`../trust/`](../trust/). A verifier derives a
 checkpoint entry only from exact RFC 8785 statement bytes; pretty-printed or
 otherwise noncanonical signed statement input is rejected rather than hashed
 as different canonical bytes. Retained v1alpha1 statements and sequence-one
@@ -98,7 +98,7 @@ checkpoint starts remain readable under their original identities.
 
 The local report covers package bytes. A publisher that distributes a package
 chooses its release cadence, provenance, signature, transparency, and revocation
-policy. Project-maintained and independent publishers use the same checks; the
+policy. All publishers use the same checks; the
 operator selects the provenance and trust policy. Acceptance by this verifier
 alone does not publish a package.
 

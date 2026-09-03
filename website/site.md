@@ -10,8 +10,8 @@ title: この site について
 
 この site の source、build、deploy entrypoint は
 [`tako0614/takoform`](https://github.com/tako0614/takoform) にあります。同じ repository が
-normative な Host API v1 契約、exact な公開 schema、conformance contract、歴史的な受領書、
-公開 Core を所有します。
+normative な Host API v1 契約、publisher 中立な共通概念、exact な公開 schema、
+conformance contract を所有します。
 
 realized な CDN、DNS、account / zone / route、credential、operator の状態は、source
 repository の authority ではありません。公開を行う operator が所有します。この site は
@@ -25,8 +25,6 @@ repository の authority ではありません。公開を行う operator が所
 - publisher 中立な共通モデルの normative 文面
 - `$id` が名指す path の [公開 schema](/schemas/) bytes
 - conformance の語彙と class、参照 harness の使い方
-- [Core release の履歴](/releases/)と Specification 受領書
-- [Decision index](/decisions/)
 
 配信しないもの:
 
@@ -37,9 +35,9 @@ repository の authority ではありません。公開を行う operator が所
 - Host support、Form activation、商用 offering の状態
 - realized な DNS / CDN / account / credential の状態
 
-Form ごとの人間向け page は、その package を公開する publisher が、自分の exact な
-package closure から生成し、canonical な repository / tag / sourcePath へ link します。
-この site はそれを複製しません。
+Form ごとの人間向け page は、その package を公開する publisher が、自分の site へ
+deploy し、canonical な repository / tag / sourcePath へ link します。この site は
+それを複製せず、publisher の中央 roster も持ちません。
 
 Takoform の client adapter（Terraform / OpenTofu 向け）の入手可否や status は、
 Terraform Registry と
@@ -56,15 +54,6 @@ identity の append-only な正本は
 [`release/public-schema-identities.json`](https://github.com/tako0614/takoform/blob/main/release/public-schema-identities.json)
 です。占有された `$id` の bytes が変わることはありません。撤回は retired 記録へ移り、
 bytes と理由を保ったまま残り、別の contract に再利用されません。
-
-## 機械可読な status
-
-[`/.well-known/takoform-site.json`](/.well-known/takoform-site.json) は、この repository の
-記録だけから導出された status document です。format は `takoform.spec-site-status@v1`。
-配信中の copy が導出結果と一致することを repository の gate が検査します。
-
-adapter の availability、publisher の roster、Host の support は、この document にも
-ありません。それらを持つのは、それを所有する repository の status です。
 
 ## 以前の site
 

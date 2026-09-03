@@ -22,11 +22,11 @@ The group is one identity component. `kind`, `definitionVersion`, and
 the four members together and MUST NOT choose a family, kind, or version by
 `latest`, by a built-in list, or by a publisher preference.
 
-There is no Core-owned official-family roster or central kind enum. A project
-maintaining Forms and an independent publisher use the same package, digest,
-and contract mechanisms. The only distinction is publisher provenance and the
-trust policy an operator chooses for that provenance. Core does not reserve a
-namespace, grant an official shortcut, or infer trust from a group name.
+There is no official-family roster or central kind enum. Every publisher uses
+the same package, digest, and contract mechanisms. The only distinction is
+publisher provenance and the trust policy an operator chooses for it. Takoform
+does not reserve a namespace, grant an official shortcut, or infer trust from a
+group name.
 
 The reverse-DNS group is carried as one path segment by Host API v1. A group
 containing `/` is invalid; a version belongs in the Form's
@@ -80,9 +80,9 @@ operations it can support. A host MAY support a subset of a family and MUST
 advertise or refuse that exact subset according to its own support policy; a
 family name does not imply support.
 
-The Core compiler accepts zero or more publisher-supplied packages and exact
+The Snapshot compiler accepts zero or more publisher-supplied packages and exact
 contract documents. This is intentional: compiling an empty family set proves
-that Core has no hidden family roster. Generic artifact conformance uses
+that the model has no hidden family roster. Generic artifact conformance uses
 synthetic reverse-DNS groups and is independent of any publisher's catalog.
 
 ## Compatibility

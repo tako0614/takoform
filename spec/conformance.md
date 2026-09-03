@@ -26,8 +26,8 @@ is listed in [`schemas/`](schemas/).
 Conformance is scoped to the artifact or implementation named by a report. A
 package claim does not claim Host Support; a Host claim does not publish a
 package; a client claim does not define Form semantics; and a publisher trust
-claim does not certify an implementation. Project-maintained and independent
-publishers use the same data and trust mechanisms.
+claim does not certify an implementation. All publishers use the same data and
+trust mechanisms.
 
 ### Form Package data
 
@@ -44,7 +44,7 @@ reference and Definition schema, canonical bytes, closed operation/capability
 vocabulary, and portable-content policy. A caller may acquire these documents
 from any publisher; the digest, not a built-in catalog, determines identity.
 
-### Core Snapshot artifact
+### Snapshot artifact
 
 The current generic artifact corpus is
 [`../conformance/takoform-v1/generic.json`](../conformance/takoform-v1/generic.json).
@@ -89,13 +89,13 @@ Form maturity, or universal support.
 A **conforming client adapter** MUST send only declared desired state, preserve
 the exact FormRef and package digest boundaries, and fail closed when it cannot
 carry an occupied identity or migration. Its local schema, state, import, and
-codec choices are client-owned and are not part of neutral Core.
+codec choices are client-owned and are not part of the neutral contract.
 
 ### Publisher trust
 
 A **conforming publisher workflow** (when one is used) MUST keep released bytes
 immutable, record exact digests and provenance, and use an append-only
-revocation policy. Core accepts caller-supplied trust inputs and performs
+revocation policy. A verifier accepts caller-supplied trust inputs and performs
 offline checks; it does not choose a publisher, grant an official bypass, or
 claim that a package was published.
 

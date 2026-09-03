@@ -4,17 +4,16 @@ canonicalSource: spec/core/README.md
 canonicalUrl: https://github.com/tako0614/takoform/blob/main/spec/core/README.md
 ---
 
-# Takoform neutral Core and compiled Snapshot
+# Immutable Snapshot
 
-Core v1.1.0 is the family-neutral Go software/module artifact. It turns already
-acquired, data-only contract artifacts into one closed, immutable graph that a
-client, Host adapter, or artifact conformance tool can consume. Its artifact
-SemVer does not version the Host API; Core continues to consume the exact
-`forms.takoform.com/v1` lane, and there is no Host API v1.1.
+A Takoform implementation turns already acquired, data-only contract artifacts
+into one closed, immutable graph that a client, Host adapter, or artifact
+conformance tool can consume. Snapshot is part of the common model; the SemVer
+of a library that implements it does not version the Host API.
 
-## Core model
+## Snapshot model
 
-The portable meaning shared by Core consumers includes:
+The portable meaning shared by Snapshot consumers includes:
 
 - RFC 8785 and I-JSON canonicalization;
 - complete Form Package closure and exact identity checks;
@@ -26,22 +25,22 @@ The portable meaning shared by Core consumers includes:
 - deterministic ordering and diagnostics; and
 - Snapshot identity.
 
-Core handles contract data only. Form rosters, publisher admission and trust
-selection, client projections, Host implementations and Resource state,
+Snapshot compilation handles contract data only. Form rosters, publisher
+admission and trust selection, client projections, Host implementations and Resource state,
 credentials, targets, activation, availability, price, and capacity remain
 outside this boundary.
 
 ## Acquisition and admission
 
-An acquisition adapter first obtains an immutable package closure. The Core
-package verifier proves that its index names every payload, byte sizes and
+An acquisition adapter first obtains an immutable package closure. The package
+verifier proves that its index names every payload, byte sizes and
 digests match, the closure is data-only, and fixtures satisfy the Definition.
 The caller then applies its selected publisher identity, signature,
-transparency, and revocation policy. Core receives only the result of those
+transparency, and revocation policy. The compiler receives only the result of those
 checks, never a secret or an executable payload.
 
 The verifier issues an immutable package capability only after the complete
-check succeeds. Core receives:
+check succeeds. The compiler receives:
 
 - diagnostics-only origin information;
 - the expected canonical package-index digest;
@@ -66,9 +65,9 @@ One input contains:
 5. zero or one explicit create-default pin for every selected `(group, kind)`.
 
 Input order has no meaning. A family group is a reverse-DNS identity; lookups
-are always group-first. Core has no Kind-only, newest, or built-in publisher
+are always group-first. The model has no Kind-only, newest, or built-in publisher
 fallback. Zero packages and zero default pins are valid and are required to
-prove that Core has no hidden family roster.
+prove that the model has no hidden family roster.
 
 ## Compilation and diagnostics
 
@@ -104,15 +103,15 @@ to another identity.
 
 A client adapter consumes a Snapshot and may build its own typed projection,
 state, imports, codecs, or migration policy. Those are client-owned facts and
-are not Core schemas or authority. A Host consumes a Snapshot only after its
+are not Snapshot schemas or authority. A Host consumes a Snapshot only after its
 own package admission and separately decides implementation support, tenant
 policy, activation, and Resource lifecycle. A conformance tool consumes a
 Snapshot together with explicitly selected corpora; family-specific semantics
-remain outside neutral Core.
+remain outside the neutral model.
 
-Project-maintained and independent publishers use the same compile path. A
-publisher policy may distinguish provenance, but Core has no official publisher
-enum, trust bypass, or namespace shortcut.
+All publishers use the same compile path. A publisher policy may distinguish
+provenance, but the model has no official publisher enum, trust bypass, or
+namespace shortcut.
 
 ## Conformance
 
@@ -123,7 +122,7 @@ immutable compiled Snapshot. It is deliberately not a lifecycle runner: it
 does not execute create/read/update/delete, fencing, relation mutation,
 runtime code, Host Support, activation, or every publisher's family semantics.
 
-Core-level witnesses include:
+Snapshot-level witnesses include:
 
 - zero-family compilation;
 - two synthetic external groups using one Kind without collision;

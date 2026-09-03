@@ -6,7 +6,10 @@ same exact contract. Core verifies packages, compiles immutable Snapshots, and
 calls compatible Hosts through one API. It is an experimental, neutral
 resource-contract project.
 
-## A checked-in Form example
+## Synthetic conformance fixture
+
+This is test evidence for the publisher-neutral contract, not a Form published
+or endorsed by Takoform.
 
 - package index:
   [`conformance/takoform-v1/generic-host/external-family/counter-reservation/package-index.json`](conformance/takoform-v1/generic-host/external-family/counter-reservation/package-index.json)
@@ -74,8 +77,7 @@ The normative model is split into:
 
 Requirement keywords and conformance classes are defined in
 [`spec/conformance.md`](spec/conformance.md). Compatibility rules are in
-[`spec/versioning.md`](spec/versioning.md), and the publication/change policy
-is in [`spec/publication-freeze.md`](spec/publication-freeze.md).
+[`spec/versioning.md`](spec/versioning.md).
 
 ## Version model
 
@@ -122,12 +124,11 @@ are outside this neutral contract.
 This repository owns the source, build, and deploy entrypoint of the API and
 common-model-only `takoform.com` site. It publishes the Host API v1 contract,
 the publisher-neutral common model, the exact bytes of every public schema at
-the path its `$id` names, the conformance language, the public Core release
-history, and the decision index.
+the path its `$id` names, and the conformance language.
 
 It does not publish Form definitions, per-Form examples, publisher catalogs,
-Form-specific conformance, or client adapter pages; each belongs to the
-publisher or adapter that owns it. Realized CDN, DNS, account, zone, and
+release/decision indexes, software release status, or client adapter pages.
+Each Form publisher deploys its own Form site. Realized CDN, DNS, account, zone, and
 credential state belong to the publishing operator, not to this repository.
 
 ```console

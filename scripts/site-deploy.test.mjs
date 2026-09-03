@@ -6,6 +6,7 @@ import { dirname, join } from "node:path";
 import {
   CLOUDFLARE_ACCOUNT_ENV,
   CLOUDFLARE_TOKEN_ENV,
+  ABSENT_ROUTES,
   READBACK_ROUTES,
   SITE_PUBLIC_ORIGIN,
   assertProductionSource,
@@ -65,6 +66,7 @@ function servingFetch(bodies, { failing = new Set() } = {}) {
   return async (url) => {
     const route = new URL(url).pathname;
     if (failing.has(url)) return { ok: false, status: 500 };
+    if (ABSENT_ROUTES.includes(route)) return { ok: false, status: 404 };
     const body = bodies[route] ?? `bytes for ${route}`;
     return { ok: true, status: 200, arrayBuffer: async () => Buffer.from(body) };
   };
@@ -263,6 +265,7 @@ describe("takoform-site runs", () => {
           fetch: async (url) => {
             const route = new URL(url).pathname;
             const stale = url.startsWith(SITE_PUBLIC_ORIGIN);
+            if (ABSENT_ROUTES.includes(route)) return { ok: false, status: 404 };
             return {
               ok: true,
               status: 200,
@@ -272,6 +275,30 @@ describe("takoform-site runs", () => {
         },
       ),
     ).rejects.toThrow(SITE_PUBLIC_ORIGIN);
+  });
+
+  test("halts when a removed public metadata or catalog route is still served", async () => {
+    const root = fixtureRoot({});
+    const run = gitRunner();
+    await expect(
+      runSiteDeploy(
+        parseSiteDeployArgs(["--apply", "--environment", "production", "--execute"]),
+        {
+          root,
+          run,
+          env: credentials,
+          fetch: async (url) => {
+            const route = new URL(url).pathname;
+            const body = `bytes for ${route}`;
+            if (route === "/.well-known/takoform-site.json") {
+              return { ok: true, status: 200, arrayBuffer: async () => Buffer.from("stale") };
+            }
+            if (ABSENT_ROUTES.includes(route)) return { ok: false, status: 404 };
+            return { ok: true, status: 200, arrayBuffer: async () => Buffer.from(body) };
+          },
+        },
+      ),
+    ).rejects.toThrow("still exposes a removed public surface");
   });
 
   test("preserves the provider output verbatim when the upload fails", async () => {

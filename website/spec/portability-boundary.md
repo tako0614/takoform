@@ -109,7 +109,7 @@ tree and change only API version, status, or SemVer. Reusing the shared schema
 vocabulary and retaining a semantic field after explicit review are allowed;
 inheriting an old field set is not.
 
-Publisher source and package generation live outside neutral Core. A publisher
+Publisher source and package generation live outside the neutral contract. A publisher
 may keep reproducible family-scoped authoring inputs, but its tests must pin
 every reviewed field set, reject substrate and operator fields, and reject open
 semantic tokens. The withdrawn v1alpha2 tree and catalog remain readable in

@@ -37,24 +37,19 @@ import { dirname, posix, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { CORE_RELEASE } from "./core-release.mjs";
-import {
-  SITE_STATUS_ROUTE,
-  SITE_STATUS_SOURCE_PATH,
-  deriveSiteStatus,
-  renderSiteStatus,
-} from "./site-status.mjs";
-
 export const SITE_ROOT = "website";
 export const SITE_PUBLIC_ROOT = `${SITE_ROOT}/public`;
 export const SITE_DIST = `${SITE_ROOT}/.vitepress/dist`;
+export const SCHEMA_IDENTITY_ORIGIN = "https://forms.takoform.com";
+export const SCHEMA_LEDGER_PATH = "release/public-schema-identities.json";
 
 const SOURCE_BROWSE = `https://github.com/${CORE_RELEASE.githubRepository}/blob/main`;
 const SOURCE_TREE = `https://github.com/${CORE_RELEASE.githubRepository}/tree/main`;
 
 // The normative prose this site republishes. Retired Host API lanes and the
 // decision bodies are deliberately absent: a retired lane read as a current
-// page is the exact confusion the lane withdrawal was for, and the decisions
-// are non-normative rationale that the index below points at in place.
+// page is the exact confusion the lane withdrawal was for, and decisions are
+// non-normative repository history rather than part of the public contract.
 export const MIRRORED_SPEC_DOCUMENTS = Object.freeze([
   "spec/README.md",
   "spec/conformance.md",
@@ -62,7 +57,6 @@ export const MIRRORED_SPEC_DOCUMENTS = Object.freeze([
   "spec/form-families.md",
   "spec/portability-boundary.md",
   "spec/project-lifecycle.md",
-  "spec/publication-freeze.md",
   "spec/core/README.md",
   "spec/form-definition/README.md",
   "spec/form-package/README.md",
@@ -78,8 +72,19 @@ export const MIRRORED_SPEC_DOCUMENTS = Object.freeze([
 
 export const GENERATED_INDEX_PAGES = Object.freeze([
   `${SITE_ROOT}/schemas/index.md`,
-  `${SITE_ROOT}/decisions/index.md`,
-  `${SITE_ROOT}/releases/index.md`,
+]);
+
+export const HAND_AUTHORED_PAGE_SOURCES = Object.freeze([
+  `${SITE_ROOT}/index.md`,
+  `${SITE_ROOT}/host-api/index.md`,
+  `${SITE_ROOT}/model/index.md`,
+  `${SITE_ROOT}/conformance/index.md`,
+  `${SITE_ROOT}/site.md`,
+]);
+
+export const HAND_AUTHORED_PUBLIC_FILES = Object.freeze([
+  `${SITE_PUBLIC_ROOT}/_headers`,
+  `${SITE_PUBLIC_ROOT}/robots.txt`,
 ]);
 
 // Everything a generated tree owns end to end. A file that lives under one of
@@ -87,6 +92,9 @@ export const GENERATED_INDEX_PAGES = Object.freeze([
 // reported by `--check`.
 const GENERATED_TREES = Object.freeze([
   `${SITE_ROOT}/spec`,
+  `${SITE_ROOT}/decisions`,
+  `${SITE_ROOT}/releases`,
+  `${SITE_PUBLIC_ROOT}/.well-known`,
   `${SITE_PUBLIC_ROOT}/schemas`,
 ]);
 
@@ -102,6 +110,10 @@ function readText(root, relativePath) {
   return readBytes(root, relativePath).toString("utf8");
 }
 
+function readJSON(root, relativePath) {
+  return JSON.parse(readText(root, relativePath));
+}
+
 function walk(root, relativeDir) {
   const absolute = resolve(root, relativeDir);
   if (!existsSync(absolute)) return [];
@@ -112,6 +124,85 @@ function walk(root, relativeDir) {
     else if (entry.isFile()) found.push(next);
   }
   return found.sort();
+}
+
+export function inspectPublishedSourceAllowlist(paths, derivedPaths) {
+  const problems = [];
+  const allowedPageSources = new Set(HAND_AUTHORED_PAGE_SOURCES);
+  const allowedPublicFiles = new Set(HAND_AUTHORED_PUBLIC_FILES);
+  for (const path of paths) {
+    if (path.startsWith(`${SITE_ROOT}/.vitepress/`)) continue;
+    if (path.startsWith(`${SITE_PUBLIC_ROOT}/`)) {
+      if (!derivedPaths.has(path) && !allowedPublicFiles.has(path)) {
+        problems.push(`${path} would publish a static file outside the schema/site-asset allowlist`);
+      }
+      continue;
+    }
+    if (!path.endsWith(".md") && !path.endsWith(".html")) continue;
+    if (!derivedPaths.has(path) && !allowedPageSources.has(path)) {
+      problems.push(`${path} would publish a page outside the API/common-model allowlist`);
+    }
+  }
+  return problems;
+}
+
+export function servedPathForIdentity(identity) {
+  let url;
+  try {
+    url = new URL(identity.id);
+  } catch {
+    throw new Error(`schema identity is not a URL: ${identity.id}`);
+  }
+  if (url.origin !== SCHEMA_IDENTITY_ORIGIN) {
+    throw new Error(`schema identity is not served from the identity origin: ${identity.id}`);
+  }
+  if (url.search !== "" || url.hash !== "") {
+    throw new Error(`schema identity carries a query or fragment: ${identity.id}`);
+  }
+  if (!url.pathname.startsWith("/schemas/") || !url.pathname.endsWith(".json")) {
+    throw new Error(`schema identity is outside the served schema tree: ${identity.id}`);
+  }
+  const expected = `${SITE_PUBLIC_ROOT}${url.pathname}`;
+  if (identity.public !== expected) {
+    throw new Error(
+      `schema identity ${identity.id} declares public path ${identity.public}, not ${expected}`,
+    );
+  }
+  return url.pathname;
+}
+
+export function deriveSchemas(root) {
+  const ledger = readJSON(root, SCHEMA_LEDGER_PATH);
+  if (ledger?.kind !== "takoform.public-schema-identities@v1") {
+    throw new Error(`${SCHEMA_LEDGER_PATH} kind changed`);
+  }
+  const identities = [];
+  for (const [status, entries] of [
+    ["active", ledger.identities],
+    ["verify-only", ledger.retired],
+  ]) {
+    for (const entry of entries) {
+      const path = servedPathForIdentity(entry);
+      if (sha256(readBytes(root, entry.source)) !== entry.sha256) {
+        throw new Error(`${entry.source} differs from its ledger digest`);
+      }
+      identities.push({
+        id: entry.id,
+        path,
+        source: entry.source,
+        sha256: entry.sha256,
+        status,
+      });
+    }
+  }
+  identities.sort((left, right) => left.id.localeCompare(right.id));
+  return {
+    ledger: SCHEMA_LEDGER_PATH,
+    identityOrigin: SCHEMA_IDENTITY_ORIGIN,
+    activeCount: ledger.identities.length,
+    verifyOnlyCount: ledger.retired.length,
+    identities,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -130,6 +221,15 @@ export function siteRouteForSpecDocument(specPath) {
   const rest = specPath.slice("spec/".length);
   if (rest.endsWith("README.md")) return `/spec/${rest.slice(0, -"README.md".length)}`;
   return `/spec/${rest.slice(0, -".md".length)}`;
+}
+
+export function distPagePathForSource(source, distRoot = SITE_DIST) {
+  const relative = source.slice(`${SITE_ROOT}/`.length);
+  if (relative === "index.md") return `${distRoot}/index.html`;
+  if (relative.endsWith("/index.md")) {
+    return `${distRoot}/${relative.slice(0, -"index.md".length)}index.html`;
+  }
+  return `${distRoot}/${relative.slice(0, -".md".length)}.html`;
 }
 
 function schemaIdentityBySource(identities) {
@@ -212,13 +312,13 @@ export function renderMirroredDocument(specPath, source, context) {
 // Generated index pages
 // ---------------------------------------------------------------------------
 
-function schemaIndexPage(status) {
+function schemaIndexPage(schemas) {
   const rows = (entries) =>
     entries.map((entry) =>
       `| [\`${entry.path}\`](${entry.path}) | \`${entry.id}\` | \`${entry.sha256}\` | [\`${entry.source}\`](${SOURCE_BROWSE}/${entry.source}) |`
     ).join("\n");
-  const active = status.schemas.identities.filter((entry) => entry.status === "active");
-  const verifyOnly = status.schemas.identities.filter((entry) => entry.status === "verify-only");
+  const active = schemas.identities.filter((entry) => entry.status === "active");
+  const verifyOnly = schemas.identities.filter((entry) => entry.status === "verify-only");
   return `---
 # Generated by scripts/site.mjs from release/public-schema-identities.json.
 title: 公開 schema
@@ -258,107 +358,21 @@ ${rows(verifyOnly)}
 `;
 }
 
-function decisionIndexPage(root) {
-  const source = readText(root, "spec/decisions/README.md");
-  const entries = [
-    ...source.matchAll(/^- \[([^\]]+)\]\(([^)\s]+\.md)\)\s*$/gmu),
-  ].map((match) => ({ title: match[1], file: match[2] }));
-  if (entries.length === 0) {
-    throw new Error("spec/decisions/README.md lists no decisions");
-  }
-  const list = entries
-    .map((entry) => `- [${entry.title}](${SOURCE_BROWSE}/spec/decisions/${entry.file})`)
-    .join("\n");
-  return `---
-# Generated by scripts/site.mjs from spec/decisions/README.md.
-title: Decision index
----
-
-# Decision index
-
-これらの記録は設計理由と履歴です。**非 normative** であり、現在の挙動と要件は
-それを所有する specification document だけが定義します。決定の題名や結論が
-すでに superseded な状態を述べていることがあり、現在の specification を
-上書きしません。
-
-本文は source repository に置き、この site は索引だけを配信します。
-
-${list}
-`;
-}
-
-function releasesIndexPage(status) {
-  const core = status.core.releases
-    .map((entry) => `| \`${entry.version}\` | \`${entry.releaseTitle}\` |`)
-    .join("\n");
-  const specification = status.specification.releases
-    .map((entry) =>
-      `| ${entry.version} | \`${entry.tag}\` | \`${entry.sourceCommit}\` | \`${entry.tagObject}\` | ${entry.immutable ? "immutable" : "mutable"} |`
-    )
-    .join("\n");
-  const withdrawn = status.specification.withdrawn
-    .map((entry) => `- ${entry.version} — ${entry.status}${entry.noReuse ? "（identity は再利用しない）" : ""}`)
-    .join("\n");
-  return `---
-# Generated by scripts/site.mjs from this repository's release records.
-title: Release
----
-
-# Release
-
-Takoform には ecosystem 全体の GA gate はありません。次の identity は
-それぞれ独立に released または retained です。
-
-## Core（Go software/module artifact）
-
-現行 artifact は \`${status.core.module}@${status.core.artifactVersion}\` です。
-Core SemVer は software artifact の identity であり、Host API の version では
-ありません。Host wire identity は \`${status.hostApi.lane}\` のままで、
-Host API v1.1 lane は存在しません。
-
-| tag | GitHub Release title |
-| --- | --- |
-${core}
-
-## Specification 受領書
-
-数字付き Specification release は、normative source tree の exact な commit
-snapshot を 1 つだけ記録した immutable な受領書です。release train ではなく、
-Host API、Form、package、client のどれも発行しません。
-
-| version | tag | source commit | tag object | 状態 |
-| --- | --- | --- | --- | --- |
-${specification}
-
-撤回済み identity:
-
-${withdrawn}
-
-## この site の status
-
-機械可読な status document は
-[\`${SITE_STATUS_ROUTE}\`](${SITE_STATUS_ROUTE}) にあります。
-この repository の記録だけから導出され、gate が配信中の copy と導出結果の
-一致を検査します。
-`;
-}
-
 // ---------------------------------------------------------------------------
 // Derivation
 // ---------------------------------------------------------------------------
 
 export function buildSiteFiles(root) {
-  const status = deriveSiteStatus(root);
+  const schemas = deriveSchemas(root);
   const files = new Map();
 
-  for (const identity of status.schemas.identities) {
+  for (const identity of schemas.identities) {
     files.set(`${SITE_PUBLIC_ROOT}${identity.path}`, readBytes(root, identity.source));
   }
-  files.set(SITE_STATUS_SOURCE_PATH, Buffer.from(renderSiteStatus(root), "utf8"));
 
   const context = {
     root,
-    schemaIdentities: schemaIdentityBySource(status.schemas.identities),
+    schemaIdentities: schemaIdentityBySource(schemas.identities),
     mirrored: new Map(
       MIRRORED_SPEC_DOCUMENTS.map((specPath) => [specPath, siteRouteForSpecDocument(specPath)]),
     ),
@@ -370,9 +384,7 @@ export function buildSiteFiles(root) {
     );
   }
 
-  files.set(`${SITE_ROOT}/schemas/index.md`, Buffer.from(schemaIndexPage(status), "utf8"));
-  files.set(`${SITE_ROOT}/decisions/index.md`, Buffer.from(decisionIndexPage(root), "utf8"));
-  files.set(`${SITE_ROOT}/releases/index.md`, Buffer.from(releasesIndexPage(status), "utf8"));
+  files.set(`${SITE_ROOT}/schemas/index.md`, Buffer.from(schemaIndexPage(schemas), "utf8"));
   return files;
 }
 
@@ -410,6 +422,12 @@ export function inspectSite(root) {
   for (const path of GENERATED_INDEX_PAGES) {
     if (!files.has(path)) problems.push(`generated index page ${path} was not derived`);
   }
+  for (const path of HAND_AUTHORED_PAGE_SOURCES) {
+    if (!existsSync(resolve(root, path))) problems.push(`allowed page source ${path} is missing`);
+  }
+  problems.push(
+    ...inspectPublishedSourceAllowlist(walk(root, SITE_ROOT), new Set(files.keys())),
+  );
   return problems;
 }
 
@@ -440,15 +458,15 @@ export function inspectDist(root, distRoot = SITE_DIST) {
   if (!existsSync(resolve(root, distRoot))) {
     return [`${distRoot} does not exist; run bun scripts/site.mjs --build`];
   }
-  let status;
+  let schemas;
   try {
-    status = deriveSiteStatus(root);
+    schemas = deriveSchemas(root);
   } catch (error) {
     return [error.message];
   }
 
   const servedSchemas = new Set(walk(root, `${distRoot}/schemas`));
-  for (const identity of status.schemas.identities) {
+  for (const identity of schemas.identities) {
     const path = `${distRoot}${identity.path}`;
     servedSchemas.delete(path);
     let bytes;
@@ -474,26 +492,21 @@ export function inspectDist(root, distRoot = SITE_DIST) {
     problems.push(`${extra} is served under /schemas/ but names no ledger identity`);
   }
 
-  const statusPath = `${distRoot}${SITE_STATUS_ROUTE}`;
-  try {
-    if (readText(root, statusPath) !== renderSiteStatus(root)) {
-      problems.push(`${statusPath} differs from the site-status derivation`);
-    }
-  } catch {
-    problems.push(`${SITE_STATUS_ROUTE} is not served by the build`);
-  }
-
-  for (const page of ["index.html", "404.html"]) {
-    if (!existsSync(resolve(root, `${distRoot}/${page}`))) {
-      problems.push(`${distRoot}/${page} is missing`);
-    }
+  const expectedPages = new Set([`${distRoot}/404.html`, `${distRoot}/schemas/index.html`]);
+  for (const source of HAND_AUTHORED_PAGE_SOURCES) {
+    expectedPages.add(distPagePathForSource(source, distRoot));
   }
   for (const specPath of MIRRORED_SPEC_DOCUMENTS) {
     const route = siteRouteForSpecDocument(specPath);
     const page = route.endsWith("/") ? `${route}index.html` : `${route}.html`;
-    if (!existsSync(resolve(root, `${distRoot}${page}`))) {
-      problems.push(`${specPath} is mirrored but ${page} is not built`);
-    }
+    expectedPages.add(`${distRoot}${page}`);
+  }
+  const actualPages = new Set(walk(root, distRoot).filter((path) => path.endsWith(".html")));
+  for (const page of expectedPages) {
+    if (!actualPages.delete(page)) problems.push(`${page} is missing`);
+  }
+  for (const page of actualPages) {
+    problems.push(`${page} is built outside the API/common-model route allowlist`);
   }
   return problems;
 }
@@ -558,7 +571,7 @@ export async function main(argv = process.argv.slice(2)) {
       return;
     }
     process.stdout.write(
-      `site: built ${SITE_DIST} serving ${deriveSiteStatus(ROOT).schemas.identities.length} schema identities (${distDigest(ROOT)})\n`,
+      `site: built ${SITE_DIST} serving ${deriveSchemas(ROOT).identities.length} schema identities (${distDigest(ROOT)})\n`,
     );
     return;
   }

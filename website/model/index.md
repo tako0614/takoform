@@ -6,7 +6,7 @@ title: 共通モデル
 
 Takoform の共通モデルは publisher 中立です。誰が Form を書いても、同じ identity 文法、
 同じ package 形式、同じ compile 規則、同じ trust 入力を通ります。normative な定義は
-[Specification](/spec/) の各 contract document が持ちます。
+[API と共通概念](/spec/) の各 contract document が持ちます。
 
 ## identity の文法
 
@@ -27,7 +27,7 @@ Definition が変わるので、member 全体が別 identity になります。
   observed / output の形。
 - [Form Package](/spec/form-package/) — 一つの exact な Form のための、閉じた data-only
   package。実行コード、credential、配置、商用の内容を持ちません。
-- [Core Snapshot](/spec/core/) — 検証済みで digest 固定された contract を、順序に
+- [Immutable Snapshot](/spec/core/) — 検証済みで digest 固定された contract を、順序に
   依存しない immutable graph へ deterministic に compile したもの。失敗したときに
   部分的な Snapshot を返しません。
 - [Interface contract](/spec/interface-contract/) と
@@ -47,7 +47,7 @@ Definition が変わるので、member 全体が別 identity になります。
 | Form definition | 一つの FormRef の `definitionVersion` | その Form の desired-state 契約の互換性 |
 
 package の `$id`、schema の `$id`、Interface / Binding ref、trust の記録、client の
-release identity、Core の module SemVer は、それぞれ自分の bytes か reader を指す
+release identity、library の SemVer は、それぞれ自分の bytes か reader を指す
 identity です。追加の Takoform version 軸として提示してはいけません。詳細は
 [Versioning and compatibility](/spec/versioning) にあります。
 

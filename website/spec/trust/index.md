@@ -4,14 +4,14 @@ canonicalSource: spec/trust/README.md
 canonicalUrl: https://github.com/tako0614/takoform/blob/main/spec/trust/README.md
 ---
 
-# Core trust profile
+# Publisher trust and revocation
 
-Takoform Core defines package identity, publisher-policy data, offline
+Takoform defines package identity, publisher-policy data, offline
 signature verification, and append-only revocation verification. The
 machine-readable contract is [`profile.json`](https://github.com/tako0614/takoform/blob/main/spec/trust/profile.json).
 
 Publisher choice, installation, support, and activation remain caller or Host
-decisions; Core consumes their exact policy and verification inputs.
+decisions; an implementation consumes their exact policy and verification inputs.
 
 ## Package identity
 
@@ -35,7 +35,7 @@ A publisher policy supplies exact values for:
 - protected ref.
 
 The caller also supplies the trusted-root bytes, exact signed subject, Sigstore
-bundle, and previous revocation pin. Core has no ambient trusted root, default
+bundle, and previous revocation pin. The contract has no ambient trusted root, default
 publisher, `official` field, privileged repository, or verification bypass.
 
 The bundle is verified offline against the exact subject and publisher policy.
@@ -53,7 +53,7 @@ verified Fulcio certificate summary:
   initiating build instructions.
 
 Each value is mandatory and must already be one non-null, lowercase 40-hex Git
-commit digest. There is no caller-supplied fallback or normalization. Core
+commit digest. There is no caller-supplied fallback or normalization. A verifier
 validates the three fields separately and does not require them to be equal.
 Equality is a publisher/import policy decision: a reusable signing workflow can
 make the specific signing instructions a different revision from the source or
@@ -63,8 +63,8 @@ and maps GitHub's `sha`, `job_workflow_sha`, and `workflow_sha` claims to them
 separately in its
 [`GitHub CI issuer profile`](https://github.com/sigstore/fulcio/blob/main/config/identity/config.yaml).
 
-An operator may trust multiple publishers, including a project-maintained one,
-by installing multiple policies. Every policy traverses the same verifier and
+An operator may trust multiple publishers by installing multiple policies.
+Every policy traverses the same verifier and
 produces the same report shape.
 
 ## Rotation and revocation
@@ -74,10 +74,10 @@ bytes and their historical policy remain immutable.
 
 A revocation statement names an exact package digest and FormRef. The current
 statement and checkpoint data-format identity is
-`trust.forms.takoform.com/v1`. It is a record format consumed by Core v1.1.0,
+`trust.forms.takoform.com/v1`. It is a record format consumed by implementations,
 not another Host API lane or a third negotiated version axis. Current
 statements use the exact stable, versionless FormRef schema. A checkpoint entry
-records `statementApiVersion: trust.forms.takoform.com/v1`; Core derives its
+records `statementApiVersion: trust.forms.takoform.com/v1`; the verifier derives its
 other identity fields and digest only from an already-canonical, validated
 statement, so the digest names the same RFC 8785 bytes that a publisher signs.
 
@@ -130,7 +130,8 @@ support, activation, provisioning, client support, and a commercial Offering
 remain separate decisions.
 
 Host-side policy persistence and mutation ordering belong to the Host, outside
-Core. Core provides deterministic formats and offline verification primitives.
+this contract. Takoform provides deterministic formats and offline verification
+primitives.
 
 Provider signing keys, Registry identities, provenance, and publication
-workflows are external trust inputs, not Core defaults.
+workflows are external trust inputs, not Takoform defaults.

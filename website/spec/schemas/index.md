@@ -6,7 +6,7 @@ canonicalUrl: https://github.com/tako0614/takoform/blob/main/spec/schemas/README
 
 # Normative schemas
 
-These are the normative structural minima of the Takoform specification.
+These are the normative structural minima of the Takoform API and common model.
 Schema validity is necessary but not sufficient: the semantic verifier rules
 in the owning Form Definition, Form Package, Interface, and trust contracts
 are also normative and may reject a structurally valid document. Where prose
@@ -87,7 +87,7 @@ data-only package verifier. `go test ./spec` compiles every schema and proves
 every implementation copy is byte-identical to its normative source.
 
 Every schema `$id` is a logical URI. The files in this directory are the only
-current Core source, and `bun run check:records` requires every non-retired and
+current contract source, and `bun run check:records` requires every non-retired and
 verify-only file, `$id`, raw SHA-256 digest, and ledger entry to agree.
 
 This repository also publishes those bytes. The `takoform.com` site it owns

@@ -1,23 +1,26 @@
 import { describe, expect, test } from "bun:test";
 
-import { deriveSiteStatus } from "./site-status.mjs";
 import {
   GENERATED_INDEX_PAGES,
   MIRRORED_SPEC_DOCUMENTS,
   SITE_PUBLIC_ROOT,
   buildSiteFiles,
+  deriveSchemas,
+  distPagePathForSource,
+  inspectPublishedSourceAllowlist,
   inspectSite,
   renderMirroredDocument,
   rewriteLinkTarget,
+  servedPathForIdentity,
   siteRouteForSpecDocument,
   sitePathForSpecDocument,
 } from "./site.mjs";
 
-const status = deriveSiteStatus(".");
+const schemas = deriveSchemas(".");
 const context = {
   root: ".",
   schemaIdentities: new Map(
-    status.schemas.identities.map((identity) => [identity.source, identity.id]),
+    schemas.identities.map((identity) => [identity.source, identity.id]),
   ),
   mirrored: new Map(
     MIRRORED_SPEC_DOCUMENTS.map((path) => [path, siteRouteForSpecDocument(path)]),
@@ -31,13 +34,13 @@ describe("takoform.com site derivation", () => {
 
   test("serves one file per ledger identity at the path the $id names", () => {
     const files = buildSiteFiles(".");
-    for (const identity of status.schemas.identities) {
+    for (const identity of schemas.identities) {
       expect(files.has(`${SITE_PUBLIC_ROOT}${identity.path}`)).toBe(true);
     }
     const served = [...files.keys()].filter((path) =>
       path.startsWith(`${SITE_PUBLIC_ROOT}/schemas/`)
     );
-    expect(served.length).toBe(status.schemas.identities.length);
+    expect(served.length).toBe(schemas.identities.length);
   });
 
   test("derives every index page and every mirrored specification page", () => {
@@ -57,6 +60,15 @@ describe("takoform.com site derivation", () => {
     expect(siteRouteForSpecDocument("spec/host-api/README.md")).toBe("/spec/host-api/");
     expect(sitePathForSpecDocument("spec/host-api/v1.md")).toBe("website/spec/host-api/v1.md");
     expect(siteRouteForSpecDocument("spec/host-api/v1.md")).toBe("/spec/host-api/v1");
+    expect(distPagePathForSource("website/index.md")).toBe(
+      "website/.vitepress/dist/index.html",
+    );
+    expect(distPagePathForSource("website/host-api/index.md")).toBe(
+      "website/.vitepress/dist/host-api/index.html",
+    );
+    expect(distPagePathForSource("website/site.md")).toBe(
+      "website/.vitepress/dist/site.html",
+    );
   });
 
   test("does not mirror the retired lanes or the decision bodies", () => {
@@ -135,5 +147,36 @@ describe("takoform.com site derivation", () => {
   test("reports a page nothing derives instead of leaving it served", () => {
     const files = buildSiteFiles(".");
     expect(files.has("website/spec/withdrawn-lane.md")).toBe(false);
+  });
+
+  test("refuses an ad-hoc Form page or public status file outside the allowlist", () => {
+    expect(
+      inspectPublishedSourceAllowlist(
+        [
+          "website/index.md",
+          "website/forms/example.md",
+          "website/public/site-status.json",
+        ],
+        new Set(),
+      ),
+    ).toEqual([
+      "website/forms/example.md would publish a page outside the API/common-model allowlist",
+      "website/public/site-status.json would publish a static file outside the schema/site-asset allowlist",
+    ]);
+  });
+
+  test("refuses a schema served at a path or origin other than its $id", () => {
+    expect(() =>
+      servedPathForIdentity({
+        id: "https://forms.takoform.com/schemas/v1/form-ref.schema.json",
+        public: "website/public/schemas/elsewhere/form-ref.schema.json",
+      })
+    ).toThrow("declares public path");
+    expect(() =>
+      servedPathForIdentity({
+        id: "https://example.test/schemas/v1/form-ref.schema.json",
+        public: "website/public/schemas/v1/form-ref.schema.json",
+      })
+    ).toThrow("identity origin");
   });
 });

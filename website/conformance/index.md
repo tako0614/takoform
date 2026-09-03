@@ -14,7 +14,7 @@ conformance の主張は、report が名指した artifact または実装だけ
 - **Interface / Binding data** — digest 束縛の ref と Definition schema、canonical bytes、
   閉じた operation / capability 語彙。identity を決めるのは digest であって内蔵 catalog では
   ありません。
-- **Core Snapshot artifact** — package index と payload の closure、digest、exact な Form
+- **Snapshot artifact** — package index と payload の closure、digest、exact な Form
   identity、Interface と Binding の bytes と digest pin、deterministic な compile。
 - **Host protocol** — exact な Host API lane に対する実装の主張。discovery、wire、lifecycle、
   optimistic concurrency、idempotency、identity、relation、artifact、error の規則を、その Host
@@ -26,7 +26,7 @@ conformance の主張は、report が名指した artifact または実装だけ
 
 ## 参照 harness
 
-Core の source から動かせる検証器です。network を読まず、Resource を変更しません。
+このrepositoryから動かせる参照検証器です。network を読まず、Resource を変更しません。
 
 ```console
 go run ./cmd/generic-conformance verify --manifest conformance/takoform-v1/generic.json

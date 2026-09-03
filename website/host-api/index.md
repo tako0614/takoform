@@ -23,8 +23,9 @@ discovery は advertised lane を一つだけ返します。advertised endpoint 
 document と same-origin で、escape した path に percent-encoding、userinfo、query、
 fragment を含みません。平文 HTTP は loopback の開発 origin でだけ有効です。
 
-Core の software artifact SemVer はこの lane の version ではありません。
-There is no Host API v1.1: Core を release しても discovery と route は動きません。
+library や Provider の SemVer はこの lane の version ではありません。それらをrelease
+しても discovery と route は動きません。APIのbehaviorを変えるときだけ新しいmajor
+laneを作ります。
 
 ## 何が wire に入り、何が入らないか
 
@@ -70,8 +71,8 @@ error code は閉じています。実装がこの lane で新しい portable co
 
 ## machine document
 
-wire を実装または検証するときに読む bytes です。digest は
-[`/.well-known/takoform-site.json`](/.well-known/takoform-site.json) にも載っています。
+wire を実装または検証するときに読む bytes です。公開 schema の exact bytes と
+digest は [公開 schema](/schemas/) で確認できます。
 
 | document | 役割 |
 | --- | --- |

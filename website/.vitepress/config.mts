@@ -4,8 +4,8 @@ import { defineConfig } from "vitepress";
 //
 // What is served here is the normative Host API v1 contract, the
 // publisher-neutral common model, the exact public schema bytes at the paths
-// their $id names, the conformance language, and the release identities this
-// repository can prove. Form definitions, per-Form examples, publisher
+// their $id names, and the conformance language. Form definitions, per-Form
+// examples, publisher
 // catalogs, and client adapter pages are not served here; each belongs to the
 // publisher or adapter that owns it.
 //
@@ -15,7 +15,7 @@ import { defineConfig } from "vitepress";
 
 const repository = "https://github.com/tako0614/takoform";
 
-const specificationSidebar = [
+const contractSidebar = [
   {
     text: "Contract map",
     items: [
@@ -37,10 +37,9 @@ const specificationSidebar = [
     items: [
       { text: "Form Definition", link: "/spec/form-definition/" },
       { text: "Form Package", link: "/spec/form-package/" },
-      { text: "Core Snapshot", link: "/spec/core/" },
+      { text: "Immutable Snapshot", link: "/spec/core/" },
       { text: "Form families", link: "/spec/form-families" },
       { text: "Project lifecycle", link: "/spec/project-lifecycle" },
-      { text: "Publication freeze", link: "/spec/publication-freeze" },
     ],
   },
   {
@@ -66,12 +65,8 @@ const guideSidebar = [
     ],
   },
   {
-    text: "identity と記録",
-    items: [
-      { text: "公開 schema", link: "/schemas/" },
-      { text: "Release", link: "/releases/" },
-      { text: "Decision index", link: "/decisions/" },
-    ],
+    text: "machine contract",
+    items: [{ text: "公開 schema", link: "/schemas/" }],
   },
   {
     text: "この site",
@@ -112,13 +107,12 @@ export default defineConfig({
     search: { provider: "local" },
     nav: [
       { text: "Host API v1", link: "/host-api/" },
-      { text: "Specification", link: "/spec/" },
+      { text: "API と概念", link: "/spec/" },
       { text: "schema", link: "/schemas/" },
-      { text: "Release", link: "/releases/" },
       { text: "GitHub", link: repository },
     ],
     sidebar: {
-      "/spec/": specificationSidebar,
+      "/spec/": contractSidebar,
       "/": guideSidebar,
     },
     socialLinks: [{ icon: "github", link: repository }],
@@ -138,7 +132,7 @@ export default defineConfig({
       linkText: "トップへ",
     },
   },
-  // The normative specification prose is authored in English while the site
+  // The normative contract prose is authored in English while the site
   // chrome and guides are Japanese. Declaring one language for both would
   // mislabel roughly half the pages, so the mirrored tree states its own.
   transformHtml(code, _id, context) {

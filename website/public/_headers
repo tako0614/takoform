@@ -4,7 +4,3 @@
 /schemas/*
   access-control-allow-origin: *
   cache-control: public, max-age=3600
-
-/.well-known/takoform-site.json
-  access-control-allow-origin: *
-  cache-control: public, max-age=300

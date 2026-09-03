@@ -1,18 +1,18 @@
 # Project and Form lifecycle
 
-Takoform is a portable desired-state specification and tooling project. Core
-defines data formats, exact identities, deterministic compilation, and the
-protocol documents. This document defines the lifecycle vocabulary for Forms
-published under those contracts.
+Takoform defines a portable desired-state model and Host API. Its contracts
+define data formats, exact identities, deterministic compilation, and protocol
+documents. This document defines the lifecycle vocabulary for Forms published
+under those contracts.
 
 Exact compatibility rules are in [`versioning.md`](versioning.md), package and
 artifact checks are in [`conformance.md`](conformance.md), and portable field
 selection is in [`portability-boundary.md`](portability-boundary.md).
 
-Core has no built-in Form roster or preferred family. A publisher supplies a
+Takoform has no built-in Form roster or preferred family. A publisher supplies a
 package and its exact contracts; an operator decides which publisher policy to
 trust; a Host independently decides which exact identities it can implement.
-The same mechanism applies to project-maintained and third-party publishers.
+The same mechanism applies to every publisher.
 
 ## Independent facts
 
@@ -20,7 +20,6 @@ These facts MUST remain separate:
 
 | Fact | Owning authority | Meaning |
 | --- | --- | --- |
-| Specification release | Core release ledger | One exact committed snapshot of normative specification source |
 | Form maturity | A scoped lifecycle record | Confidence in one portable contract |
 | Package publication | The publisher's release evidence | Exact bytes can be retrieved and authenticated |
 | Publisher trust | Operator-selected policy | Which provenance and signatures are accepted |
@@ -29,21 +28,20 @@ These facts MUST remain separate:
 | Service Offering | A commercial platform | Capacity, price, availability, and support |
 | Client projection | The client that provides it | Local schema, state, and migration behavior |
 
-No Specification release, package, trust policy, generated index, Host report,
+No API publication, package, trust policy, generated index, Host report,
 activation, or Service Offering MAY by itself promote Form maturity. A Host
 MUST NOT describe its support decision as Takoform approval or certification.
 
-Core v1.1.0 is a software/module artifact release separate from the Host API
-v1 lane and from Form, package, client, and Host adoption. Changing current
-source does not rewrite retained release records. There is no Host API v1.1.
+A software/library release is separate from the Host API lane and from Form,
+package, client, and Host adoption. Changing one does not change the others.
 
 ## Form families
 
 Forms use publisher-controlled, versionless reverse-DNS groups. The group is
 part of the exact FormRef but does not confer maturity or support. See
 [`form-families.md`](form-families.md) for the namespace and role rules. A
-family may contain any subset of a publisher's Forms; Core does not maintain a
-central list.
+family may contain any subset of a publisher's Forms; Takoform does not
+maintain a central list.
 
 ## Form lifecycle
 
@@ -102,12 +100,12 @@ That decision MUST bind the exact predecessor FormRef, compatibility analysis,
 portable positive and negative evidence, migration or no-migration guidance,
 replacement/import/delete/recovery analysis, and known limitations. Host or
 consumer adoption is optional supporting evidence, never a Form transition or
-Host API lane change prerequisite, and grants no normative authority over Core
-or another publisher's Form.
+Host API lane change prerequisite, and grants no normative authority over
+another publisher's Form.
 
 Stable does not guarantee that every Host supports the Form or that any
-commercial platform offers it. A Specification or Host protocol release does
-not trigger a Form transition.
+commercial platform offers it. An API or software release does not trigger a
+Form transition.
 
 ### Legacy
 
@@ -141,9 +139,10 @@ or commercial data.
 
 One closed data-only Form Package contains one Definition and one exact FormRef.
 A catalog or compatibility set is an external mapping, never a multi-Form
-package. Project-maintained and independent publishers use the same authoring,
-verification, and admission path; provenance and operator trust are the only
-distinction.
+package. All publishers use the same authoring, verification, and admission
+path; provenance and operator trust are the only distinction. Each publisher
+deploys its own Form pages and package publication surface; Takoform does not
+maintain a central Form site or catalog.
 
 ## Deprecation and security revocation
 

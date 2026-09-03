@@ -10,7 +10,7 @@ hero:
       text: Host API v1 を読む
       link: /host-api/
     - theme: alt
-      text: Specification
+      text: API と概念
       link: /spec/
     - theme: alt
       text: 公開 schema
@@ -30,14 +30,14 @@ features:
 - publisher 中立な共通モデル（FormRef、Form Definition、Form Package、Snapshot、Interface / Binding / artifact / standard service）
 - `$id` が名指す path で配信される [公開 schema](/schemas/) の exact な bytes
 - [conformance の語彙と class](/conformance/)、参照 harness の使い方
-- [公開 Core release の履歴](/releases/)と immutable な Specification 受領書
-- [Decision index](/decisions/)
+- Host API と Form の version を混同しないための互換性ルール
 
 ## 配信しないもの
 
 Form definition、Form ごとの example、publisher の catalog や roster、Form 固有の
 conformance report、client adapter の resource page はここにありません。それぞれを
-所有する publisher と adapter が自分の exact な package closure から公開します。
+所有する publisher と adapter が自分の site から公開します。Takoform はそれらを
+中央 catalog として再公開しません。
 
 Host の support、Form の activation、商用 offering、realized な DNS / CDN / account の
 状態も、この site の主張ではありません。詳しくは [この site について](/site) を

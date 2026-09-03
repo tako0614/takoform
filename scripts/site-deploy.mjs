@@ -24,7 +24,6 @@ import { fileURLToPath } from "node:url";
 
 import { CORE_RELEASE } from "./core-release.mjs";
 import { SITE_DIST, distDigest, inspectDist } from "./site.mjs";
-import { SITE_STATUS_ROUTE } from "./site-status.mjs";
 
 export const SITE_SURFACE = "takoform-site";
 export const SITE_PROJECT = "takoform-site";
@@ -40,9 +39,25 @@ export const CLOUDFLARE_ACCOUNT_ENV = "CLOUDFLARE_ACCOUNT_ID";
 // Read back more than one route. A single document proves the upload landed;
 // it does not prove the published schema tree came with it.
 export const READBACK_ROUTES = Object.freeze([
-  SITE_STATUS_ROUTE,
+  "/index.html",
+  "/sitemap.xml",
   "/schemas/v1/host-discovery.schema.json",
   "/schemas/v1/form-ref.schema.json",
+]);
+export const ABSENT_ROUTES = Object.freeze([
+  "/.well-known/takoform-site.json",
+  "/forms/",
+  "/release/",
+  "/proposals/",
+  "/docs/resources/actor_namespace.html",
+  "/spec/decisions/0052-the-specification-is-released-on-its-own-line.html",
+  "/docs/versions.html",
+  "/spec/publication-freeze",
+  "/spec/host-api/v1beta1",
+  "/spec/host-api/v1beta4",
+  "/spec/trust/0001-provider-runner-report-v2",
+  "/releases/",
+  "/decisions/",
 ]);
 
 export const USAGE = [
@@ -228,6 +243,20 @@ async function readbackDigests(fetchImpl, origin, routes) {
   return digests;
 }
 
+async function requireAbsentRoutes(fetchImpl, origin, routes) {
+  for (const route of routes) {
+    const response = await fetchImpl(`${origin}${route}`, {
+      headers: { "cache-control": "no-cache" },
+      redirect: "manual",
+    });
+    if (response.status !== 404 && response.status !== 410) {
+      throw new Error(
+        `readback of retired route ${origin}${route} returned HTTP ${response.status}; the deployment still exposes a removed public surface`,
+      );
+    }
+  }
+}
+
 function localDigests(root, routes) {
   const digests = {};
   for (const route of routes) {
@@ -316,7 +345,7 @@ export async function runSiteDeploy(parsed, options = {}) {
     site,
     gate: ["check:site", "build:site"],
     upload: ["wrangler", "pages", "deploy", SITE_DIST, "--project-name", SITE_PROJECT, "--branch", parsed.branch],
-    readback: READBACK_ROUTES,
+    readback: { exact: READBACK_ROUTES, absent: ABSENT_ROUTES },
   };
 
   if (parsed.environment === "production") assertProductionSource(source);
@@ -366,6 +395,7 @@ export async function runSiteDeploy(parsed, options = {}) {
     expected,
     await readbackDigests(fetchImpl, deploymentUrl, READBACK_ROUTES),
   );
+  await requireAbsentRoutes(fetchImpl, deploymentUrl, ABSENT_ROUTES);
 
   const result = {
     ...plan,
@@ -374,6 +404,7 @@ export async function runSiteDeploy(parsed, options = {}) {
     distDigest: built,
     deploymentUrl,
     readbackDigests: expected,
+    absentRoutes: ABSENT_ROUTES,
   };
 
   if (parsed.environment === "production") {
@@ -382,6 +413,7 @@ export async function runSiteDeploy(parsed, options = {}) {
       expected,
       await readbackDigests(fetchImpl, SITE_PUBLIC_ORIGIN, READBACK_ROUTES),
     );
+    await requireAbsentRoutes(fetchImpl, SITE_PUBLIC_ORIGIN, ABSENT_ROUTES);
     result.publicOriginVerified = SITE_PUBLIC_ORIGIN;
   } else {
     result.publicOriginVerified = null;

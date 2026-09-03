@@ -14,22 +14,17 @@ website/
 ├── host-api/  model/  conformance/  site.md
 │                          読み方の案内（手書き）
 ├── spec/                  normative 文面の mirror（生成）
-├── schemas/  decisions/  releases/
-│                          索引 page（生成）
+├── schemas/               schema 索引 page（生成）
 └── public/
     ├── schemas/           公開 schema の bytes（生成）
-    ├── .well-known/takoform-site.json
-    │                      status document（生成）
     ├── _headers  robots.txt
     └                      配信 header と robots（手書き）
 ```
 
-生成部分の正本は次の二つです。手で編集した内容は gate が差し戻します。
+生成部分の正本は次です。手で編集した内容は gate が差し戻します。
 
 - [`scripts/site.mjs`](../scripts/site.mjs) — mirror page、索引 page、公開 schema bytes、
   build 出力の検査
-- [`scripts/site-status.mjs`](../scripts/site-status.mjs) —
-  `/.well-known/takoform-site.json` の導出
 
 ```console
 bun scripts/site.mjs --write        # 生成物を書き直す
@@ -38,7 +33,7 @@ bun run build:site                  # build して配信面を検査する
 bun run site:dev                    # 手元で見る
 ```
 
-`bun run check` はこの二つを含みます。生成物が古いまま commit されることはありません。
+`bun run check` はこれらの検査を含みます。生成物が古いまま commit されることはありません。
 
 ## 配信する path
 
@@ -48,9 +43,11 @@ bun run site:dev                    # 手元で見る
 | `/spec/**` | normative 文面の mirror。正本は `spec/**` |
 | `/schemas/` | identity の索引 page |
 | `/schemas/<$id と同じ path>` | 公開 schema の exact な bytes |
-| `/decisions/`、`/releases/` | 索引 page |
-| `/.well-known/takoform-site.json` | `takoform.spec-site-status@v1` |
 | `/sitemap.xml`、`/robots.txt`、`/404.html` | site の付随物 |
+
+個別FormのDefinition、example、catalog、Form pageは配信しません。それぞれの
+publisherが自分のsiteへdeployします。site独自のwell-known statusや文書集合versionも
+公開しません。
 
 公開 schema の `$id` は `https://forms.takoform.com/schemas/...` です。append-only な
 正本は [`release/public-schema-identities.json`](../release/public-schema-identities.json)
@@ -77,7 +74,8 @@ credential を持ちません。
 
    `--status` は read-only、`--execute` の無い `--apply` は plan です。preview は
    `takoform-site.pages.dev` の per-deployment URL に出ます。ここで page と
-   `/.well-known/takoform-site.json` と schema URL を実際に読みます。
+   sitemap と schema URL を実際に読み、撤去した旧catalog/status URLが404であることも
+   確認します。
 4. **custom domain を付ける。** Pages project の Custom domains に `takoform.com` を
    追加し、必要なら `www.takoform.com` も追加します。DNS record の作成と検証は
    operator の操作です。
@@ -97,7 +95,7 @@ credential を持ちません。
    production は clean な `main` だけを受け付け、local HEAD が credential-free に読んだ
    公開 `refs/heads/main` と一致しない限り、target に触れる前に refuse します。upload の
    あと、per-deployment の immutable URL と `https://takoform.com` の双方から
-   status document と schema を読み直し、digest が build 出力と一致しなければ halt します。
+   page、sitemap、schema を読み直し、digest が build 出力と一致しなければ halt します。
 
 戻すときは Pages project の deployment history から直前の production deployment を
 promote します。配信される schema bytes は `spec/schemas/` の source と byte 単位で

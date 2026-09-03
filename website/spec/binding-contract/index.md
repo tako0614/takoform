@@ -11,10 +11,10 @@ Binding is a digest-bound, data-only contract that grants one consumer resource
 a typed capability on one target resource. The runtime API and permission
 arrive together; credentials do not cross the contract.
 
-Project-maintained and independent publishers use the same authoring,
+All publishers use the same authoring,
 canonicalization, and admission mechanism. Publisher provenance is evaluated
-by an operator-selected trust policy and is not encoded in a BindingRef. Core
-does not maintain a preferred Binding catalog or a client-specific mapping.
+by an operator-selected trust policy and is not encoded in a BindingRef.
+Takoform does not maintain a preferred Binding catalog or a client-specific mapping.
 
 ## BindingRef
 
@@ -119,12 +119,12 @@ MUST NOT infer a Binding from a name or a merely similar target.
 
 Deleting a resource with a live Binding or other stored relation fails
 `dependency_in_use` until the relation is removed. The detailed lifecycle and
-fencing checks belong to a Host's own conformance evidence; the neutral Core
+fencing checks belong to a Host's own conformance evidence; the neutral Snapshot
 artifact corpus does not execute them.
 
 ## Artifact acquisition and digest scope
 
-Core defines the BindingRef and Definition schemas and verifies caller-supplied
+Takoform defines the BindingRef and Definition schemas. A verifier checks caller-supplied
 exact artifacts. It does not require a repository-wide Binding catalog or a
 Binding Package envelope. A caller may acquire a Binding Definition from any
 publisher, then pin its canonical digest in a Snapshot. A BindingRef's digest

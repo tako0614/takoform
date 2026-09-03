@@ -83,7 +83,6 @@ const publishingPlatformTokens = ["CLOUDFLARE_", "wrangler"];
 // has outlived its reason and is protecting a stale credential path.
 const publishedSitePaths = [
   "scripts/site.mjs",
-  "scripts/site-status.mjs",
   "website/.vitepress/config.mts",
 ];
 

@@ -141,7 +141,6 @@ describe("Core source boundary", () => {
   function siteEntries() {
     const entries = validEntries();
     entries.set("scripts/site.mjs", "export const SITE_ROOT = \"website\";\n");
-    entries.set("scripts/site-status.mjs", "export const SITE_STATUS_ROUTE = \"/x\";\n");
     entries.set("website/.vitepress/config.mts", "export default {};\n");
     return entries;
   }

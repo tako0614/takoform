@@ -16,10 +16,10 @@ contract ([`v1.md`](/spec/host-api/v1)). Its endpoints are:
 - wire schema: [`host-api-wire-v1.schema.json`](https://forms.takoform.com/schemas/v1/host-api-wire.schema.json); and
 - operation table: [`operations-v1.json`](https://github.com/tako0614/takoform/blob/main/spec/host-api/operations-v1.json).
 
-The lane is a protocol identity, not a Form catalog or publisher allowlist.
-Core v1.1.0 is a software/module artifact that changes no v1 wire identity; a
-Host still implements the contract and support profile independently. There is
-no Host API v1.1.
+The lane is a protocol identity, not a Form catalog or publisher allowlist. A
+Host implements the contract and support profile independently. Editorial
+clarifications keep this exact v1 identity only when behavior is unchanged;
+every behavioral change uses a new API major.
 
 ## Conformance
 

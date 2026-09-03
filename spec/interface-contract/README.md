@@ -54,7 +54,8 @@ A runtime supplied by a Host MAY be described as an Interface. A Form then
 declares the exact InterfaceRef it requires in `providedInterfaces` or
 `acceptedBindings`; a date, flag, or unregistered version token is not a
 portable runtime contract. The runtime implementation and its invocation
-environment belong to the Host or publisher that makes the claim, not to Core.
+environment belong to the Host or publisher that makes the claim, not to the
+portable contract.
 
 The artifact corpus in
 [`../conformance.md`](../conformance.md) verifies Interface Definition bytes,
@@ -95,8 +96,8 @@ descriptions are authoritative for the details the meta-schema cannot express.
 
 ## Artifact distribution
 
-Core defines the Interface schemas and verifies exact artifacts supplied by a
-caller. Project-maintained and independent publishers use the same contract
+Takoform defines the Interface schemas; implementations verify exact artifacts
+supplied by a caller. All publishers use the same contract
 path. An Interface Definition is not an executable package and does not grant
 Host support. A `schemaDigest` binds only canonical Definition bytes; it does
 not encode package digest, publisher identity, signature, revocation feed, or

@@ -10,10 +10,10 @@ contract ([`v1.md`](v1.md)). Its endpoints are:
 - wire schema: [`host-api-wire-v1.schema.json`](../schemas/host-api-wire-v1.schema.json); and
 - operation table: [`operations-v1.json`](operations-v1.json).
 
-The lane is a protocol identity, not a Form catalog or publisher allowlist.
-Core v1.1.0 is a software/module artifact that changes no v1 wire identity; a
-Host still implements the contract and support profile independently. There is
-no Host API v1.1.
+The lane is a protocol identity, not a Form catalog or publisher allowlist. A
+Host implements the contract and support profile independently. Editorial
+clarifications keep this exact v1 identity only when behavior is unchanged;
+every behavioral change uses a new API major.
 
 ## Conformance
 
