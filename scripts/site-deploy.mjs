@@ -72,7 +72,7 @@ export const WRANGLER_PRODUCTION_DEPLOYMENT_LIST_ARGS = Object.freeze([
 // Read back more than one page. Schema routes are loaded from the append-only
 // ledger below; a hand-maintained sample cannot prove a publication.
 export const PAGE_READBACK_ROUTES = Object.freeze([
-  "/index.html",
+  "/",
   "/sitemap.xml",
 ]);
 // Kept as an import-compatible name for callers that used the original page
@@ -476,7 +476,8 @@ async function requireAbsentRoutes(fetchImpl, origin, routes) {
 function localDigests(root, routes) {
   const digests = {};
   for (const route of routes) {
-    digests[route] = sha256(readFileSync(resolve(root, `${SITE_DIST}${route}`)));
+    const fileRoute = route === "/" ? "/index.html" : route;
+    digests[route] = sha256(readFileSync(resolve(root, `${SITE_DIST}${fileRoute}`)));
   }
   return digests;
 }

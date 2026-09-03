@@ -80,7 +80,8 @@ function fixtureRoot(pageBodies = {}) {
   mkdirSync(dirname(ledgerPath), { recursive: true });
   writeFileSync(ledgerPath, `${JSON.stringify(SCHEMA_LEDGER, null, 2)}\n`);
   for (const route of PAGE_READBACK_ROUTES) {
-    const file = join(root, `${SITE_DIST}${route}`);
+    const fileRoute = route === "/" ? "/index.html" : route;
+    const file = join(root, `${SITE_DIST}${fileRoute}`);
     mkdirSync(dirname(file), { recursive: true });
     writeFileSync(file, pageBodies[route] ?? `bytes for ${route}`);
   }
@@ -159,7 +160,8 @@ function gitRunner({
 }
 
 function localBody(root, route) {
-  return readFileSync(join(root, `${SITE_DIST}${route}`));
+  const fileRoute = route === "/" ? "/index.html" : route;
+  return readFileSync(join(root, `${SITE_DIST}${fileRoute}`));
 }
 
 function servingFetch(root, {
@@ -194,6 +196,11 @@ function servingFetch(root, {
 }
 
 describe("takoform-site argument parsing", () => {
+  test("reads the Pages landing document through its canonical slash route", () => {
+    expect(PAGE_READBACK_ROUTES).toEqual(["/", "/sitemap.xml"]);
+    expect(PAGE_READBACK_ROUTES).not.toContain("/index.html");
+  });
+
   test("accepts a read-only status request", () => {
     expect(parseSiteDeployArgs(["--status"])).toEqual({ mode: "status" });
   });
@@ -1090,7 +1097,7 @@ describe("takoform-site runs", () => {
           }),
         },
       ),
-    ).rejects.toThrow(`${SITE_WWW_ORIGIN}/index.html returned HTTP 301`);
+    ).rejects.toThrow(`${SITE_WWW_ORIGIN}/ returned HTTP 301`);
   });
 
   test("halts when a removed public metadata or catalog route is still served", async () => {
