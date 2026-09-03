@@ -111,6 +111,20 @@ describe("current documentation boundary", () => {
     ]);
   });
 
+  test("allows only historical decisions to retain the retired lifecycle link", () => {
+    const entries = baseEntries();
+    entries.set(
+      "spec/decisions/0035-beta-contracts-ship-in-stable-provider-v2-1.md",
+      "[historical lifecycle](../project-lifecycle.md)\n",
+    );
+    expect(inspectDocs(entries)).toEqual([]);
+
+    entries.set("spec/current.md", "[retired lifecycle](project-lifecycle.md)\n");
+    expect(inspectDocs(entries)).toContain(
+      "spec/current.md:1 local Markdown link target does not exist: project-lifecycle.md",
+    );
+  });
+
   test("checks links in the W10 receipt and generated guidance", () => {
     const entries = baseEntries();
     entries.set("docs/extraction/w10-core-cutover.md", "[gone](missing.md)\n");

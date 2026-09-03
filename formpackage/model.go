@@ -10,7 +10,6 @@ const (
 	// explicitly instead of treating this alias as current authority.
 	FormAPIVersion = LegacyFormAPIVersion
 	// CurrentFormAPIVersion identifies the current Form specification epoch.
-	// An epoch does not imply that any Form has reached Experimental maturity.
 	CurrentFormAPIVersion = "forms.takoform.com/v1alpha2"
 	// PackageAPIVersion is the retained v1alpha1 package profile. Its
 	// packageVersion remains part of immutable Legacy bytes and locators.
@@ -114,9 +113,9 @@ type FormDefinition struct {
 	DefinitionVersion string `json:"definitionVersion"`
 	Title             string `json:"title"`
 	Description       string `json:"description,omitempty"`
-	// Status is retained only for immutable v1alpha1 Definition bytes. The
-	// v1alpha2 schema forbids it because forms/lifecycle.json is the sole
-	// authority for Proposal, Experimental, Stable, and Legacy maturity.
+	// Status is retained only when decoding immutable v1alpha1 Definition bytes.
+	// Current profiles reject this historical field; it is not a current Form
+	// publication or lifecycle authority.
 	Status string `json:"status,omitempty"`
 	// Role is the closed family resource role (decision 0009). The frozen
 	// v1alpha1/v1alpha2 schemas forbid it, so it stays empty on those epochs.
@@ -345,8 +344,8 @@ func (packageValue VerifiedPackage) Payload(relativePath string) ([]byte, bool) 
 }
 
 // RevocationStatement is one immutable, append-only security decision for an
-// exact Form Package digest. Deprecation is represented by Form Definition
-// status and must not be encoded as a security revocation.
+// exact Form Package digest. Publication and support records are separate from
+// this security decision and must not be encoded as a revocation.
 type RevocationStatement struct {
 	APIVersion       string            `json:"apiVersion"`
 	Kind             string            `json:"kind"`

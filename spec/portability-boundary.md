@@ -96,10 +96,10 @@ not a desired field.
 
 ## New Form authoring rule
 
-The v1alpha1 Legacy catalog and the withdrawn v1alpha2 provider-v2 line are
-prior art only. A new Form MUST be authored from its Proposal and this
-boundary. A generator MUST NOT copy a Legacy or retained Definition or fixture
-tree and change only API version, status, or SemVer. Reusing the shared schema
+The retained v1alpha1 catalog and the withdrawn v1alpha2 provider-v2 line are
+prior art only. A new Form MUST be authored from publisher-owned source and
+this boundary. A generator MUST NOT copy a retained Definition or fixture tree
+and change only API version, status, or SemVer. Reusing the shared schema
 vocabulary and retaining a semantic field after explicit review are allowed;
 inheriting an old field set is not.
 

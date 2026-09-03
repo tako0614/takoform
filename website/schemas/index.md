@@ -5,6 +5,10 @@ title: 公開 schema
 
 # 公開 schema
 
+This non-normative index is derived from the append-only identity ledger. It
+can track future identities without adding them to the frozen Host API v1
+closure or redefining their contracts.
+
 Takoform の normative schema は、`$id` が名指す path でそのまま配信されます。
 配信される bytes は [`spec/schemas/`](https://github.com/tako0614/takoform/tree/main/spec/schemas) の source と
 byte 単位で同一で、digest は append-only ledger

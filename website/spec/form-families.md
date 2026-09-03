@@ -7,8 +7,8 @@ canonicalUrl: https://github.com/tako0614/takoform/blob/main/spec/form-families.
 # Form families and namespaces
 
 A Form Family is a publisher-defined group of Forms that share a namespace and
-related semantics. A family is not a package, a release channel, a maturity
-state, or a compatibility promise. The family model is described by
+related semantics. A family is not a package, a release channel, or a
+compatibility promise. The family model is described by
 [decision 0009](https://github.com/tako0614/takoform/blob/main/spec/decisions/0009-form-families-and-namespaced-api-versions.md);
 the portable-data rule for every member is
 [`portability-boundary.md`](/spec/portability-boundary).
@@ -99,5 +99,5 @@ new semantics. [`versioning.md`](/spec/versioning) defines the shared retention
 and non-reuse rules.
 
 A family groups related Form contracts; it does not combine them into one
-package or select maturity, Host implementation, client schema, credentials,
-placement, capacity, pricing, or a backend.
+package or select a Host implementation, client schema, credentials, placement,
+capacity, pricing, or a backend.

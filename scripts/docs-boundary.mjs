@@ -28,6 +28,14 @@ export const linkExcludedDocPrefixes = Object.freeze([
   "docs/extraction/history/",
 ]);
 
+// Historical decision bodies remain byte-exact records. They may therefore
+// retain their original link to the removed publisher-governance document;
+// this narrow exception does not restore that document or permit current docs
+// to link to it.
+export const retiredHistoricalLinkTargets = Object.freeze(new Set([
+  "spec/project-lifecycle.md",
+]));
+
 const deletedRunnerTokens = Object.freeze([
   /\bcmd\/(?:portable-host-conformance|reference-host|form-package-release|standard-form-conformance|current-form-source)(?:\/|\b)/iu,
   /\bconformance\/(?:portable-host-v3|portable-host-v1beta1|runtime-abi-v1)(?:\/|\b)/iu,
@@ -106,6 +114,10 @@ function isVocabularyExcludedDoc(path) {
 
 function isLinkExcludedDoc(path) {
   return linkExcludedDocPrefixes.some((prefix) => path.startsWith(prefix));
+}
+
+function isRetiredHistoricalLink(path, target) {
+  return path.startsWith("spec/decisions/") && retiredHistoricalLinkTargets.has(target);
 }
 
 export function isCurrentDoc(path) {
@@ -320,7 +332,7 @@ function checkLocalLinks(path, content, entries, problems) {
         problems.push(`${path}:${index + 1} has an invalid local Markdown link target: ${match[1]}`);
       } else if (resolved.escapesRepository) {
         problems.push(`${path}:${index + 1} local Markdown link escapes the repository: ${match[1]}`);
-      } else if (!hasEntry(entries, resolved.target)) {
+      } else if (!hasEntry(entries, resolved.target) && !isRetiredHistoricalLink(path, resolved.target)) {
         problems.push(`${path}:${index + 1} local Markdown link target does not exist: ${match[1]}`);
       }
     }

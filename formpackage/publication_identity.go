@@ -14,7 +14,8 @@ var (
 )
 
 // PublicationLocator is the immutable repository/Git locator for one exact
-// package artifact. ArtifactID is a compatibility locator, not Form maturity.
+// package artifact. ArtifactID is a compatibility locator, not Form lifecycle
+// or publication state.
 type PublicationLocator struct {
 	APIVersion string `json:"apiVersion"`
 	ReleaseID  string `json:"releaseId"`

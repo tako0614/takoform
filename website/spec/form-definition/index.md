@@ -65,9 +65,10 @@ not admit `refresh`, `drift`, or open connection descriptors. A Definition's
 the mechanisms the Definition actually declares, never against a kind or family
 name.
 
-The current family structure has no maturity or deprecation field. Proposal,
-Experimental, Stable, and Legacy state is owned outside immutable Definition
-bytes by [`../project-lifecycle.md`](/spec/project-lifecycle).
+The current family structure has no publication or lifecycle state field. A
+Definition's `lifecycleCapabilities` declares the resource operations it
+supports; a Host reports runtime lifecycle state. Neither publication labels
+nor Host state are encoded in immutable Definition bytes.
 
 Fixture stages are package data, not Host Support claims. A package verifier
 checks their structure and stage vocabulary; lifecycle or runtime execution

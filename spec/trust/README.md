@@ -70,7 +70,7 @@ A revocation statement names an exact package digest and FormRef. The current
 statement and checkpoint data-format identity is
 `trust.forms.takoform.com/v1`. It is a record format consumed by implementations,
 not another Host API lane or a third negotiated version axis. Current
-statements use the exact stable, versionless FormRef schema. A checkpoint entry
+statements use the exact current, versionless FormRef schema. A checkpoint entry
 records `statementApiVersion: trust.forms.takoform.com/v1`; the verifier derives its
 other identity fields and digest only from an already-canonical, validated
 statement, so the digest names the same RFC 8785 bytes that a publisher signs.
@@ -94,8 +94,8 @@ certificate provenance, and previous pin. Only that complete verification
 issues the unforgeable capability consumed by `CheckNotRevoked`. A verified
 genesis capability proves the publisher's signed current revocation set is
 empty and can authorize `CheckNotRevoked` without inventing evidence. The
-capability remains FormRef-profile-bound: a current checkpoint covers stable
-versionless FormRefs, while a retained v1alpha1 checkpoint covers its Legacy
+capability remains FormRef-profile-bound: a current checkpoint covers current
+versionless FormRefs, while a retained v1alpha1 checkpoint covers its retained
 FormRef epoch. An empty current genesis cannot answer for the legacy chain.
 
 A current verifier persists
@@ -114,8 +114,8 @@ used as an alias for the signed v1 genesis.
 
 Security revocation blocks create, update, and activation. It does not replace
 package bytes or erase existing Resources: referenced bytes remain available
-for observe, delete, or an explicit operator evacuation path. Deprecation is a
-different lifecycle fact.
+for observe, delete, or an explicit operator evacuation path. Publication and
+support records remain separate owner decisions.
 
 ## Use of verification results
 

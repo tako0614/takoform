@@ -75,10 +75,10 @@ Compilation validates the selected Host API lane, verifies each package
 capability and digest pin, validates exact Interface and Binding definitions,
 rejects duplicate identities, indexes all contracts, checks the Host API lower
 bound, closes every exact reference, checks Binding projections, requires one
-explicit default per selected group and kind, and freezes stable views ordered
+explicit default per selected group and kind, and freezes current views ordered
 by exact identity. Any failure returns diagnostics and no partial Snapshot.
 
-The stable diagnostic codes are `invalid_input`, `invalid_artifact`,
+The current diagnostic codes are `invalid_input`, `invalid_artifact`,
 `digest_mismatch`, `duplicate_identity`, `unresolved_reference`,
 `ambiguous_default`, `missing_default`, and `unsupported_host_api`.
 Diagnostics sort by subject, JSON Pointer, code, then message. Reordering input

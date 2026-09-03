@@ -3,8 +3,8 @@
 Takoform defines and verifies portable, data-only resource contracts called
 Forms. Publishers describe desired state once; clients and Hosts consume the
 same exact contract. Core verifies packages, compiles immutable Snapshots, and
-calls compatible Hosts through one API. It is an experimental, neutral
-resource-contract project.
+calls compatible Hosts through one API. It is a neutral resource-contract
+project.
 
 ## Synthetic conformance fixture
 
@@ -71,28 +71,36 @@ The normative model is split into:
   [`spec/artifact-transport/`](spec/artifact-transport/), and
   [`spec/standard-services/`](spec/standard-services/) — digest-bound data
   contracts; and
-- [`spec/trust/`](spec/trust/) and
-  [`spec/project-lifecycle.md`](spec/project-lifecycle.md) — caller-supplied
-  trust inputs and separate Form lifecycle facts.
+- [`spec/trust/`](spec/trust/) — caller-supplied trust inputs and offline
+  verification records.
 
 Requirement keywords and conformance classes are defined in
 [`spec/conformance.md`](spec/conformance.md). Compatibility rules are in
 [`spec/versioning.md`](spec/versioning.md).
+The exact Host API v1/common-model prose, machine roots, and recursive schema
+closure are named by [`spec/host-api/v1.freeze.json`](spec/host-api/v1.freeze.json).
+After its first-add commit those bytes never change; errata are non-normative,
+and a normative or behavioral change requires a future Host API v2 proposal.
 
 ## Version model
 
-Takoform has exactly two domain version axes:
+Takoform has exactly four named version streams. The first two express domain
+compatibility; the latter two identify independently released software:
 
-| Axis | Current identity | Meaning |
+| Stream | Current identity | Meaning |
 | --- | --- | --- |
 | Host API lane | `forms.takoform.com/v1` | Compatibility of the Host discovery and wire contract |
 | Form definition | each Form's `definitionVersion` | Compatibility of that Form's portable desired-state contract |
+| Core library | independent SemVer | Compatibility of SDK, CLI, verifier, compiler, and client software |
+| Provider | independent SemVer | Compatibility of Terraform/OpenTofu schema, state, import, diagnostics, and mappings |
 
 A reverse-DNS Form group is a namespace, not a version. Package and schema
 `$id`, package digest, Interface/Binding ref, trust record, client release, and
-other evidence identify their own bytes or readers. The Go module
+other evidence identify their own bytes or readers; they are not version
+streams. The Go module
 `github.com/tako0614/takoform` uses `v1.1.0` as a software artifact identity;
-it is not a third domain version axis. There is no Host API v1.1.
+it is not a Host API or Specification version. There is no Host API minor lane
+such as `/v1.1`, and no separately numbered Specification 1.x lane.
 
 ## Publisher equality
 

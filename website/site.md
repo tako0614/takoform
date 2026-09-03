@@ -10,8 +10,10 @@ title: この site について
 
 この site の source、build、deploy entrypoint は
 [`tako0614/takoform`](https://github.com/tako0614/takoform) にあります。同じ repository が
-normative な Host API v1 契約、publisher 中立な共通概念、exact な公開 schema、
-conformance contract を所有します。
+[`v1.freeze.json`](https://github.com/tako0614/takoform/blob/main/spec/host-api/v1.freeze.json)
+に列挙された normative な Host API v1/common-model 契約、exact な公開 schema、
+conformance contract を所有します。`/spec/` 配下でも overview、navigation、schema
+index は明示的に non-normative で、この hand-authored page も presentation です。
 
 realized な CDN、DNS、account / zone / route、credential、operator の状態は、source
 repository の authority ではありません。公開を行う operator が所有します。この site は

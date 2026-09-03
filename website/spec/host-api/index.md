@@ -6,6 +6,11 @@ canonicalUrl: https://github.com/tako0614/takoform/blob/main/spec/host-api/READM
 
 # Portable Form Host APIs
 
+This page is non-normative navigation. The immutable contract is
+[`v1.md`](/spec/host-api/v1), and its exact closure is named by
+[`v1.freeze.json`](https://github.com/tako0614/takoform/blob/main/spec/host-api/v1.freeze.json). Nothing on this page adds to or reinterprets
+that contract.
+
 ## Current Host API v1
 
 The current Host lane uses the unchanged literal, provider-neutral Host API v1
@@ -17,9 +22,9 @@ contract ([`v1.md`](/spec/host-api/v1)). Its endpoints are:
 - operation table: [`operations-v1.json`](https://github.com/tako0614/takoform/blob/main/spec/host-api/operations-v1.json).
 
 The lane is a protocol identity, not a Form catalog or publisher allowlist. A
-Host implements the contract and support profile independently. Editorial
-clarifications keep this exact v1 identity only when behavior is unchanged;
-every behavioral change uses a new API major.
+Host implements the contract and support profile independently. Its normative
+bytes never change. Errata are non-normative and cannot reinterpret v1; a
+normative or behavioral change requires a future Host API v2 proposal.
 
 ## Conformance
 

@@ -43,8 +43,8 @@ Host の support、Form の activation、商用 offering、realized な DNS / CD
 状態も、この site の主張ではありません。詳しくは [この site について](/site) を
 読んでください。
 
-## 実験的な project です
+## この project の範囲
 
-Takoform は中立な resource-contract の実験です。conformance に通ったという事実は、
+Takoform は中立な resource-contract を定義します。conformance に通ったという事実は、
 その artifact または実装についての証拠であって、公開、support、production readiness の
 どれも与えません。

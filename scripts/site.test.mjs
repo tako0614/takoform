@@ -2,12 +2,15 @@ import { describe, expect, test } from "bun:test";
 
 import {
   GENERATED_INDEX_PAGES,
+  FROZEN_HOST_API_SPEC_DOCUMENTS,
+  HAND_AUTHORED_PAGE_SOURCES,
   MIRRORED_SPEC_DOCUMENTS,
   SITE_PUBLIC_ROOT,
   buildSiteFiles,
   deriveSchemas,
   distPagePathForSource,
   inspectPublishedSourceAllowlist,
+  inspectPublicDocumentAuthority,
   inspectSite,
   renderMirroredDocument,
   rewriteLinkTarget,
@@ -78,6 +81,61 @@ describe("takoform.com site derivation", () => {
     expect(MIRRORED_SPEC_DOCUMENTS.some((path) => path.startsWith("spec/proposals/"))).toBe(false);
   });
 
+  test("derives frozen Host API mirrors from the freeze while presentation stays mutable", () => {
+    expect(FROZEN_HOST_API_SPEC_DOCUMENTS).toEqual([
+      "spec/host-api/v1.md",
+      "spec/conformance.md",
+      "spec/versioning.md",
+      "spec/form-families.md",
+      "spec/portability-boundary.md",
+      "spec/form-definition/README.md",
+      "spec/form-package/README.md",
+      "spec/core/README.md",
+      "spec/interface-contract/README.md",
+      "spec/binding-contract/README.md",
+      "spec/artifact-transport/README.md",
+      "spec/standard-services/README.md",
+      "spec/trust/README.md",
+    ]);
+    expect(MIRRORED_SPEC_DOCUMENTS).toContain("spec/host-api/v1.md");
+    expect(new Set(MIRRORED_SPEC_DOCUMENTS).size).toBe(MIRRORED_SPEC_DOCUMENTS.length);
+    for (const path of HAND_AUTHORED_PAGE_SOURCES) {
+      expect(FROZEN_HOST_API_SPEC_DOCUMENTS).not.toContain(path);
+    }
+  });
+
+  test("does not mirror publisher-owned lifecycle records", () => {
+    expect(MIRRORED_SPEC_DOCUMENTS).not.toContain("spec/project-lifecycle.md");
+    expect(buildSiteFiles(".").has("website/spec/project-lifecycle.md")).toBe(false);
+  });
+
+  test("keeps normative claims inside the freeze and classifies mutable spec indexes", () => {
+    const frozen = new Set(["spec/frozen.md"]);
+    expect(inspectPublicDocumentAuthority(
+      new Map([
+        ["spec/frozen.md", "# Contract\n\nA Host MUST reject this input.\n"],
+        ["spec/index.md", "# Index\n\nThis non-normative index only links to contracts.\n"],
+        ["website/guide.md", "# Guide\n\nThis page explains the contract.\n"],
+      ]),
+      frozen,
+      { classificationRequiredPaths: new Set(["spec/frozen.md", "spec/index.md"]) },
+    )).toEqual([]);
+
+    expect(inspectPublicDocumentAuthority(
+      new Map([["spec/shadow.md", "# Shadow contract\n\nA Host MUST accept this input.\n"]]),
+      frozen,
+      { classificationRequiredPaths: new Set(["spec/shadow.md"]) },
+    )).toEqual([
+      "spec/shadow.md is a public/current document outside the frozen closure and must explicitly declare itself non-normative",
+    ]);
+    expect(inspectPublicDocumentAuthority(
+      new Map([["website/guide.md", "# Guide\n\nA Host MUST accept this input.\n"]]),
+      frozen,
+    )).toEqual([
+      "website/guide.md defines normative behavior outside the frozen closure",
+    ]);
+  });
+
   describe("link rewriting", () => {
     test("moves a schema link to the published $id rather than a repository path", () => {
       expect(rewriteLinkTarget("spec/host-api/v1.md", "../schemas/form-ref-v1.schema.json", context))
@@ -99,7 +157,7 @@ describe("takoform.com site derivation", () => {
       expect(rewriteLinkTarget("spec/README.md", "../formpackage/", context))
         .toBe("https://github.com/tako0614/takoform/tree/main/formpackage");
       expect(rewriteLinkTarget("spec/versioning.md", "project-lifecycle.md", context))
-        .toBe("/spec/project-lifecycle");
+        .toBe("https://github.com/tako0614/takoform/blob/main/spec/project-lifecycle.md");
     });
 
     test("leaves absolute and fragment-only targets untouched", () => {
@@ -136,7 +194,7 @@ describe("takoform.com site derivation", () => {
       expect(rendered).toContain("The `count` is 31 and the `total` is 0.");
     });
 
-    test("says on the page which copy is normative", () => {
+    test("records the canonical source without assigning normative status", () => {
       const rendered = renderMirroredDocument("spec/README.md", "# Title\n", context);
       expect(rendered).toContain(
         "canonicalUrl: https://github.com/tako0614/takoform/blob/main/spec/README.md",

@@ -1115,7 +1115,7 @@ func promotePackageToCurrentEpoch(t *testing.T, root string) {
 	})
 }
 
-func TestCurrentFormDefinitionRejectsLegacyDocumentStatus(t *testing.T) {
+func TestCurrentFormDefinitionRejectsLegacyStatusField(t *testing.T) {
 	t.Parallel()
 	root := makeValidPackage(t, nil)
 	promotePackageToCurrentEpoch(t, root)
@@ -1129,7 +1129,7 @@ func TestCurrentFormDefinitionRejectsLegacyDocumentStatus(t *testing.T) {
 	}
 	definition["status"] = "compatibility-candidate"
 	if _, err := ValidateDefinition(canonicalMarshal(t, definition)); err == nil || !strings.Contains(err.Error(), "status") {
-		t.Fatalf("v1alpha2 legacy status error = %v", err)
+		t.Fatalf("current Form Definition status error = %v", err)
 	}
 }
 

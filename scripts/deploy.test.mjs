@@ -1,11 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { DEPLOY_CONTRACT, parseDeployArgs, runDeploy } from "./deploy.mjs";
-import {
-  CLOUDFLARE_ACCOUNT_ENV,
-  CLOUDFLARE_TOKEN_ENV,
-  SITE_SURFACE,
-} from "./site-deploy.mjs";
+import { API_CUTOVER_SURFACE, SITE_SURFACE } from "./site-deploy.mjs";
 
 describe("Takoform deploy entrypoint", () => {
   test("answers the v2 contract without invoking the release implementation", async () => {
@@ -19,10 +15,11 @@ describe("Takoform deploy entrypoint", () => {
 
     expect(result).toBe(DEPLOY_CONTRACT);
     expect(invoked).toBe(false);
-    expect(DEPLOY_CONTRACT.surfaces).toHaveLength(2);
+    expect(DEPLOY_CONTRACT.surfaces).toHaveLength(3);
     expect(DEPLOY_CONTRACT.surfaces.map((surface) => surface.surface)).toEqual([
       "core",
       SITE_SURFACE,
+      API_CUTOVER_SURFACE,
     ]);
     expect(DEPLOY_CONTRACT.surfaces[0]).toMatchObject({
       surface: "core",
@@ -96,33 +93,57 @@ describe("Takoform deploy entrypoint", () => {
     );
   });
 
-  test("keeps the site surface in the routine static lane, separate from the release", () => {
+  test("declares the site cutover's consumer identity and irreversible topology hazards", () => {
     const site = DEPLOY_CONTRACT.surfaces.find((surface) => surface.surface === SITE_SURFACE);
     expect(site).toMatchObject({
-      target: "takoform.com -> cloudflare-pages:takoform-site",
+      target:
+      "cloudflare-pages:takoform-site; operator-routed aliases takoform.com,www.takoform.com,forms.takoform.com",
       covers: ["website"],
-      requiresScripts: ["check:site", "build:site"],
+      requiresScripts: ["check:host-api-freeze", "check:site", "build:site"],
       triggers: [],
     });
     expect(site.requiresTools).toContain("wrangler");
-    expect(site.requiresEnv).toEqual([CLOUDFLARE_TOKEN_ENV, CLOUDFLARE_ACCOUNT_ENV]);
+    expect(site.requiresEnv).toEqual([]);
+    expect(site.obligations).toHaveProperty("no-overwrite");
+    expect(site.obligations).not.toHaveProperty("pre-mutation-proof");
+    expect(site.obligations).not.toHaveProperty("independent-review");
   });
 
-  test("lets an operator discover every variable the site surface requires", () => {
+  test("uses the standard Wrangler login/profile instead of environment token requirements", () => {
     const site = DEPLOY_CONTRACT.surfaces.find((surface) => surface.surface === SITE_SURFACE);
-    const answers = Object.values(site.obligations).join("\n");
-    for (const variable of site.requiresEnv) expect(answers).toContain(variable);
+    expect(site.requiresEnv).toEqual([]);
+    const obligations = Object.values(site.obligations).join("\n");
+    expect(obligations).toContain("wrangler login");
+    expect(obligations).toContain("pages project list --json");
   });
 
   test("answers the site surface with a gate scoped to the bytes it publishes", () => {
     const site = DEPLOY_CONTRACT.surfaces.find((surface) => surface.surface === SITE_SURFACE);
     expect(site.obligations.provenance).toContain("check:site");
+    expect(site.obligations.provenance).toContain("check:host-api-freeze");
     expect(site.obligations.provenance).toContain("credential-free read of the public refs/heads/main");
+    expect(site.obligations.provenance).toContain("does not change the fixed Host API v1");
     expect(site.obligations["post-conditions"]).toContain("immutable per-deployment URL");
     expect(site.obligations["post-conditions"]).toContain("https://takoform.com");
-    expect(site.obligations.reversal).toContain("previous production deployment");
+    expect(site.obligations["post-conditions"]).toContain("https://www.takoform.com");
+    expect(site.obligations["post-conditions"]).toContain("https://forms.takoform.com");
+    expect(site.obligations["post-conditions"]).toContain("production deployment history");
+    expect(site.obligations.reversal).toContain("forward repair");
     expect(site.obligations["failure-handling"]).toContain("never retries");
     expect(site.obligations["no-overwrite"]).toContain("names no ledger identity");
+    const cutover = DEPLOY_CONTRACT.surfaces.find((surface) => surface.surface === API_CUTOVER_SURFACE);
+    expect(cutover).toMatchObject({
+      surface: API_CUTOVER_SURFACE,
+      target:
+        "cloudflare-pages:takoform-site; operator-routed aliases takoform.com,www.takoform.com,forms.takoform.com",
+      triggers: ["published-identity", "irreversible"],
+    });
+    expect(cutover.obligations["pre-mutation-proof"]).toContain("31");
+    expect(cutover.obligations["pre-mutation-proof"]).toContain("17");
+    expect(cutover.obligations["pre-mutation-proof"]).toContain("immediately before");
+    expect(cutover.obligations["independent-review"]).toContain("--review");
+    expect(cutover.obligations["post-conditions"]).toContain("https://www.takoform.com");
+    expect(cutover.obligations["failure-handling"]).toContain("unavailable Pages domain ownership");
   });
 
   test("delegates the site surface without reaching the release implementation", async () => {
@@ -138,6 +159,58 @@ describe("Takoform deploy entrypoint", () => {
     });
     expect(calls).toEqual([{ mode: "status" }]);
     expect(result).toEqual({ delegated: "site" });
+  });
+
+  test("delegates the upload-free API cutover verifier", async () => {
+    const calls = [];
+    const deploymentUrl = "https://1a2b3c4d.takoform-site.pages.dev";
+    const result = await runDeploy(
+      parseDeployArgs([API_CUTOVER_SURFACE, "--verify-cutover", "--deployment-url", deploymentUrl]),
+      {
+        runSiteDeploy: async (site) => {
+          calls.push(site);
+          return { delegated: "cutover-verification" };
+        },
+      },
+    );
+    expect(calls).toEqual([{ mode: "verify-cutover", deploymentUrl }]);
+    expect(result).toEqual({ delegated: "cutover-verification" });
+  });
+
+  test("routine site rejects direct cutover flags and API surface auto-selects initial cutover", () => {
+    expect(() =>
+      parseDeployArgs([
+        SITE_SURFACE,
+        "--apply",
+        "--environment",
+        "production",
+        "--initial-cutover",
+        "--review",
+        "audit_takoform_live_cutover_owner",
+      ])
+    ).toThrow(API_CUTOVER_SURFACE);
+    expect(() =>
+      parseDeployArgs([
+        SITE_SURFACE,
+        "--verify-cutover",
+        "--deployment-url",
+        "https://1a2b3c4d.takoform-site.pages.dev",
+      ])
+    ).toThrow(API_CUTOVER_SURFACE);
+    expect(
+      parseDeployArgs([
+        API_CUTOVER_SURFACE,
+        "--apply",
+        "--environment",
+        "production",
+        "--review",
+        "audit_takoform_live_cutover_owner",
+      ]),
+    ).toMatchObject({
+      mode: "site",
+      surface: API_CUTOVER_SURFACE,
+      site: { mode: "apply", initialCutover: true, review: "audit_takoform_live_cutover_owner" },
+    });
   });
 
   test("refuses a site mutation that names no exact environment", () => {

@@ -9,7 +9,7 @@ The Host API v1 operation table
 [`operations-v1.json`](../host-api/operations-v1.json) defines the transport
 routes. The manifest's structural profile is
 [`artifact-manifest-v1alpha1.schema.json`](../schemas/artifact-manifest-v1alpha1.schema.json).
-The artifact identity remains independent of Form maturity, package
+The artifact identity remains independent of Form definition versions, package
 publication, client projection, and Host adoption.
 
 ## Endpoints

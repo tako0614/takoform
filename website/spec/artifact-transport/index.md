@@ -15,7 +15,7 @@ The Host API v1 operation table
 [`operations-v1.json`](https://github.com/tako0614/takoform/blob/main/spec/host-api/operations-v1.json) defines the transport
 routes. The manifest's structural profile is
 [`artifact-manifest-v1alpha1.schema.json`](https://forms.takoform.com/schemas/artifacts/v1alpha1/artifact-manifest.schema.json).
-The artifact identity remains independent of Form maturity, package
+The artifact identity remains independent of Form definition versions, package
 publication, client projection, and Host adoption.
 
 ## Endpoints

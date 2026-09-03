@@ -87,7 +87,7 @@ go run ./cmd/form-package validate-revocation-checkpoint CHECKPOINT.json
 ```
 
 The current `trust.forms.takoform.com/v1` statement and checkpoint schemas use
-stable versionless FormRefs. A new checkpoint chain begins with the signed
+current versionless FormRefs. A new checkpoint chain begins with the signed
 sequence-zero genesis defined in [`../trust/`](../trust/). A verifier derives a
 checkpoint entry only from exact RFC 8785 statement bytes; pretty-printed or
 otherwise noncanonical signed statement input is rejected rather than hashed

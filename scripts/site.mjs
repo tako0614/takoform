@@ -2,17 +2,16 @@
 
 // Generator and gate for the API and common-model-only takoform.com site.
 //
-// The site publishes exactly two things this repository is the authority for:
-// the normative Host API v1 and common-model prose, and the exact public
-// schema bytes at the paths their $id values name. Everything else on the site
-// is an index into those two, or a statement about what the site does not
-// publish.
+// The site publishes the frozen Host API v1/common-model closure and the exact
+// public schema bytes at the paths their $id values name. It also publishes
+// clearly non-normative indexes and hand-authored presentation that point at
+// those contracts without redefining them.
 //
 // Two rules keep it honest and are enforced below rather than reviewed:
 //
-//   1. Every generated page and every served schema byte is derived. A page
-//      that a human edited in place is a second copy of a normative document,
-//      and a second copy drifts. `--check` re-derives and compares.
+//   1. Every mirrored page and every served schema byte is derived. A generated
+//      page edited in place is a second source and drifts. `--check` re-derives
+//      and compares.
 //   2. Nothing is served that no derivation produced. A mirror that only ever
 //      adds keeps publishing pages whose source was deleted, which is how a
 //      withdrawn lane stays reachable and readable as current.
@@ -37,6 +36,7 @@ import { dirname, posix, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { CORE_RELEASE } from "./core-release.mjs";
+import { readHostAPIFreezeManifest } from "./host-api-freeze.mjs";
 export const SITE_ROOT = "website";
 export const SITE_PUBLIC_ROOT = `${SITE_ROOT}/public`;
 export const SITE_DIST = `${SITE_ROOT}/.vitepress/dist`;
@@ -46,29 +46,34 @@ export const SCHEMA_LEDGER_PATH = "release/public-schema-identities.json";
 const SOURCE_BROWSE = `https://github.com/${CORE_RELEASE.githubRepository}/blob/main`;
 const SOURCE_TREE = `https://github.com/${CORE_RELEASE.githubRepository}/tree/main`;
 
-// The normative prose this site republishes. Retired Host API lanes and the
-// decision bodies are deliberately absent: a retired lane read as a current
-// page is the exact confusion the lane withdrawal was for, and decisions are
-// non-normative repository history rather than part of the public contract.
-export const MIRRORED_SPEC_DOCUMENTS = Object.freeze([
+// The immutable prose this site republishes comes only from the freeze. Retired
+// Host API lanes and decision bodies are deliberately absent: a retired lane
+// read as a current page is the exact confusion the lane withdrawal was for,
+// and decisions are non-normative repository history rather than public/current
+// contract pages.
+export const FROZEN_HOST_API_SPEC_DOCUMENTS = Object.freeze(
+  readHostAPIFreezeManifest(resolve(dirname(fileURLToPath(import.meta.url)), ".."))
+    .normativeProse.map((entry) => entry.path),
+);
+
+export const MIRRORED_SPEC_DOCUMENTS = Object.freeze([...new Set([
   "spec/README.md",
   "spec/conformance.md",
   "spec/versioning.md",
   "spec/form-families.md",
   "spec/portability-boundary.md",
-  "spec/project-lifecycle.md",
   "spec/core/README.md",
   "spec/form-definition/README.md",
   "spec/form-package/README.md",
   "spec/host-api/README.md",
-  "spec/host-api/v1.md",
+  ...FROZEN_HOST_API_SPEC_DOCUMENTS,
   "spec/interface-contract/README.md",
   "spec/binding-contract/README.md",
   "spec/artifact-transport/README.md",
   "spec/standard-services/README.md",
   "spec/schemas/README.md",
   "spec/trust/README.md",
-]);
+])]);
 
 export const GENERATED_INDEX_PAGES = Object.freeze([
   `${SITE_ROOT}/schemas/index.md`,
@@ -124,6 +129,43 @@ function walk(root, relativeDir) {
     else if (entry.isFile()) found.push(next);
   }
   return found.sort();
+}
+
+const NON_NORMATIVE_DECLARATION =
+  /\b(?:This (?:page|document|index|guide) is non-normative|This non-normative (?:page|document|index|guide))\b/iu;
+const NORMATIVE_REQUIREMENT =
+  /\b(?:MUST(?: NOT)?|REQUIRED|SHALL(?: NOT)?|SHOULD(?: NOT)?|RECOMMENDED|MAY|OPTIONAL)\b/u;
+const SELF_NORMATIVE_CLAIM =
+  /(?:^#{1,6}\s+Normative\b|\bThis (?:page|document|guide|index|site) (?:is|defines|contains|specifies)[^\n.]{0,80}\bnormative\b)/imu;
+
+function markdownProse(source) {
+  return source
+    .replace(/(^|\n)(`{3,}|~{3,})[^\n]*\n[\s\S]*?\n\2(?=\n|$)/gu, "$1")
+    .replace(/(`+)[\s\S]*?\1/gu, "");
+}
+
+export function inspectPublicDocumentAuthority(
+  documents,
+  frozenPaths,
+  { classificationRequiredPaths = new Set() } = {},
+) {
+  const problems = [];
+  for (const [path, source] of documents) {
+    if (frozenPaths.has(path)) continue;
+    const prose = markdownProse(source);
+    const explicitlyNonNormative = NON_NORMATIVE_DECLARATION.test(prose.slice(0, 512));
+    if (classificationRequiredPaths.has(path) && !explicitlyNonNormative) {
+      problems.push(
+        `${path} is a public/current document outside the frozen closure and must explicitly declare itself non-normative`,
+      );
+      continue;
+    }
+    if (!explicitlyNonNormative &&
+      (NORMATIVE_REQUIREMENT.test(prose) || SELF_NORMATIVE_CLAIM.test(prose))) {
+      problems.push(`${path} defines normative behavior outside the frozen closure`);
+    }
+  }
+  return problems;
 }
 
 export function inspectPublishedSourceAllowlist(paths, derivedPaths) {
@@ -206,7 +248,7 @@ export function deriveSchemas(root) {
 }
 
 // ---------------------------------------------------------------------------
-// Mirrored normative prose
+// Mirrored specification prose
 // ---------------------------------------------------------------------------
 
 export function sitePathForSpecDocument(specPath) {
@@ -326,6 +368,10 @@ title: 公開 schema
 
 # 公開 schema
 
+This non-normative index is derived from the append-only identity ledger. It
+can track future identities without adding them to the frozen Host API v1
+closure or redefining their contracts.
+
 Takoform の normative schema は、\`$id\` が名指す path でそのまま配信されます。
 配信される bytes は [\`spec/schemas/\`](${SOURCE_TREE}/spec/schemas) の source と
 byte 単位で同一で、digest は append-only ledger
@@ -425,6 +471,26 @@ export function inspectSite(root) {
   for (const path of HAND_AUTHORED_PAGE_SOURCES) {
     if (!existsSync(resolve(root, path))) problems.push(`allowed page source ${path} is missing`);
   }
+  const publicDocuments = new Map();
+  for (const path of [...MIRRORED_SPEC_DOCUMENTS, ...HAND_AUTHORED_PAGE_SOURCES]) {
+    if (existsSync(resolve(root, path))) publicDocuments.set(path, readText(root, path));
+  }
+  for (const path of GENERATED_INDEX_PAGES) {
+    const bytes = files.get(path);
+    if (bytes !== undefined) publicDocuments.set(path, bytes.toString("utf8"));
+  }
+  problems.push(
+    ...inspectPublicDocumentAuthority(
+      publicDocuments,
+      new Set(FROZEN_HOST_API_SPEC_DOCUMENTS),
+      {
+        classificationRequiredPaths: new Set([
+          ...MIRRORED_SPEC_DOCUMENTS,
+          ...GENERATED_INDEX_PAGES,
+        ]),
+      },
+    ),
+  );
   problems.push(
     ...inspectPublishedSourceAllowlist(walk(root, SITE_ROOT), new Set(files.keys())),
   );

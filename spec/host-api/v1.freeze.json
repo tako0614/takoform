@@ -1,0 +1,106 @@
+{
+  "kind": "takoform.host-api.freeze",
+  "lane": "forms.takoform.com/v1",
+  "normativeProse": [
+    {
+      "path": "spec/host-api/v1.md",
+      "sha256": "sha256:9bac2a3b9022cec084a20cc92f1e14bb8005932802462788f26ceae258de5d7e"
+    },
+    {
+      "path": "spec/conformance.md",
+      "sha256": "sha256:20ca3bfd16c9923b4613c37ba06d69962250d1a773788141c75eae856d5a6069"
+    },
+    {
+      "path": "spec/versioning.md",
+      "sha256": "sha256:72a1985bc3d42777f9cd9bc532e92a09b6eb59bdaa84726708ac4eceaf5df597"
+    },
+    {
+      "path": "spec/form-families.md",
+      "sha256": "sha256:a337d538cb26717c05ecefe541e105d46c4c8dcce4fb57878af09719777e5a91"
+    },
+    {
+      "path": "spec/portability-boundary.md",
+      "sha256": "sha256:078283b42fc74b805f2be6993f51781949bb38415c03f6cfec58339e0e8c8883"
+    },
+    {
+      "path": "spec/form-definition/README.md",
+      "sha256": "sha256:74cfb34cf3e1b3eca9f5d9e940c78f90eb9139223909361e43b882bd7e1c5959"
+    },
+    {
+      "path": "spec/form-package/README.md",
+      "sha256": "sha256:ed6629bc2acbe925f3c50fc8dc931a987c39934cb409f5b40eb6d9a9db626441"
+    },
+    {
+      "path": "spec/core/README.md",
+      "sha256": "sha256:4fbe7c793bd2b31e12d22a6d33b171caad6e8a1429be1a792c13f9e72e46a6cd"
+    },
+    {
+      "path": "spec/interface-contract/README.md",
+      "sha256": "sha256:287e46e3db8030d4f7436a1fd5dde9c3ef93b82d958655509d80c067f1fe75b0"
+    },
+    {
+      "path": "spec/binding-contract/README.md",
+      "sha256": "sha256:058b931bdd8a18f8da6fea132fca1ff5b9385905578e10b0c35bc9a8de875ac8"
+    },
+    {
+      "path": "spec/artifact-transport/README.md",
+      "sha256": "sha256:dceec12c29503bdef20f59bbdb365d14c40ce63b8022222ca4ff687f5000929f"
+    },
+    {
+      "path": "spec/standard-services/README.md",
+      "sha256": "sha256:033455dcdb19f38062e5b16f361bedbe814b3e1ed17e3c88f652709d330890d1"
+    },
+    {
+      "path": "spec/trust/README.md",
+      "sha256": "sha256:953c56ce7d9d4bfb9994de8f00355085f0d103806b95cb4f13b4a4e77af81d3b"
+    }
+  ],
+  "machineRoots": [
+    {
+      "path": "spec/host-api/operations-v1.json",
+      "sha256": "sha256:7ca963517ca3aed1a2c90bf681745beac5fcde37e41b8a53a4877582abcdfb23"
+    },
+    {
+      "path": "conformance/takoform-v1/generic.json",
+      "sha256": "sha256:7caed449cd40068c0ac940a20e6c5d1fe8555ce4a16812416ea5962d2a243e38"
+    },
+    {
+      "path": "spec/trust/profile.json",
+      "sha256": "sha256:438ef635a4a57529f9301666e8e100eb11a3e5b46b6d91561ea9a5868a71239b"
+    }
+  ],
+  "schemas": {
+    "ledger": "release/public-schema-identities.json",
+    "rootIds": [
+      "https://forms.takoform.com/schemas/v1/host-discovery.schema.json",
+      "https://forms.takoform.com/schemas/v1/form-ref.schema.json",
+      "https://forms.takoform.com/schemas/v1/form-definition.schema.json",
+      "https://forms.takoform.com/schemas/v1/host-api-wire.schema.json",
+      "https://forms.takoform.com/schemas/operations/v1/operation.schema.json",
+      "https://forms.takoform.com/schemas/interfaces/v1alpha1/interface-definition.schema.json",
+      "https://forms.takoform.com/schemas/bindings/v1alpha2/binding-definition.schema.json",
+      "https://forms.takoform.com/schemas/support/v1/host-support-profile.schema.json",
+      "https://forms.takoform.com/schemas/v1alpha5/package-index.schema.json",
+      "https://forms.takoform.com/schemas/v1/form-package-revocation.schema.json",
+      "https://forms.takoform.com/schemas/v1/form-package-revocation-checkpoint.schema.json"
+    ],
+    "closureIds": [
+      "https://forms.takoform.com/schemas/artifacts/v1alpha1/artifact-manifest.schema.json",
+      "https://forms.takoform.com/schemas/bindings/v1alpha2/binding-definition.schema.json",
+      "https://forms.takoform.com/schemas/bindings/v1alpha2/binding-ref.schema.json",
+      "https://forms.takoform.com/schemas/interfaces/v1alpha1/interface-definition.schema.json",
+      "https://forms.takoform.com/schemas/interfaces/v1alpha1/interface-ref.schema.json",
+      "https://forms.takoform.com/schemas/operations/v1/operation.schema.json",
+      "https://forms.takoform.com/schemas/standards/v1/standard-service-ref.schema.json",
+      "https://forms.takoform.com/schemas/support/v1/host-support-profile.schema.json",
+      "https://forms.takoform.com/schemas/v1/form-definition.schema.json",
+      "https://forms.takoform.com/schemas/v1/form-package-revocation-checkpoint.schema.json",
+      "https://forms.takoform.com/schemas/v1/form-package-revocation.schema.json",
+      "https://forms.takoform.com/schemas/v1/form-ref.schema.json",
+      "https://forms.takoform.com/schemas/v1/host-api-wire.schema.json",
+      "https://forms.takoform.com/schemas/v1/host-discovery.schema.json",
+      "https://forms.takoform.com/schemas/v1alpha5/package-index.schema.json",
+      "https://forms.takoform.com/schemas/v1beta2/form-ref.schema.json"
+    ]
+  }
+}

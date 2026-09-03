@@ -6,12 +6,12 @@ canonicalUrl: https://github.com/tako0614/takoform/blob/main/spec/versioning.md
 
 # Versioning and compatibility
 
-Takoform has exactly two domain version axes: the Host API wire lane and each
-Form's `definitionVersion`. Other numbers and digests identify
-namespaces, formats, schemas, evidence, parsers, clients, or distribution
-artifacts. They MUST NOT be presented as additional Takoform versions or
-aligned to imply one release or maturity level. Form lifecycle vocabulary is in
-[`project-lifecycle.md`](/spec/project-lifecycle).
+Takoform has exactly four named version streams. The Host API major lane and
+each Form's `definitionVersion` are domain compatibility axes. Core library
+SemVer and Provider SemVer are independent software-release streams. Other
+numbers and digests identify namespaces, formats, schemas, evidence, parsers,
+clients, or distribution artifacts. They MUST NOT be presented as additional
+Takoform versions or aligned to imply one release.
 
 ## Domain version axes
 
@@ -19,14 +19,16 @@ aligned to imply one release or maturity level. Form lifecycle vocabulary is in
 | --- | --- | --- |
 | Host API lane | an exact wire major such as `forms.takoform.com/v1` | Compatibility of Host discovery, routes, and closed wire documents |
 | Form definition | SemVer in one exact FormRef's `definitionVersion` | Compatibility of that Form's portable desired-state contract |
+| Core library | independent SemVer | Compatibility of SDK, CLI, verifier, compiler, and client software |
+| Provider | independent SemVer | Compatibility of Terraform/OpenTofu schema, state, import, diagnostics, and mappings |
 
-The current Host lane is exactly `forms.takoform.com/v1`. Editorial
-clarifications retain that exact lane only when they change no accepted
-request, response, error, lifecycle semantic, or peer obligation; every
-behavioral change requires a new Host API major. A software library or client may release on its own SemVer
-cadence, but that number is not a Host API version or a third domain axis. A
-Form group is a versionless namespace. `requiresHostApi` is a lower bound on
-the Host API wire major, not a negotiation or a third version.
+The current Host lane is exactly `forms.takoform.com/v1`. Its normative bytes
+never change. Errata are non-normative and cannot reinterpret the lane; every
+normative or behavioral change requires a future Host API v2 proposal. A
+software library or Provider may release on its own SemVer cadence, but that
+number is not a Host API or Form version. A Form group is a versionless
+namespace. `requiresHostApi` is a lower bound on the Host API wire major, not a
+negotiation or another version stream.
 
 ## Artifact and evidence identities
 
@@ -38,13 +40,13 @@ but are not user-selectable Takoform version axes:
 | Form Package | envelope `$id` plus content digest | manifest parser and immutable distribution bytes |
 | Interface / Binding | exact ref plus schema digest | digest-bound contract data; Form-owned compatibility follows the Form's `definitionVersion` |
 | External standard | the standard owner's protocol identity | compatibility governed by that external standard |
-| Software library / client / Provider | the artifact's own SemVer | local behavior, schema, state, and migration support; it does not version the Host API or a Form |
+| Other software / client | the artifact's own release identity | local behavior and compatibility; it does not add a Takoform version stream |
 | Publisher trust | policy, root, bundle, lineage, and checkpoint identities | which exact provenance and revocation evidence an operator accepts |
 | Schema / record | `$id`, format, generation, sequence, and digest | parser and append-only evidence bytes |
 
-No `admissionVersion` exists or is needed. A stable admission report binds its
-exact fields, digests, trust evidence, and capability without minting another
-domain version.
+No `admissionVersion` exists or is needed. An admission report binds its exact
+fields, digests, trust evidence, and capability without minting another domain
+version.
 
 The current revocation statement and checkpoint identity
 `trust.forms.takoform.com/v1`, its reserved genesis
@@ -72,10 +74,11 @@ table, wire schema, discovery schema, and support-profile schema define that
 exact contract. There is no fixed family roster or publisher allowlist, and no
 software artifact version is projected into a Host address.
 
-The current package profile is
-[`package-index-v1alpha5.schema.json`](https://forms.takoform.com/schemas/v1alpha5/package-index.schema.json).
-It is a manifest format that can carry any publisher's exact FormRef; it is not
-a Form generation or a maturity channel.
+The current package profile is `package-index-v1alpha5.schema.json`. It is an
+exact schema root in the frozen Host API v1/common-model closure because Hosts
+install and resolve its data-only packages. Its format identity is not a Form
+`definitionVersion` or another version stream, and its bytes cannot change
+within v1.
 
 ## What freezes a value
 
@@ -84,6 +87,7 @@ that value may move.
 
 | Value | Current authority |
 | --- | --- |
+| Host API v1 normative prose and machine/schema closure | [`spec/host-api/v1.freeze.json`](https://github.com/tako0614/takoform/blob/main/spec/host-api/v1.freeze.json), anchored to the manifest's first-add Git commit |
 | Non-retired and verify-only schema `$id` and path | [`release/public-schema-identities.json`](https://github.com/tako0614/takoform/blob/main/release/public-schema-identities.json) |
 
 Withdrawal is recorded, never silent. An occupied address or digest moves to a
@@ -128,30 +132,25 @@ contract documents that the software supports.
 
 A client release identity describes only that client's protocol handling, local
 schema, persisted state, import behavior, and exact-identity compatibility. It
-does not describe Form maturity, package publication, Host Support, Activation,
-or a Service Offering.
+does not describe package publication, Host Support, Activation, or a Service
+Offering.
 
-Within a stable client major, a release MUST NOT silently reinterpret persisted
+Within a client major, a release MUST NOT silently reinterpret persisted
 state as a different FormRef, discard a supported migration, or make an
 existing valid configuration mean another contract. Removing support for an
 occupied exact FormRef is a compatibility change in that client and requires
 its own migration policy.
 
 A client MAY support a mixed set of Form versions and publisher policies.
-Advancing the client release MUST NOT reset, renumber, promote, or deprecate a
-Form. Changing a Form does not require a client release when the client already
-preserves that exact identity and can carry its data correctly.
+Advancing the client release MUST NOT reset or renumber a Form. Changing a Form
+does not require a client release when the client already preserves that exact
+identity and can carry its data correctly.
 
-## Form versions
+## Form definitionVersion SemVer
 
-### Proposal
+### `0.x`
 
-A Proposal has no public version. It MAY change incompatibly or be withdrawn
-without reserving a FormRef.
-
-### Experimental `0.x`
-
-The first reproducible public version of a Form line is `0.1.0`.
+The first public version of a Form line is `0.1.0`.
 
 - A breaking semantic or schema change increments the minor version and resets
   the patch version.
@@ -160,14 +159,14 @@ The first reproducible public version of a Form line is `0.1.0`.
   increments the patch version.
 
 A `0.x` identity is never overwritten. A breaking correction mints a new exact
-identity instead of editing occupied bytes. A `0.x` identity MAY be withdrawn
-before Stable, but withdrawal keeps its bytes and records its retirement.
+identity instead of editing occupied bytes. A publisher MAY withdraw a `0.x`
+identity, but withdrawal keeps its bytes and records its retirement.
 
-### Stable `1.x+`
+### `1.x` and later
 
-A Form MAY begin a stable major only after the evidence and explicit decision
-required by [`project-lifecycle.md`](/spec/project-lifecycle). The initial stable
-identity is `1.0.0` for a new kind.
+The initial identity in a `1.x` major is `1.0.0` for a new kind. The major's
+compatibility commitment is defined by the rules below; no separate Takoform
+status record is involved.
 
 - A patch preserves desired schema and portable semantics.
 - A minor adds optional data or relaxes a constraint without changing the
@@ -175,8 +174,7 @@ identity is `1.0.0` for a new kind.
 - A major may remove data, tighten a constraint, change meaning, or require
   replacement or explicit migration.
 
-When compatibility cannot be proved, the change MUST be treated as breaking or
-remain a Proposal.
+When compatibility cannot be proved, the change MUST be treated as breaking.
 
 ## State and exact identity
 
@@ -192,16 +190,16 @@ identities and provide explicit migration rather than silently substituting a
 group.
 
 An occupied FormRef MUST never be reused for different bytes. A retained
-predecessor Form whose historical version is greater than zero is not thereby a
-current Stable Form, and no current tooling may renumber it.
+predecessor Form whose historical version is greater than zero remains bound to
+its recorded identity, and no current tooling may renumber it.
 
 ## Host API lanes
 
 The exact Host API v1 lane is discovered at `/.well-known/takoform/v1` with API
 base `/apis/forms.takoform.com/v1`. Its wire contract is
 [`host-api/v1.md`](/spec/host-api/v1). Releasing a library or client does not alter
-those addresses, advance Form maturity, publish a package, release another
-client, or change publisher trust.
+those addresses, publish a package, release another client, or change publisher
+trust.
 
 API v1 uses closed request, response, error, and endpoint envelopes. Adding an
 optional field can make an old decoder reject a document; adding an error can
@@ -215,8 +213,8 @@ change is incompatible.
 An incompatible protocol requires a new Host API major and new exact wire
 identities. It does not require a software implementation to adopt the same
 numeric major. A new Host API major is never a relabeling of an occupied address.
-Maturity language, a Form or family change, elapsed time, or a software
-artifact release does not mint a Host lane.
+A Form or family change, elapsed time, or a software artifact release does not
+mint a Host lane.
 
 ## Retained predecessors
 
@@ -226,14 +224,10 @@ NOT be relabelled, reused, or treated as current inputs. Repository provenance
 stays in append-only internal records instead of creating another public
 version stream.
 
-## Deprecation and revocation
+## Revocation and retained identities
 
-Deprecation announces a migration contract: reason, successor, timing for
-rejecting new create/apply, retained lifecycle behavior, and migration steps.
-Legacy is the retained lifecycle state after a current line is no longer
-recommended for new work. Neither operation deletes public bytes.
-
-Security revocation is separate and append-only, as described in
-[`../trust/`](https://github.com/tako0614/takoform/tree/main/trust). It may block creation, update, or activation while
-retaining referenced bytes for observation, deletion, recovery, or explicit
-operator evacuation.
+The current trust profile and v1 revocation statement/checkpoint schemas are
+exact roots in the frozen Host API v1/common-model closure. Revocation evidence
+remains an append-only security record rather than a version stream. It may
+block creation, update, or activation while retaining referenced bytes for
+observation, deletion, recovery, or explicit operator evacuation.

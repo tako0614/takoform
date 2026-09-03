@@ -4,7 +4,7 @@
   "version": "0.0.0-private",
   "packageManager": "bun@1.3.14",
   "scripts": {
-    "check": "bun run check:tools && bun run format:check && bun run check:source-boundary && bun run check:extraction && bun run check:records && bun run check:docs && bun run check:deploy && bun run check:core-release && bun run check:site && bun run lint && bun run typecheck && bun run test:portable && bun run build:portable && bun run build:site",
+    "check": "bun run check:tools && bun run format:check && bun run check:source-boundary && bun run check:extraction && bun run check:records && bun run check:docs && bun run check:deploy && bun run check:core-release && bun run check:host-api-freeze && bun run check:site && bun run lint && bun run typecheck && bun run test:portable && bun run build:portable && bun run build:site",
     "deploy": "bun scripts/deploy.mjs",
     "check:tools": "set -e; for tool in git go gofmt node; do command -v \"$tool\" >/dev/null || { printf 'Required portable check tool is missing: %s\\n' \"$tool\" >&2; exit 127; }; done",
     "check:source-boundary": "bun test scripts/source-boundary.test.mjs && bun scripts/source-boundary.mjs",
@@ -13,6 +13,7 @@
     "check:docs": "bun test scripts/docs-boundary.test.mjs && bun scripts/docs-boundary.mjs",
     "check:deploy": "node --check scripts/deploy.mjs && node --check scripts/site-deploy.mjs && bun test scripts/deploy.test.mjs scripts/site-deploy.test.mjs",
     "check:core-release": "node --check scripts/core-release.mjs && bun test scripts/core-release.test.mjs",
+    "check:host-api-freeze": "node --check scripts/host-api-freeze.mjs && bun test scripts/host-api-freeze.test.mjs && bun scripts/host-api-freeze.mjs --check",
     "check:site": "bun test scripts/site.test.mjs && bun scripts/site.mjs --check",
     "build:site": "bun scripts/site.mjs --build",
     "site:dev": "vitepress dev website",

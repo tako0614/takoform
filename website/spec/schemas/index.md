@@ -4,14 +4,15 @@ canonicalSource: spec/schemas/README.md
 canonicalUrl: https://github.com/tako0614/takoform/blob/main/spec/schemas/README.md
 ---
 
-# Normative schemas
+# Public schema identity index
 
-These are the normative structural minima of the Takoform API and common model.
-Schema validity is necessary but not sufficient: the semantic verifier rules
-in the owning Form Definition, Form Package, Interface, and trust contracts
-are also normative and may reject a structurally valid document. Where prose
-and a schema directly disagree about the same structural condition, the schema
-wins.
+This non-normative index is derived from the append-only
+[`release/public-schema-identities.json`](https://github.com/tako0614/takoform/blob/main/release/public-schema-identities.json)
+ledger. It may track future identities without changing the frozen Host API v1
+closure, and it does not assign authority or reinterpret any schema. The exact
+v1 schema subset is named by
+[`../host-api/v1.freeze.json`](https://github.com/tako0614/takoform/blob/main/spec/host-api/v1.freeze.json); each schema's owning
+contract defines whether and how its structural minimum is normative.
 
 ## Non-retired schema identities
 
@@ -26,20 +27,20 @@ column states the role of each identity.
 | [`form-definition-v1beta1.schema.json`](https://forms.takoform.com/schemas/v1beta1/form-definition.schema.json) | the Beta data-only Form Definition with roles, exact Interfaces, and typed Bindings |
 | [`form-ref-v1beta2.schema.json`](https://forms.takoform.com/schemas/v1beta2/form-ref.schema.json) | the retained transition reference that first admitted versionless groups alongside versioned groups; current Form Definitions use `form-ref-v1` |
 | [`form-definition-v1beta2.schema.json`](https://forms.takoform.com/schemas/v1beta2/form-definition.schema.json) | the retained transition Form Definition for versionless groups and typed desired-state contracts |
-| [`form-definition-v1.schema.json`](https://forms.takoform.com/schemas/v1/form-definition.schema.json) | the stable versionless-group Form Definition profile with closed structural and resolved-UID constraints |
-| [`form-ref-v1.schema.json`](https://forms.takoform.com/schemas/v1/form-ref.schema.json) | the stable exact four-field Form reference for one versionless Form Family group; the referenced Form's own `0.x` or future `1.x` maturity remains independent |
+| [`form-definition-v1.schema.json`](https://forms.takoform.com/schemas/v1/form-definition.schema.json) | the current versionless-group Form Definition profile with closed structural and resolved-UID constraints |
+| [`form-ref-v1.schema.json`](https://forms.takoform.com/schemas/v1/form-ref.schema.json) | the current exact four-field Form reference for one versionless Form Family group; the referenced Form's own `definitionVersion` remains independent |
 | [`package-index-v1alpha4.schema.json`](https://forms.takoform.com/schemas/v1alpha4/package-index.schema.json) | the retained Provider 2.1.1 content-addressed package profile for versioned family FormRefs |
-| [`package-index-v1alpha5.schema.json`](https://forms.takoform.com/schemas/v1alpha5/package-index.schema.json) | the current content-addressed package profile for stable versionless-group FormRefs |
-| [`form-package-revocation-v1.schema.json`](https://forms.takoform.com/schemas/v1/form-package-revocation.schema.json) | the current append-only revocation statement for an exact package and stable versionless FormRef |
+| [`package-index-v1alpha5.schema.json`](https://forms.takoform.com/schemas/v1alpha5/package-index.schema.json) | the current content-addressed package profile for versionless-group FormRefs |
+| [`form-package-revocation-v1.schema.json`](https://forms.takoform.com/schemas/v1/form-package-revocation.schema.json) | the current append-only revocation statement for an exact package and versionless FormRef |
 | [`form-package-revocation-checkpoint-v1.schema.json`](https://forms.takoform.com/schemas/v1/form-package-revocation-checkpoint.schema.json) | the current cumulative checkpoint profile, rooted in its one signed empty sequence-zero genesis |
-| [`form-package-revocation.schema.json`](https://forms.takoform.com/schemas/v1alpha1/form-package-revocation.schema.json) | the retained v1alpha1 revocation statement for a Legacy FormRef |
+| [`form-package-revocation.schema.json`](https://forms.takoform.com/schemas/v1alpha1/form-package-revocation.schema.json) | the retained v1alpha1 revocation statement for a retained FormRef |
 | [`form-package-revocation-checkpoint.schema.json`](https://forms.takoform.com/schemas/v1alpha1/form-package-revocation-checkpoint.schema.json) | the retained v1alpha1 cumulative checkpoint profile whose historical chains begin at sequence one |
 | [`host-discovery-v1beta1.schema.json`](https://forms.takoform.com/schemas/v1beta1/host-discovery.schema.json) | the Beta host discovery document |
 | [`host-api-wire-v1beta1.schema.json`](https://forms.takoform.com/schemas/v1beta1/host-api-wire.schema.json) | the Beta UID/generation/revision Resource, condition, operation, artifact, and error envelopes |
 | [`host-discovery-v1beta4.schema.json`](https://forms.takoform.com/schemas/v1beta4/host-discovery.schema.json) | the retained Beta 4 Host discovery document |
 | [`host-api-wire-v1beta4.schema.json`](https://forms.takoform.com/schemas/v1beta4/host-api-wire.schema.json) | the retained Beta 4 Resource, condition, operation, artifact, and error envelopes |
-| [`host-discovery-v1.schema.json`](https://forms.takoform.com/schemas/v1/host-discovery.schema.json) | the stable `forms.takoform.com/v1` Host discovery document |
-| [`host-api-wire-v1.schema.json`](https://forms.takoform.com/schemas/v1/host-api-wire.schema.json) | the stable UID/generation/revision Resource, condition, operation, artifact, and error envelopes |
+| [`host-discovery-v1.schema.json`](https://forms.takoform.com/schemas/v1/host-discovery.schema.json) | the current `forms.takoform.com/v1` Host discovery document |
+| [`host-api-wire-v1.schema.json`](https://forms.takoform.com/schemas/v1/host-api-wire.schema.json) | the current UID/generation/revision Resource, condition, operation, artifact, and error envelopes |
 | [`interface-ref-v1alpha1.schema.json`](https://forms.takoform.com/schemas/interfaces/v1alpha1/interface-ref.schema.json) | the exact digest-bound Interface reference |
 | [`interface-definition-v1alpha1.schema.json`](https://forms.takoform.com/schemas/interfaces/v1alpha1/interface-definition.schema.json) | the exact data-only Interface Definition with operations, semantics, and behavior fixtures |
 | [`binding-ref-v1alpha1.schema.json`](https://forms.takoform.com/schemas/bindings/v1alpha1/binding-ref.schema.json) | the exact digest-bound Binding reference |
@@ -49,12 +50,12 @@ column states the role of each identity.
 | [`artifact-manifest-v1alpha1.schema.json`](https://forms.takoform.com/schemas/artifacts/v1alpha1/artifact-manifest.schema.json) | the content-addressed artifact manifest for uploaded bundles |
 | [`operation-v1alpha1.schema.json`](https://forms.takoform.com/schemas/operations/v1alpha1/operation.schema.json) | the long-running Operation envelope |
 | [`operation-v1alpha2.schema.json`](https://forms.takoform.com/schemas/operations/v1alpha2/operation.schema.json) | the retained Beta 4 long-running Operation envelope |
-| [`operation-v1.schema.json`](https://forms.takoform.com/schemas/operations/v1/operation.schema.json) | the stable long-running Operation envelope |
+| [`operation-v1.schema.json`](https://forms.takoform.com/schemas/operations/v1/operation.schema.json) | the current long-running Operation envelope |
 | [`standard-service-ref-v1alpha1.schema.json`](https://forms.takoform.com/schemas/standards/v1alpha1/standard-service-ref.schema.json) | the retained closed-vocabulary StandardServiceRef identity |
-| [`standard-service-ref-v1.schema.json`](https://forms.takoform.com/schemas/standards/v1/standard-service-ref.schema.json) | the stable provider-neutral StandardServiceRef with an opaque normalized namespaced protocol identifier |
+| [`standard-service-ref-v1.schema.json`](https://forms.takoform.com/schemas/standards/v1/standard-service-ref.schema.json) | the current provider-neutral StandardServiceRef with an opaque normalized namespaced protocol identifier |
 | [`host-support-profile-v1alpha1.schema.json`](https://forms.takoform.com/schemas/support/v1alpha1/host-support-profile.schema.json) | the first retained Host Support Profile identity |
 | [`host-support-profile-v1alpha2.schema.json`](https://forms.takoform.com/schemas/support/v1alpha2/host-support-profile.schema.json) | the retained versionless-Form-group Host Support Profile identity |
-| [`host-support-profile-v1.schema.json`](https://forms.takoform.com/schemas/support/v1/host-support-profile.schema.json) | the stable Host Support Profile, including exact fail-closed support for opaque standard-service identifiers |
+| [`host-support-profile-v1.schema.json`](https://forms.takoform.com/schemas/support/v1/host-support-profile.schema.json) | the current Host Support Profile, including exact fail-closed support for opaque standard-service identifiers |
 
 ## Verify-only schema identities
 

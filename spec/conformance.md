@@ -18,8 +18,10 @@ sections; schema validity alone is therefore not sufficient.
 
 Where prose and a normative schema disagree about the same structural
 condition, **the schema wins**. Semantic rules that a schema cannot express add
-fail-closed requirements rather than contradicting it. Every normative schema
-is listed in [`schemas/`](schemas/).
+fail-closed requirements rather than contradicting it. Every schema in the
+frozen Host API v1 closure is named by
+[`host-api/v1.freeze.json`](host-api/v1.freeze.json); other schema contracts are
+independently governed.
 
 ## Independent conformance claims
 
@@ -31,11 +33,11 @@ trust mechanisms.
 
 ### Form Package data
 
-A **conforming Form Package** MUST satisfy
-[`form-package/`](form-package/) and [`form-definition/`](form-definition/):
-one Definition, one exact FormRef, RFC 8785 canonical bytes, a closed file
-inventory, allowlisted data media types, and no executable, credential,
-placement, or commercial content. It MUST NOT depend on a Host to be valid.
+A **conforming Form Package** MUST contain one Definition satisfying
+[`form-definition/`](form-definition/), one exact FormRef, RFC 8785 canonical
+bytes, a closed file inventory, allowlisted data media types, and no executable,
+credential, placement, or commercial content. It MUST NOT depend on a Host to
+be valid.
 
 ### Interface and Binding data
 
@@ -81,8 +83,8 @@ A **conforming Host** is an implementation claim against an exact Host API
 lane, such as [`host-api/v1.md`](host-api/v1.md). Its own evidence MUST cover
 the discovery, wire, lifecycle, optimistic-concurrency, idempotency,
 identity, relation, artifact, and error rules that it claims. Such a report is
-not produced by the generic artifact corpus and does not grant publication,
-Form maturity, or universal support.
+not produced by the generic artifact corpus and does not grant publication or
+universal support.
 
 ### Client adapter
 
@@ -103,8 +105,6 @@ claim that a package was published.
 
 Passing package, contract, and Snapshot checks proves only those data and
 compiler properties. It is not evidence of a running Host, lifecycle
-execution, fencing, Host Support, production activation, Form maturity,
-revocation enforcement, or interoperability with a particular backend. Those
-facts require readback from the party that actually performed the external
-operation. The lifecycle requirements are owned by
-[`project-lifecycle.md`](project-lifecycle.md).
+execution, fencing, Host Support, production activation, revocation
+enforcement, or interoperability with a particular backend. Those facts
+require readback from the party that actually performed the external operation.

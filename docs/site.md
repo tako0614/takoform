@@ -5,6 +5,11 @@
 DNS、account / zone / route、credential、operator の状態は所有しません。それらは公開を
 行う operator の authority です。
 
+site の見た目や案内文は Host API v1 とは独立して配信できます。この deploy は固定された
+Host API v1 を変更せず、新しい API version や specification release lane を作りません。
+一方、schema の exact bytes（および将来 freeze される normative API bytes）は consumer が
+参照する identity なので、presentation と同じ rollback 条件では扱いません。
+
 ## repository 内の配置
 
 ```text
@@ -60,10 +65,12 @@ publisherが自分のsiteへdeployします。site独自のwell-known statusや�
 credential を持ちません。
 
 1. **Pages project を作る。** project 名は `takoform-site`、production branch は `main`。
-   git 連携は使わず direct upload だけを使います（deploy entrypoint がその一回の
-   upload を行います）。
-2. **credential を用意する。** `CLOUDFLARE_ACCOUNT_ID` と、Pages の編集権限だけを持つ
-   `CLOUDFLARE_API_TOKEN` を operator の環境に置きます。repository には置きません。
+   git 連携は使わず direct upload だけを使います（deploy entrypoint が一回だけ
+   upload します）。project 作成自体はこの entrypoint の仕事ではありません。
+2. **Wrangler の profile を用意する。** `wrangler login` を実行し、Pages project を
+   読み書きできる operator の profile を選びます。deploy entrypoint は
+   `wrangler pages project list --json` で profile と project の可読性を確認します。
+   credential の環境変数を repository に置く必要はありません。
 3. **preview で確かめる。**
 
    ```console
@@ -72,35 +79,109 @@ credential を持ちません。
    bun run deploy -- takoform-site --apply --environment integration --execute
    ```
 
-   `--status` は read-only、`--execute` の無い `--apply` は plan です。preview は
-   `takoform-site.pages.dev` の per-deployment URL に出ます。ここで page と
-   sitemap と schema URL を実際に読み、撤去した旧catalog/status URLが404であることも
-   確認します。
-4. **custom domain を付ける。** Pages project の Custom domains に `takoform.com` を
-   追加し、必要なら `www.takoform.com` も追加します。DNS record の作成と検証は
-   operator の操作です。
-5. **schema の `$id` host を移す。** `forms.takoform.com` を同じ Pages project の
-   custom domain として追加すると、`$id` の path がそのまま解決します。**この
-   hostname は現在、別 repository から build された Worker が保持しています。**
-   Cloudflare の custom domain は同時に一つの service にしか付けられないので、
-   Worker 側の route を外してから Pages project に付ける順序になります。その間だけ
-   `$id` URL は解決しません。移す前に手順 3 の preview で、同じ digest の bytes が
-   同じ path から返ることを確認してください。
-6. **production を publish する。**
+   `--status` は read-only で、Wrangler の project list に `takoform-site` が存在するかと
+   custom domains を報告します。`--execute` の無い `--apply` は plan で provider を
+   読みません。実行する apply は gate の前に同じ read-only project list を preflight し、
+   profile が未認証・可読不能、または project が存在しない場合は upload に進みません。
+   preview は `takoform-site.pages.dev` の per-deployment URL に出ます。immutable URL
+   から landing page、sitemap、ledger にある current 33件と retired 15件の schema を
+   byte 単位で読み戻し、撤去した catalog/status/release/decision route も不在であることを
+   確認します。schema の sample 2件だけで成功にはしません。
+4. **最初の production deployment を作る。** domain を動かす前に、clean な public
+   `main` で次を順に実行します。これは `takoform-api-v1-cutover` が一度だけ所有する
+   Host API v1 の identity/domain cutover です。`--review` は変更を作成していない reviewer または
+   deliberate review の非secretな evidence reference であり、deploy の許可ではありません。
+   値は `audit_`、`review_`、`operator_`、`agent_`（または同じ語と `:`）から始まる
+   小文字の label だけを受け付け、free-form text、credential、account ID は渡しません。
 
    ```console
+   bun run deploy -- takoform-api-v1-cutover --apply --environment production --review audit_takoform_live_cutover_owner
+   bun run deploy -- takoform-api-v1-cutover --apply --environment production --review audit_takoform_live_cutover_owner --execute
+   ```
+
+   execute は upload の前に次をすべて要求します。
+
+   - Pages project が存在し、production deployment が gate 前と upload 直前のどちらにも
+     一つもないこと（通常 production mode は空の history に最初の upload を行えません）
+   - 既存 `https://forms.takoform.com` が ledger の31件を redirectなしの HTTP 200 と
+     exact digest で返すこと
+   - 残る固定17件を redirectなしの exact HTTP 404 で返すこと
+   - `check:site` と `build:site` が、これから送る全schemaを含む同じdistを証明すること
+
+   Wrangler の project list は production branch の設定値を返さないため、branch は receipt の
+   residual として明示されます。upload は `main` に固定し、返った deployment URL が production
+   history に存在することを upload 後に readback します。custom domain はこの時点で一つも
+   attach されていないことを project list で確認します。
+
+   17件の集合は live audit と一致する定数として entrypoint に固定されています。1件でも
+   status、redirect、bytes、ledger partition が変われば upload 前に停止します。その後の
+   direct upload は一回だけで、返された immutable deployment URL と
+   `https://takoform-site.pages.dev` の両方から全48 schema、page、negative route を読み戻します。
+   custom domain がまだ付いていないことは失敗にしません。
+
+   deployment list の確認と upload は provider 上の atomic operation ではありません。この一回の
+   bootstrap 中は他の Pages writer を止め、同じ operator が手順を直列化します。entrypoint は
+   長い build と48件の旧host audit後、upload の直前に空のproduction historyを再確認します。
+
+   成功時の stdout は `kind: takoform.site-initial-cutover-pending`、
+   `status: pending-domain-cutover` の JSON receipt です。receipt は Pages deployment URL、
+   source commit/digest、31/17 partition、review reference、および旧 owner の次の公開識別子を
+   含みますが、credential や Cloudflare account ID は含みません。
+
+   - Worker: `takoform-website`
+   - version: `1e4871b5-e4b3-4c30-8bb9-78592b5ce49e`
+   - deployment: `9eae618a-4144-4115-abe4-3a50dae795af`
+   - source: `f71d4be4caf5a5e0c4fc97bfadeb6ebb627d1928`
+
+5. **operator が custom domain を移す。** Pages project の custom domain は必ず
+   **`www.takoform.com` → `takoform.com` → `forms.takoform.com`（forms last）** の順で
+   追加・移動します。これは pending receipt の後に operator が行う authority です。
+   DNS、Worker route の解除、Pages custom domain の設定はこの repository が行いません。
+   Cloudflare の custom domain は同時に一つの service にしか付けられないため、一時的な
+   不通を最小にする順序も operator が直列化します。
+
+   `forms.takoform.com` を最後に移す操作が irreversible な topology boundary です。その
+   時点で、それまで404だった17件の consumer-pinned `$id` が初めて公開され、旧 Worker は
+   rollback target ではなくなります。以後の失敗は Pages history からの forward repair だけです。
+
+6. **uploadせず cutover を検証する。** 手順4の receipt にある exact immutable URL を使います。
+
+   ```console
+   bun run deploy -- takoform-api-v1-cutover --verify-cutover --deployment-url https://<deployment>.takoform-site.pages.dev
+   ```
+
+   verifier は clean な local `main` と credential/configを隔離して読んだ public `main` の一致を
+   要求し、指定URLがWranglerで読み取ったproduction deployment historyの実在URLであることを
+   gate前に確認します。branch aliasは受け付けません。local site を build して ledger と全schema
+   bytesを再確認したうえで、immutable URL、
+   `https://takoform.com` と `https://www.takoform.com` の page/negative route、
+   `https://forms.takoform.com` の全48 schemaを読み戻します。Wrangler の
+   `pages project list --json` が返す三つの custom domain 所有を要求し、現在の CLI が
+   domain field を返さない場合は verifier が gate 前に停止します。certificate/activation 状態を
+   返さないことだけは receipt に residual として記録します。HTTPS の exact readback が実際の
+   serving evidence です。Wrangler の read-only history/list 以外に、
+   upload、project作成、domain操作は行いません。
+
+   この確認と operator-retained receipt の保存が終わったら、一回限りの
+   `--initial-cutover`、31/17 partition、旧 Worker 識別子は通常の deploy path から削除します。
+   全48 schema の ledger-driven readback と forward-repair 制約は残します。
+7. **以後の production 更新。** initial cutover flag は再利用しません。
+
+   ```console
+   bun run deploy -- takoform-site --apply --environment production
    bun run deploy -- takoform-site --apply --environment production --execute
    ```
 
-   production は clean な `main` だけを受け付け、local HEAD が credential-free に読んだ
-   公開 `refs/heads/main` と一致しない限り、target に触れる前に refuse します。upload の
-   あと、per-deployment の immutable URL と `https://takoform.com` の双方から
-   page、sitemap、schema を読み直し、digest が build 出力と一致しなければ halt します。
+   通常 production も clean な exact public `main`、一回のupload、immutable URLの全schema
+   readback、apex と www の page/negative readback、`forms.takoform.com` の全schema readbackを
+   要求します。通常の `takoform-site` surface は `--initial-cutover` と `--verify-cutover` を
+   受け付けず、Host API v1 の identity/domain 操作は上の cutover surface に分離されています。
 
-戻すときは Pages project の deployment history から直前の production deployment を
-promote します。配信される schema bytes は `spec/schemas/` の source と byte 単位で
-同一で、その digest は append-only ledger が固定しているので、古い deployment でも
-すでに mint 済みの `$id` を同じ bytes で配信します。
+presentation だけの不具合は、全48 schemaが同じbytesであることを確認できる以前の Pages
+deployment へ戻せます。しかし initial domain cutover 後に旧 Worker へ戻すと、新しく公開した
+17件が消えます。schema、domain cutover、または readback が失敗した場合は provider history を
+読み、全48件を保持する Pages deployment へ forward repair します。自動 rollback や blind retry
+は行いません。
 
 ## 以前の site を superseded にする
 

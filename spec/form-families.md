@@ -1,8 +1,8 @@
 # Form families and namespaces
 
 A Form Family is a publisher-defined group of Forms that share a namespace and
-related semantics. A family is not a package, a release channel, a maturity
-state, or a compatibility promise. The family model is described by
+related semantics. A family is not a package, a release channel, or a
+compatibility promise. The family model is described by
 [decision 0009](decisions/0009-form-families-and-namespaced-api-versions.md);
 the portable-data rule for every member is
 [`portability-boundary.md`](portability-boundary.md).
@@ -93,5 +93,5 @@ new semantics. [`versioning.md`](versioning.md) defines the shared retention
 and non-reuse rules.
 
 A family groups related Form contracts; it does not combine them into one
-package or select maturity, Host implementation, client schema, credentials,
-placement, capacity, pricing, or a backend.
+package or select a Host implementation, client schema, credentials, placement,
+capacity, pricing, or a backend.

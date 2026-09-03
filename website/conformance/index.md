@@ -47,8 +47,8 @@ package が零個でも通ります。roster も優遇される namespace もあ
 
 package と contract と Snapshot の検査に通ることが証明するのは、その data と compiler の
 性質だけです。動いている Host、lifecycle の実行、fencing、Host support、production の
-activation、Form の成熟度、revocation の強制、特定 backend との相互運用性は、どれも
-別の証拠です。外部の操作を実際に行った当事者からの readback が要ります。
+activation、revocation の強制、特定 backend との相互運用性は、どれも別の証拠です。
+外部の操作を実際に行った当事者からの readback が要ります。
 
 corpus は Host の lifecycle runner ではありません。create / read / update / delete、
 optimistic concurrency の fencing、relation の変更、runtime code、activation、Host Support、
