@@ -603,6 +603,29 @@ export function buildSite(root, { run = spawnSync } = {}) {
   if (result.status !== 0) throw new Error(`vitepress build failed with status ${result.status}`);
 }
 
+/**
+ * Build twice and require one byte-identical publishable tree.
+ *
+ * The deploy verifier compares live bytes with a fresh build. A site build
+ * that changes without a source change therefore cannot be published or
+ * repaired safely: the next verification would prove a different artifact.
+ */
+export function buildSiteReproducibly(
+  root,
+  { build = buildSite, digest = distDigest } = {},
+) {
+  build(root);
+  const first = digest(root);
+  build(root);
+  const second = digest(root);
+  if (first !== second) {
+    throw new Error(
+      `site build is not reproducible: consecutive publishable trees differ (${first} != ${second})`,
+    );
+  }
+  return second;
+}
+
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const USAGE = "usage: bun scripts/site.mjs [--check|--write|--build|--dist-digest]\n";
 
@@ -629,7 +652,7 @@ export async function main(argv = process.argv.slice(2)) {
     return;
   }
   if (mode === "--build") {
-    buildSite(ROOT);
+    const digest = buildSiteReproducibly(ROOT);
     const problems = inspectDist(ROOT);
     if (problems.length !== 0) {
       for (const problem of problems) process.stderr.write(`site: ${problem}\n`);
@@ -637,7 +660,7 @@ export async function main(argv = process.argv.slice(2)) {
       return;
     }
     process.stdout.write(
-      `site: built ${SITE_DIST} serving ${deriveSchemas(ROOT).identities.length} schema identities (${distDigest(ROOT)})\n`,
+      `site: built ${SITE_DIST} serving ${deriveSchemas(ROOT).identities.length} schema identities (${digest})\n`,
     );
     return;
   }

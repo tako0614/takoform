@@ -6,6 +6,7 @@ import {
   HAND_AUTHORED_PAGE_SOURCES,
   MIRRORED_SPEC_DOCUMENTS,
   SITE_PUBLIC_ROOT,
+  buildSiteReproducibly,
   buildSiteFiles,
   deriveSchemas,
   distPagePathForSource,
@@ -31,6 +32,25 @@ const context = {
 };
 
 describe("takoform.com site derivation", () => {
+  test("refuses a publishable tree that changes across consecutive builds", () => {
+    const observed = ["sha256:first", "sha256:second"];
+    expect(() =>
+      buildSiteReproducibly(".", {
+        build: () => {},
+        digest: () => observed.shift(),
+      })
+    ).toThrow("site build is not reproducible");
+  });
+
+  test("returns the digest of a reproducible publishable tree", () => {
+    let builds = 0;
+    expect(buildSiteReproducibly(".", {
+      build: () => builds++,
+      digest: () => "sha256:stable",
+    })).toBe("sha256:stable");
+    expect(builds).toBe(2);
+  });
+
   test("every generated page and served schema equals its derivation", () => {
     expect(inspectSite(".")).toEqual([]);
   });

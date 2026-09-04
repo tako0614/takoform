@@ -81,6 +81,12 @@ export default defineConfig({
     "Takoform Host API v1 と publisher 中立な共通モデルの normative 契約、公開 schema、conformance。",
   cleanUrls: true,
   lastUpdated: false,
+  // VitePress 1.6 builds the local-search MiniSearch index through a concurrent
+  // mapper. MiniSearch assigns numeric document IDs in completion order, so a
+  // concurrency greater than one changes content-hashed asset names between
+  // otherwise identical builds. This small site values reproducible release
+  // bytes over parallel rendering.
+  buildConcurrency: 1,
   // Every schema URL below resolves to a file the build copies verbatim out of
   // public/, not to a page, so the page-route link checker cannot see it. The
   // bytes at those paths are proved separately, and far more strictly, by
