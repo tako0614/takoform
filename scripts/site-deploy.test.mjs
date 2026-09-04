@@ -19,6 +19,7 @@ import {
   SITE_WWW_ORIGIN,
   assertProductionSource,
   extractDeploymentUrl,
+  findRollbackCandidate,
   parseSiteDeployArgs,
   readSourceState,
   requireInitialCutoverTopology,
@@ -29,6 +30,7 @@ import { SCHEMA_LEDGER_PATH, SITE_DIST } from "./site.mjs";
 
 const HEAD = "a".repeat(40);
 const DEPLOYMENT = "https://1a2b3c4d.takoform-site.pages.dev";
+const ROLLBACK_CANDIDATE = "https://0f0e0d0c.takoform-site.pages.dev";
 const REVIEW = "audit_takoform_live_cutover_owner";
 const REPOSITORY_ROOT = join(import.meta.dirname, "..");
 const SCHEMA_LEDGER = JSON.parse(
@@ -104,16 +106,35 @@ function gitRunner({
   projectList = PROJECT_LIST,
   projectListStatus = 0,
   projectListStderr = "",
-  productionDeployments = JSON.stringify([
-    {
-      Id: "existing-production",
-      Environment: "Production",
-      Branch: "main",
-      Deployment: DEPLOYMENT,
-      Status: "Success",
-    },
-  ]),
+  productionDeployments = [
+    JSON.stringify([
+      {
+        Id: "existing-production",
+        Environment: "Production",
+        Branch: "main",
+        Deployment: ROLLBACK_CANDIDATE,
+        Status: "1 hour ago",
+      },
+    ]),
+    JSON.stringify([
+      {
+        Id: "new-production",
+        Environment: "Production",
+        Branch: "main",
+        Deployment: DEPLOYMENT,
+        Status: "just now",
+      },
+      {
+        Id: "existing-production",
+        Environment: "Production",
+        Branch: "main",
+        Deployment: ROLLBACK_CANDIDATE,
+        Status: "1 hour ago",
+      },
+    ]),
+  ],
   productionDeploymentsStatus = 0,
+  uploadDeployment = DEPLOYMENT,
   events = [],
 } = {}) {
   const calls = [];
@@ -150,7 +171,7 @@ function gitRunner({
       return { status: productionDeploymentsStatus, stdout, stderr: "" };
     }
     if (command === "wrangler") {
-      return { status: 0, stdout: `Deployment complete! Take a peek over at ${DEPLOYMENT}\n` };
+      return { status: 0, stdout: `Deployment complete! Take a peek over at ${uploadDeployment}\n` };
     }
     return { status: 0, stdout: "" };
   };
@@ -192,6 +213,32 @@ function servingFetch(root, {
       status: 200,
       arrayBuffer: async () => localBody(root, route),
     };
+  };
+}
+
+function staleThenConvergingFetch(root, { staleAttempts, events = [] } = {}) {
+  const baseFetch = servingFetch(root, { events });
+  const attempts = new Map();
+  return async (url, init = {}) => {
+    const parsed = new URL(url);
+    if ([SITE_PUBLIC_ORIGIN, SITE_WWW_ORIGIN, SCHEMA_PUBLIC_ORIGIN].includes(parsed.origin)) {
+      const firstRoute = parsed.origin === SCHEMA_PUBLIC_ORIGIN ? SCHEMA_ROUTES[0] : "/";
+      if (parsed.pathname === firstRoute) {
+        attempts.set(parsed.origin, (attempts.get(parsed.origin) ?? 0) + 1);
+      }
+      const attempt = attempts.get(parsed.origin) ?? 0;
+      if (attempt <= staleAttempts) {
+        events.push(`fetch:${url}`);
+        expect(init.headers["cache-control"]).toBe("no-cache");
+        expect(init.headers.pragma).toBe("no-cache");
+        return {
+          ok: true,
+          status: 200,
+          arrayBuffer: async () => Buffer.from(`stale ${parsed.origin} ${attempt}`),
+        };
+      }
+    }
+    return baseFetch(url, init);
   };
 }
 
@@ -633,6 +680,7 @@ describe("takoform-site runs", () => {
     );
     expect(result.executed).toBe(true);
     expect(result.deploymentUrl).toBe(DEPLOYMENT);
+    expect(result.productionDeploymentVerified).toBe(true);
     expect(result.commit).toBe(HEAD);
     expect(result.publicOriginsVerified).toEqual([...SITE_PUBLIC_ORIGINS]);
     expect(result.publicOrigins).toEqual([...SITE_PUBLIC_ORIGINS]);
@@ -667,6 +715,315 @@ describe("takoform-site runs", () => {
         ([command, ...args]) => command === "wrangler" && args.includes("deploy"),
       ),
     ).toHaveLength(1);
+  });
+
+  test("retains immutable and rollback identities when immutable post-upload readback fails", async () => {
+    const root = fixtureRoot();
+    const route = SCHEMA_ROUTES[0];
+    const history = JSON.stringify([{ Id: "rollback", Deployment: ROLLBACK_CANDIDATE }]);
+    const run = gitRunner({
+      productionDeployments: [
+        history,
+        JSON.stringify([
+          { Id: "new-production", Environment: "Production", Branch: "main", Deployment: DEPLOYMENT },
+          { Id: "rollback", Environment: "Production", Branch: "main", Deployment: ROLLBACK_CANDIDATE },
+        ]),
+      ],
+      uploadDeployment: DEPLOYMENT,
+    });
+    let failure;
+    try {
+      await runSiteDeploy(
+        parseSiteDeployArgs(["--apply", "--environment", "production", "--execute"]),
+        {
+          root,
+          run,
+          env: {},
+          fetch: servingFetch(root, {
+            override: new Map([
+              [
+                `${DEPLOYMENT}${route}`,
+                { ok: true, status: 200, arrayBuffer: async () => Buffer.from("wrong bytes") },
+              ],
+            ]),
+          }),
+        },
+      );
+    } catch (error) {
+      failure = error;
+    }
+    expect(failure).toBeInstanceOf(Error);
+    expect(failure.kind).toBe("takoform.site-post-upload-failure");
+    expect(failure.reason).toBe("immutable deployment readback failed");
+    expect(failure.deploymentUrl).toBe(DEPLOYMENT);
+    expect(failure.rollbackCandidate.url).toBe(ROLLBACK_CANDIDATE);
+    expect(failure.message).toContain("upload succeeded");
+    expect(failure.message).toContain(DEPLOYMENT);
+    expect(
+      run.calls.filter(
+        ([command, ...args]) => command === "wrangler" && args.includes("deploy"),
+      ),
+    ).toHaveLength(1);
+  });
+
+  test("selects the exact predecessor behind the uploaded production deployment", () => {
+    const concurrent = "https://22222222.takoform-site.pages.dev";
+    const failed = "https://33333333.takoform-site.pages.dev";
+    const preview = "https://44444444.takoform-site.pages.dev";
+    expect(findRollbackCandidate([
+      {
+        Id: "concurrent-newer-production",
+        Environment: "Production",
+        Branch: "main",
+        Deployment: concurrent,
+        Status: "just now",
+      },
+      {
+        Id: "uploaded-production",
+        Environment: "Production",
+        Branch: "main",
+        Deployment: DEPLOYMENT,
+        Status: "seconds ago",
+      },
+      {
+        Id: "failed-production",
+        Environment: "Production",
+        Branch: "main",
+        Deployment: failed,
+        Status: "failed",
+      },
+      {
+        Id: "active-production",
+        Environment: "Production",
+        Branch: "main",
+        Deployment: "https://55555555.takoform-site.pages.dev",
+        Status: "Active",
+      },
+      {
+        id: "idle-production-api-shape",
+        environment: "production",
+        branch: "main",
+        url: "https://66666666.takoform-site.pages.dev",
+        latest_stage: { status: "idle" },
+      },
+      {
+        Id: "preview",
+        Environment: "Preview",
+        Branch: "feature/site",
+        Deployment: preview,
+        Status: "success",
+      },
+      {
+        Id: "exact-predecessor",
+        Environment: "Production",
+        Branch: "main",
+        Deployment: ROLLBACK_CANDIDATE,
+        Status: "1 hour ago",
+      },
+    ], DEPLOYMENT)).toMatchObject({
+      id: "exact-predecessor",
+      url: ROLLBACK_CANDIDATE,
+      branch: "main",
+    });
+  });
+
+  test("wraps an invalid immutable URL acknowledgement after exactly one upload", async () => {
+    const root = fixtureRoot();
+    const run = gitRunner({ uploadDeployment: "not-a-deployment-url" });
+    let failure;
+    try {
+      await runSiteDeploy(
+        parseSiteDeployArgs(["--apply", "--environment", "production", "--execute"]),
+        { root, run, env: {}, fetch: servingFetch(root) },
+      );
+    } catch (error) {
+      failure = error;
+    }
+    expect(failure).toBeInstanceOf(Error);
+    expect(failure).toMatchObject({
+      kind: "takoform.site-post-upload-failure",
+      uploadSucceeded: true,
+      reason: "immutable deployment URL was unavailable from the upload acknowledgement",
+      deploymentUrl: null,
+      rollbackCandidate: { url: ROLLBACK_CANDIDATE },
+    });
+    expect(failure.message).toContain("upload succeeded");
+    expect(failure.message).toContain("immutable deployment URL unavailable");
+    expect(failure.message).toContain(ROLLBACK_CANDIDATE);
+    expect(
+      run.calls.filter(
+        ([command, ...args]) => command === "wrangler" && args.includes("deploy"),
+      ),
+    ).toHaveLength(1);
+  });
+
+  test("refuses before upload when production history has only non-successful rows", async () => {
+    const root = fixtureRoot();
+    const run = gitRunner({
+      productionDeployments: JSON.stringify([
+        {
+          Id: "active",
+          Environment: "Production",
+          Branch: "main",
+          Deployment: ROLLBACK_CANDIDATE,
+          Status: "Active",
+        },
+        {
+          id: "idle",
+          environment: "production",
+          branch: "main",
+          url: "https://77777777.takoform-site.pages.dev",
+          latest_stage: { status: "idle" },
+        },
+      ]),
+    });
+    await expect(
+      runSiteDeploy(
+        parseSiteDeployArgs(["--apply", "--environment", "production", "--execute"]),
+        { root, run, env: {}, fetch: servingFetch(root) },
+      ),
+    ).rejects.toThrow("no successful production/main deployment");
+    expect(
+      run.calls.filter(
+        ([command, ...args]) => command === "wrangler" && args.includes("deploy"),
+      ),
+    ).toHaveLength(0);
+  });
+
+  test("bounds a non-cooperative immutable readback after one upload", async () => {
+    const root = fixtureRoot();
+    const run = gitRunner();
+    const baseFetch = servingFetch(root);
+    const fetch = (url, init) =>
+      url === `${DEPLOYMENT}/` ? new Promise(() => {}) : baseFetch(url, init);
+    let failure;
+    try {
+      await runSiteDeploy(
+        parseSiteDeployArgs(["--apply", "--environment", "production", "--execute"]),
+        {
+          root,
+          run,
+          env: {},
+          fetch,
+          postUploadReadback: { attempts: 1, intervalMs: 0, deadlineMs: 5 },
+        },
+      );
+    } catch (error) {
+      failure = error;
+    }
+    expect(failure).toBeInstanceOf(Error);
+    expect(failure).toMatchObject({
+      kind: "takoform.site-post-upload-failure",
+      uploadSucceeded: true,
+      reason: "immutable deployment readback failed",
+      deploymentUrl: DEPLOYMENT,
+    });
+    expect(failure.message).toContain("deadline elapsed");
+    expect(
+      run.calls.filter(
+        ([command, ...args]) => command === "wrangler" && args.includes("deploy"),
+      ),
+    ).toHaveLength(1);
+  });
+
+  test("polls stale production aliases until they converge after one upload", async () => {
+    const root = fixtureRoot();
+    const events = [];
+    const run = gitRunner({ events });
+    const result = await runSiteDeploy(
+      parseSiteDeployArgs(["--apply", "--environment", "production", "--execute"]),
+      {
+        root,
+        run,
+        env: {},
+        events,
+        fetch: staleThenConvergingFetch(root, { staleAttempts: 2, events }),
+        postUploadReadback: { attempts: 4, intervalMs: 0 },
+      },
+    );
+    expect(result.executed).toBe(true);
+    expect(result.deploymentUrl).toBe(DEPLOYMENT);
+    expect(result.publicOriginsVerified).toEqual([...SITE_PUBLIC_ORIGINS]);
+    expect(result.readbackAttempts).toBe(3);
+    expect(
+      run.calls.filter(
+        ([command, ...args]) => command === "wrangler" && args.includes("deploy"),
+      ),
+    ).toHaveLength(1);
+    expect(
+      run.calls.filter(
+        ([command, ...args]) =>
+          command === "wrangler" && args.includes("deployment") && args.includes("list"),
+      ),
+    ).toHaveLength(2);
+  });
+
+  test("reports an explicit post-upload convergence failure with immutable and rollback URLs", async () => {
+    const root = fixtureRoot();
+    const events = [];
+    const history = JSON.stringify([{ Id: "rollback", Deployment: ROLLBACK_CANDIDATE }]);
+    const run = gitRunner({
+      events,
+      productionDeployments: [history, JSON.stringify([
+        { Id: "new-production", Deployment: DEPLOYMENT },
+        { Id: "rollback", Deployment: ROLLBACK_CANDIDATE },
+      ])],
+      uploadDeployment: DEPLOYMENT,
+    });
+    let failure;
+    try {
+      await runSiteDeploy(
+        parseSiteDeployArgs(["--apply", "--environment", "production", "--execute"]),
+        {
+          root,
+          run,
+          env: {},
+          events,
+          fetch: staleThenConvergingFetch(root, { staleAttempts: 100, events }),
+          postUploadReadback: { attempts: 3, intervalMs: 0 },
+        },
+      );
+    } catch (error) {
+      failure = error;
+    }
+    expect(failure).toBeInstanceOf(Error);
+    expect(failure.message).toContain("upload succeeded");
+    expect(failure.message).toContain("readback not converged");
+    expect(failure.message).toContain(DEPLOYMENT);
+    expect(failure.message).toContain(ROLLBACK_CANDIDATE);
+    expect(failure.deploymentUrl).toBe(DEPLOYMENT);
+    expect(failure.rollbackCandidate.url).toBe(ROLLBACK_CANDIDATE);
+    expect(
+      run.calls.filter(
+        ([command, ...args]) => command === "wrangler" && args.includes("deploy"),
+      ),
+    ).toHaveLength(1);
+  });
+
+  test("refuses when the returned immutable URL is absent from refreshed production history", async () => {
+    const root = fixtureRoot();
+    const history = JSON.stringify([{ Id: "rollback", Deployment: ROLLBACK_CANDIDATE }]);
+    const run = gitRunner({
+      productionDeployments: [history, history],
+      uploadDeployment: DEPLOYMENT,
+    });
+    await expect(
+      runSiteDeploy(
+        parseSiteDeployArgs(["--apply", "--environment", "production", "--execute"]),
+        { root, run, env: {}, fetch: servingFetch(root) },
+      ),
+    ).rejects.toThrow(/upload succeeded.*production deployment history.*1a2b3c4d/u);
+    expect(
+      run.calls.filter(
+        ([command, ...args]) => command === "wrangler" && args.includes("deploy"),
+      ),
+    ).toHaveLength(1);
+    expect(
+      run.calls.filter(
+        ([command, ...args]) =>
+          command === "wrangler" && args.includes("deployment") && args.includes("list"),
+      ),
+    ).toHaveLength(2);
   });
 
   test("normal production cannot consume the project's first deployment", async () => {
@@ -753,6 +1110,60 @@ describe("takoform-site runs", () => {
     expect(Object.keys(result.readback.pagesCanonical.schemas)).toHaveLength(48);
     expect(JSON.stringify(result)).not.toContain("accountId");
     expect(JSON.stringify(result)).not.toContain("account_id");
+  });
+
+  test("the initial cutover waits for the canonical Pages alias to converge", async () => {
+    const root = fixtureRoot();
+    const events = [];
+    const run = gitRunner({
+      events,
+      productionDeployments: [
+        "[]",
+        "[]",
+        JSON.stringify([{ Id: "new-production", Deployment: DEPLOYMENT }]),
+      ],
+    });
+    const baseFetch = servingFetch(root, { events, oldFormsPartition: true });
+    let canonicalAttempts = 0;
+    const fetch = async (url, init = {}) => {
+      if (url === `${SITE_PAGES_ORIGIN}/`) {
+        canonicalAttempts += 1;
+        if (canonicalAttempts === 1) {
+          events.push(`fetch:${url}`);
+          return {
+            ok: true,
+            status: 200,
+            arrayBuffer: async () => Buffer.from("stale canonical page"),
+          };
+        }
+      }
+      return baseFetch(url, init);
+    };
+    const result = await runSiteDeploy(
+      parseSiteDeployArgs([
+        "--apply",
+        "--environment",
+        "production",
+        "--initial-cutover",
+        "--review",
+        REVIEW,
+        "--execute",
+      ]),
+      {
+        root,
+        run,
+        env: {},
+        fetch,
+        postUploadReadback: { attempts: 2, intervalMs: 0, deadlineMs: 1000 },
+      },
+    );
+    expect(result.readbackAttempts).toBe(2);
+    expect(result.pagesCanonicalVerified).toBe(SITE_PAGES_ORIGIN);
+    expect(
+      run.calls.filter(
+        ([command, ...args]) => command === "wrangler" && args.includes("deploy"),
+      ),
+    ).toHaveLength(1);
   });
 
   test("the initial cutover fails before upload on a redirect, other status, or partition drift", async () => {
@@ -906,7 +1317,26 @@ describe("takoform-site runs", () => {
   test("the post-domain verifier requires clean public main and uploads nothing", async () => {
     const root = fixtureRoot();
     const events = [];
-    const run = gitRunner({ events, projectList: PROJECT_LIST_WITH_DOMAINS });
+    const run = gitRunner({
+      events,
+      projectList: PROJECT_LIST_WITH_DOMAINS,
+      productionDeployments: JSON.stringify([
+        {
+          Id: "new-production",
+          Environment: "Production",
+          Branch: "main",
+          Deployment: DEPLOYMENT,
+          Status: "just now",
+        },
+        {
+          Id: "old-production",
+          Environment: "Production",
+          Branch: "main",
+          Deployment: ROLLBACK_CANDIDATE,
+          Status: "1 hour ago",
+        },
+      ]),
+    });
     const result = await runSiteDeploy(
       parseSiteDeployArgs(["--verify-cutover", "--deployment-url", DEPLOYMENT]),
       { root, run, env: {}, fetch: servingFetch(root, { events }) },
@@ -1054,6 +1484,7 @@ describe("takoform-site runs", () => {
               ],
             ]),
           }),
+          postUploadReadback: { attempts: 1, intervalMs: 0 },
         },
       ),
     ).rejects.toThrow(SITE_PUBLIC_ORIGIN);
@@ -1077,6 +1508,7 @@ describe("takoform-site runs", () => {
               ],
             ]),
           }),
+          postUploadReadback: { attempts: 1, intervalMs: 0 },
         },
       ),
     ).rejects.toThrow(SITE_WWW_ORIGIN);
@@ -1095,6 +1527,7 @@ describe("takoform-site runs", () => {
               [`${SITE_WWW_ORIGIN}${PAGE_READBACK_ROUTES[0]}`, { ok: false, status: 301 }],
             ]),
           }),
+          postUploadReadback: { attempts: 1, intervalMs: 0 },
         },
       ),
     ).rejects.toThrow(`${SITE_WWW_ORIGIN}/ returned HTTP 301`);

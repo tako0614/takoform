@@ -68,6 +68,12 @@ export const WRANGLER_PRODUCTION_DEPLOYMENT_LIST_ARGS = Object.freeze([
   "production",
   "--json",
 ]);
+// Pages custom domains can continue serving their previous deployment briefly
+// after the immutable upload has completed. Keep this convergence check
+// bounded so a deploy never turns into an unbounded retry or a second upload.
+export const PRODUCTION_READBACK_MAX_ATTEMPTS = 12;
+export const PRODUCTION_READBACK_INTERVAL_MS = 2_500;
+export const PRODUCTION_READBACK_DEADLINE_MS = 30_000;
 
 // Read back more than one page. Schema routes are loaded from the append-only
 // ledger below; a hand-maintained sample cannot prove a publication.
@@ -444,12 +450,24 @@ function requireInitialCutoverPartition(entries) {
   };
 }
 
-async function readbackDigests(fetchImpl, origin, routes, { redirect = "manual" } = {}) {
+async function readbackDigests(
+  fetchImpl,
+  origin,
+  routes,
+  { redirect = "manual", signal } = {},
+) {
   const digests = {};
   for (const route of routes) {
     const response = await fetchImpl(`${origin}${route}`, {
-      headers: { "cache-control": "no-cache" },
+      headers: {
+        // The aliases are eventually consistent at the edge. Explicitly ask
+        // every read to bypass/revalidate cache so a poll observes the
+        // current serving deployment instead of repeating a cached response.
+        "cache-control": "no-cache",
+        pragma: "no-cache",
+      },
       redirect,
+      ...(signal === undefined ? {} : { signal }),
     });
     if (response.status !== 200) {
       throw new Error(`readback of ${origin}${route} returned HTTP ${response.status}`);
@@ -459,11 +477,15 @@ async function readbackDigests(fetchImpl, origin, routes, { redirect = "manual" 
   return digests;
 }
 
-async function requireAbsentRoutes(fetchImpl, origin, routes) {
+async function requireAbsentRoutes(fetchImpl, origin, routes, { signal } = {}) {
   for (const route of routes) {
     const response = await fetchImpl(`${origin}${route}`, {
-      headers: { "cache-control": "no-cache" },
+      headers: {
+        "cache-control": "no-cache",
+        pragma: "no-cache",
+      },
       redirect: "manual",
+      ...(signal === undefined ? {} : { signal }),
     });
     if (response.status !== 404 && response.status !== 410) {
       throw new Error(
@@ -508,54 +530,56 @@ async function verifyExactRoutes(fetchImpl, origin, expected, where, options) {
   return actual;
 }
 
-async function verifyFullDeployment(fetchImpl, origin, expected) {
+async function verifyFullDeployment(fetchImpl, origin, expected, options = {}) {
   const pages = await verifyExactRoutes(
     fetchImpl,
     origin,
     expected.pages,
     `the deployment ${origin}`,
-    { redirect: "manual" },
+    { ...options, redirect: "manual" },
   );
   const schemas = await verifyExactRoutes(
     fetchImpl,
     origin,
     expected.schemas,
     `the deployment ${origin}`,
+    options,
   );
-  await requireAbsentRoutes(fetchImpl, origin, ABSENT_ROUTES);
+  await requireAbsentRoutes(fetchImpl, origin, ABSENT_ROUTES, options);
   return { pages, schemas, absent: ABSENT_ROUTES };
 }
 
-async function verifyApex(fetchImpl, expectedPages) {
+async function verifyApex(fetchImpl, expectedPages, options = {}) {
   const pages = await verifyExactRoutes(
     fetchImpl,
     SITE_PUBLIC_ORIGIN,
     expectedPages,
     `the public alias ${SITE_PUBLIC_ORIGIN}`,
-    { redirect: "manual" },
+    { ...options, redirect: "manual" },
   );
-  await requireAbsentRoutes(fetchImpl, SITE_PUBLIC_ORIGIN, ABSENT_ROUTES);
+  await requireAbsentRoutes(fetchImpl, SITE_PUBLIC_ORIGIN, ABSENT_ROUTES, options);
   return { pages, absent: ABSENT_ROUTES };
 }
 
-async function verifyWww(fetchImpl, expectedPages) {
+async function verifyWww(fetchImpl, expectedPages, options = {}) {
   const pages = await verifyExactRoutes(
     fetchImpl,
     SITE_WWW_ORIGIN,
     expectedPages,
     `the public alias ${SITE_WWW_ORIGIN}`,
-    { redirect: "manual" },
+    { ...options, redirect: "manual" },
   );
-  await requireAbsentRoutes(fetchImpl, SITE_WWW_ORIGIN, ABSENT_ROUTES);
+  await requireAbsentRoutes(fetchImpl, SITE_WWW_ORIGIN, ABSENT_ROUTES, options);
   return { pages, absent: ABSENT_ROUTES };
 }
 
-async function verifySchemaOrigin(fetchImpl, expectedSchemas) {
+async function verifySchemaOrigin(fetchImpl, expectedSchemas, options = {}) {
   const schemas = await verifyExactRoutes(
     fetchImpl,
     SCHEMA_PUBLIC_ORIGIN,
     expectedSchemas,
     `the schema identity origin ${SCHEMA_PUBLIC_ORIGIN}`,
+    options,
   );
   return { schemas };
 }
@@ -865,21 +889,221 @@ function runWranglerProductionDeploymentList(run, { root, env }) {
 
 function requireKnownProductionDeploymentUrl(deployments, deploymentUrl) {
   const normalized = deploymentUrl.replace(/\/$/u, "");
-  const known = deployments.some((deployment) => {
-    if (!deployment || typeof deployment !== "object") {
-      return false;
-    }
-    // Wrangler 4 prints JSON table rows with a capitalized `Deployment`
-    // column. Retain `url` for the underlying API shape so a CLI format
-    // simplification does not weaken the identity check.
-    const providerUrl = deployment.Deployment ?? deployment.url;
-    return typeof providerUrl === "string" && providerUrl.replace(/\/$/u, "") === normalized;
-  });
+  const known = deployments.some((value) => deploymentRecord(value)?.url === normalized);
   if (!known) {
     throw new Error(
       `refused before verification: ${deploymentUrl} is not an exact immutable URL in the ${SITE_PROJECT} production deployment history; branch aliases and unrelated URLs are not accepted`,
     );
   }
+}
+
+function deploymentRecord(deployment) {
+  if (!deployment || typeof deployment !== "object") return null;
+  const value = deployment.Deployment ?? deployment.url;
+  if (typeof value !== "string") return null;
+  const normalized = value.replace(/\/$/u, "");
+  try {
+    const url = requireImmutableDeploymentUrl(normalized);
+    const environment = deployment.Environment ?? deployment.environment;
+    if (
+      typeof environment === "string" &&
+      environment.toLowerCase() !== "production"
+    ) {
+      return null;
+    }
+    const branch = deployment.Branch ?? deployment.branch;
+    if (typeof branch === "string" && branch !== "main") return null;
+    const stageStatus =
+      deployment.latest_stage?.status ??
+      deployment.latestStage?.status ??
+      deployment.stage?.status;
+    if (typeof stageStatus === "string" && stageStatus.toLowerCase() !== "success") {
+      return null;
+    }
+    const tableStatus = deployment.Status ?? deployment.status;
+    if (
+      typeof tableStatus === "string" &&
+      /^(?:active|canceled|cancelled|failure|failed|idle|skipped)$/iu.test(tableStatus.trim())
+    ) {
+      return null;
+    }
+    return {
+      id: deployment.Id ?? deployment.id ?? null,
+      url,
+      branch: branch ?? null,
+      status: tableStatus ?? stageStatus ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Preserve the prior immutable deployment identity for a post-upload
+ * failure. The caller may use this URL for an explicitly chosen forward
+ * repair; this function never performs that repair itself.
+ */
+export function findRollbackCandidate(deployments, deploymentUrl) {
+  if (!Array.isArray(deployments)) return null;
+  const current = requireImmutableDeploymentUrl(deploymentUrl);
+  let foundCurrent = false;
+  for (const value of deployments) {
+    const deployment = deploymentRecord(value);
+    if (deployment === null) continue;
+    if (!foundCurrent) {
+      if (deployment.url === current) foundCurrent = true;
+      continue;
+    }
+    if (deployment.url !== current) return deployment;
+  }
+  return null;
+}
+
+function findCurrentRollbackCandidate(deployments) {
+  if (!Array.isArray(deployments)) return null;
+  for (const value of deployments) {
+    const deployment = deploymentRecord(value);
+    if (deployment !== null) return deployment;
+  }
+  return null;
+}
+
+function postUploadFailure({ deploymentUrl, rollbackCandidate, reason, cause }) {
+  const rollbackUrl = rollbackCandidate?.url ?? "none available";
+  const immutableIdentity = deploymentUrl ?? "unavailable";
+  const immutableNote = deploymentUrl === null || deploymentUrl === undefined
+    ? "immutable deployment URL unavailable"
+    : "immutable URL retained";
+  const error = new Error(
+    `upload succeeded/${reason}; immutable deployment URL: ${immutableIdentity} (${immutableNote}); rollback candidate: ${rollbackUrl}; no re-upload or automatic rollback was attempted${cause ? `; last diagnostic: ${cause instanceof Error ? cause.message : String(cause)}` : ""}`,
+    cause ? { cause } : undefined,
+  );
+  // Keep machine-readable recovery evidence on the thrown error as well as in
+  // its message, because the CLI prints only the message while callers/tests
+  // can retain the exact identities without parsing prose.
+  error.uploadSucceeded = true;
+  error.kind = "takoform.site-post-upload-failure";
+  error.reason = reason;
+  error.deploymentUrl = deploymentUrl;
+  error.rollbackCandidate = rollbackCandidate;
+  error.rollbackCandidateUrl = rollbackCandidate?.url ?? null;
+  return error;
+}
+
+function postUploadHistoryFailure({ deploymentUrl, rollbackCandidate, cause }) {
+  return postUploadFailure({
+    deploymentUrl,
+    rollbackCandidate,
+    reason: "production deployment history did not contain the returned immutable URL",
+    cause,
+  });
+}
+
+function postUploadReadbackFailure({ deploymentUrl, rollbackCandidate, attempts, failures }) {
+  const cause = new Error(
+    `readback attempts exhausted (${attempts}); ${failures.join("; ")}`,
+  );
+  return postUploadFailure({
+    deploymentUrl,
+    rollbackCandidate,
+    reason: `readback not converged after ${attempts} bounded attempt${attempts === 1 ? "" : "s"}`,
+    cause,
+  });
+}
+
+function defaultSleep(delayMs) {
+  return new Promise((resolveSleep) => setTimeout(resolveSleep, delayMs));
+}
+
+function postUploadReadbackOptions(options) {
+  const config = options?.postUploadReadback ?? {};
+  const attempts = config.attempts ?? PRODUCTION_READBACK_MAX_ATTEMPTS;
+  const intervalMs = config.intervalMs ?? PRODUCTION_READBACK_INTERVAL_MS;
+  const deadlineMs = config.deadlineMs ?? PRODUCTION_READBACK_DEADLINE_MS;
+  const sleep = config.sleep ?? defaultSleep;
+  if (!Number.isInteger(attempts) || attempts < 1) {
+    throw new Error("post-upload production readback attempts must be a positive integer");
+  }
+  if (!Number.isFinite(intervalMs) || intervalMs < 0) {
+    throw new Error("post-upload production readback interval must be a non-negative number");
+  }
+  if (!Number.isFinite(deadlineMs) || deadlineMs < 1) {
+    throw new Error("post-upload production readback deadline must be a positive number");
+  }
+  if (typeof sleep !== "function") {
+    throw new Error("post-upload production readback sleep must be a function");
+  }
+  return { attempts, intervalMs, deadlineMs, sleep };
+}
+
+async function withReadbackDeadline(label, deadlineMs, operation) {
+  const controller = new AbortController();
+  let timer;
+  let timedOut = false;
+  const work = Promise.resolve().then(() => operation(controller.signal));
+  work.catch(() => {});
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+      reject(new Error(`${label} deadline elapsed after ${deadlineMs}ms`));
+    }, deadlineMs);
+  });
+  try {
+    return await Promise.race([work, timeout]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+    if (timedOut) controller.abort();
+  }
+}
+
+async function pollReadbacks(checks, config, label) {
+  const { attempts, intervalMs, deadlineMs, sleep } = config;
+  let failures = [];
+  let attempted = 0;
+  try {
+    return await withReadbackDeadline(label, deadlineMs, async (signal) => {
+      for (let attempt = 1; attempt <= attempts; attempt += 1) {
+        attempted = attempt;
+        const readback = {};
+        const attemptFailures = [];
+        for (const [name, check] of checks) {
+          try {
+            readback[name] = await check(signal);
+          } catch (error) {
+            attemptFailures.push(`${name}: ${error instanceof Error ? error.message : String(error)}`);
+          }
+        }
+        if (attemptFailures.length === 0) {
+          return { ...readback, attempts: attempt };
+        }
+        failures = attemptFailures;
+        if (signal.aborted) throw new Error(`${label} deadline elapsed`);
+        if (attempt < attempts) await sleep(intervalMs);
+      }
+      return { attempts, failures };
+    });
+  } catch (error) {
+    return {
+      attempts: Math.max(attempted, 1),
+      failures: [
+        ...failures,
+        `${label}: ${error instanceof Error ? error.message : String(error)}`,
+      ],
+    };
+  }
+}
+
+async function pollProductionAliases(fetchImpl, expected, config) {
+  return await pollReadbacks(
+    [
+      ["apex", (signal) => verifyApex(fetchImpl, expected.pages, { signal })],
+      ["www", (signal) => verifyWww(fetchImpl, expected.pages, { signal })],
+      ["forms", (signal) => verifySchemaOrigin(fetchImpl, expected.schemas, { signal })],
+    ],
+    config,
+    "production alias readback",
+  );
 }
 
 export async function runSiteDeploy(parsed, options = {}) {
@@ -993,6 +1217,9 @@ export async function runSiteDeploy(parsed, options = {}) {
     plan.refusedWithout = "--execute";
     return plan;
   }
+  // Validate every test/operator override before the one upload. No malformed
+  // convergence policy may turn into a post-mutation surprise.
+  const postUploadReadback = postUploadReadbackOptions(options);
 
   // Wrangler's logged-in profile is the sole provider authority. Read the
   // exact project list before running any gate or upload so authentication and
@@ -1007,17 +1234,27 @@ export async function runSiteDeploy(parsed, options = {}) {
     );
   }
   const initialTopology = parsed.initialCutover ? requireInitialCutoverTopology(target) : null;
+  let deploymentsBeforeUpload = null;
+  let rollbackCandidate = null;
   if (parsed.environment === "production") {
-    const deployments = runWranglerProductionDeploymentList(run, { root, env });
-    if (parsed.initialCutover && deployments.length !== 0) {
+    deploymentsBeforeUpload = runWranglerProductionDeploymentList(run, { root, env });
+    if (parsed.initialCutover && deploymentsBeforeUpload.length !== 0) {
       throw new Error(
         `refused before touching the target: Pages project ${SITE_PROJECT} already has a production deployment; --initial-cutover cannot be reused, inspect provider history and repair forward`,
       );
     }
-    if (!parsed.initialCutover && deployments.length === 0) {
+    if (!parsed.initialCutover && deploymentsBeforeUpload.length === 0) {
       throw new Error(
         `refused before touching the target: Pages project ${SITE_PROJECT} has no production deployment; its first publication requires the audited --initial-cutover flow`,
       );
+    }
+    if (!parsed.initialCutover) {
+      rollbackCandidate = findCurrentRollbackCandidate(deploymentsBeforeUpload);
+      if (rollbackCandidate === null) {
+        throw new Error(
+          `refused before touching the target: Pages project ${SITE_PROJECT} has no successful production/main deployment that can serve as the prior rollback candidate`,
+        );
+      }
     }
   }
 
@@ -1074,15 +1311,68 @@ export async function runSiteDeploy(parsed, options = {}) {
     );
   }
 
-  const deploymentUrl = extractDeploymentUrl(uploadOutput);
+  let deploymentUrl = null;
+  try {
+    // Extracting already validates the provider's exact immutable hostname;
+    // keep the second validator at this post-upload identity boundary.
+    deploymentUrl = requireImmutableDeploymentUrl(extractDeploymentUrl(uploadOutput));
+  } catch (error) {
+    throw postUploadFailure({
+      deploymentUrl: null,
+      rollbackCandidate,
+      reason: "immutable deployment URL was unavailable from the upload acknowledgement",
+      cause: error,
+    });
+  }
+  let immutableReadback;
+  try {
+    immutableReadback = await withReadbackDeadline(
+      "immutable deployment readback",
+      postUploadReadback.deadlineMs,
+      (signal) => verifyFullDeployment(fetchImpl, deploymentUrl, expected, { signal }),
+    );
+  } catch (error) {
+    // The byte proof remains primary. A best-effort provider-history read may
+    // still recover the exact predecessor identity for the operator, but it
+    // never masks the immutable-readback failure.
+    if (parsed.environment === "production") {
+      try {
+        const deploymentsAfterFailure = runWranglerProductionDeploymentList(run, { root, env });
+        requireKnownProductionDeploymentUrl(deploymentsAfterFailure, deploymentUrl);
+        rollbackCandidate =
+          findRollbackCandidate(deploymentsAfterFailure, deploymentUrl) ?? rollbackCandidate;
+      } catch {
+        // Retain the exact pre-upload predecessor if provider history cannot
+        // yet expose the completed upload.
+      }
+    }
+    throw postUploadFailure({
+      deploymentUrl,
+      rollbackCandidate,
+      reason: "immutable deployment readback failed",
+      cause: error,
+    });
+  }
   let productionDeploymentVerified = false;
-  if (parsed.initialCutover) {
-    const deploymentsAfterUpload = runWranglerProductionDeploymentList(run, { root, env });
-    requireKnownProductionDeploymentUrl(deploymentsAfterUpload, deploymentUrl);
+  if (parsed.environment === "production") {
+    let deploymentsAfterUpload;
+    try {
+      deploymentsAfterUpload = runWranglerProductionDeploymentList(run, { root, env });
+      requireKnownProductionDeploymentUrl(deploymentsAfterUpload, deploymentUrl);
+      rollbackCandidate =
+        findRollbackCandidate(deploymentsAfterUpload, deploymentUrl) ?? rollbackCandidate;
+      if (!parsed.initialCutover && rollbackCandidate === null) {
+        throw new Error(
+          "the refreshed production history did not identify the exact predecessor after the uploaded deployment",
+        );
+      }
+    } catch (error) {
+      throw postUploadHistoryFailure({ deploymentUrl, rollbackCandidate, cause: error });
+    }
     productionDeploymentVerified = true;
   }
   const readback = {
-    immutable: await verifyFullDeployment(fetchImpl, deploymentUrl, expected),
+    immutable: immutableReadback,
   };
 
   const result = {
@@ -1091,17 +1381,31 @@ export async function runSiteDeploy(parsed, options = {}) {
     commit: source.head,
     distDigest: built,
     deploymentUrl,
+    ...(parsed.environment === "production" ? { productionDeploymentVerified } : {}),
     readback,
     absentRoutes: ABSENT_ROUTES,
     publicOriginsVerified: [],
   };
 
   if (parsed.initialCutover) {
-    result.readback.pagesCanonical = await verifyFullDeployment(
-      fetchImpl,
-      SITE_PAGES_ORIGIN,
-      expected,
+    const convergence = await pollReadbacks(
+      [[
+        "pagesCanonical",
+        (signal) => verifyFullDeployment(fetchImpl, SITE_PAGES_ORIGIN, expected, { signal }),
+      ]],
+      postUploadReadback,
+      "canonical Pages alias readback",
     );
+    if (convergence.failures !== undefined) {
+      throw postUploadReadbackFailure({
+        deploymentUrl,
+        rollbackCandidate,
+        attempts: convergence.attempts,
+        failures: convergence.failures,
+      });
+    }
+    result.readback.pagesCanonical = convergence.pagesCanonical;
+    result.readbackAttempts = convergence.attempts;
     return {
       ...result,
       kind: "takoform.site-initial-cutover-pending",
@@ -1120,9 +1424,19 @@ export async function runSiteDeploy(parsed, options = {}) {
   }
 
   if (parsed.environment === "production") {
-    result.readback.apex = await verifyApex(fetchImpl, expected.pages);
-    result.readback.www = await verifyWww(fetchImpl, expected.pages);
-    result.readback.forms = await verifySchemaOrigin(fetchImpl, expected.schemas);
+    const convergence = await pollProductionAliases(fetchImpl, expected, postUploadReadback);
+    if (convergence.failures !== undefined) {
+      throw postUploadReadbackFailure({
+        deploymentUrl,
+        rollbackCandidate,
+        attempts: convergence.attempts,
+        failures: convergence.failures,
+      });
+    }
+    result.readback.apex = convergence.apex;
+    result.readback.www = convergence.www;
+    result.readback.forms = convergence.forms;
+    result.readbackAttempts = convergence.attempts;
     result.publicOriginsVerified = [...SITE_PUBLIC_ORIGINS];
   }
   return result;
