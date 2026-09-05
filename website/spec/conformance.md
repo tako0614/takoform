@@ -1,5 +1,6 @@
 ---
 # Generated from spec/conformance.md by scripts/site.mjs. Edit the specification, not this page.
+normative: true
 canonicalSource: spec/conformance.md
 canonicalUrl: https://github.com/tako0614/takoform/blob/main/spec/conformance.md
 ---

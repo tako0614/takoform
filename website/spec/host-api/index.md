@@ -1,5 +1,6 @@
 ---
 # Generated from spec/host-api/README.md by scripts/site.mjs. Edit the specification, not this page.
+normative: false
 canonicalSource: spec/host-api/README.md
 canonicalUrl: https://github.com/tako0614/takoform/blob/main/spec/host-api/README.md
 ---

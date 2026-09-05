@@ -1,5 +1,6 @@
 ---
 # Generated from spec/portability-boundary.md by scripts/site.mjs. Edit the specification, not this page.
+normative: true
 canonicalSource: spec/portability-boundary.md
 canonicalUrl: https://github.com/tako0614/takoform/blob/main/spec/portability-boundary.md
 ---

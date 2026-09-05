@@ -1,0 +1,11 @@
+[
+  {
+    "date": "2026-09-04",
+    "macrostructure": "Map / Diagram",
+    "theme": "Coral",
+    "enrichment": "Tier A contract map",
+    "brief": "Reader-first Takoform documentation home and learning routes",
+    "slopTest": "pass 58/58",
+    "viewports": [320, 375, 414, 768, 1280]
+  }
+]

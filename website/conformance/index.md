@@ -4,64 +4,77 @@ title: conformance と参照実装
 
 # conformance と参照実装
 
-conformance の主張は、report が名指した artifact または実装だけに及びます。normative な
-語彙と class は [Conformance language and classes](/spec/conformance) が持ちます。
+このページは non-normative な案内です。conformance の主張は、report が名指した artifact または実装
+だけに及びます。語彙と requirement keyword の正本は [Conformance language and classes](/spec/conformance)
+です。
 
-## 独立した主張
+## claim を分けて読む
 
-- **Form Package data** — Definition 一つ、exact な FormRef 一つ、RFC 8785 canonical bytes、
-  閉じた file inventory、allowlist された data media type。Host に依存せず valid です。
-- **Interface / Binding data** — digest 束縛の ref と Definition schema、canonical bytes、
-  閉じた operation / capability 語彙。identity を決めるのは digest であって内蔵 catalog では
-  ありません。
-- **Snapshot artifact** — package index と payload の closure、digest、exact な Form
-  identity、Interface と Binding の bytes と digest pin、deterministic な compile。
-- **Host protocol** — exact な Host API lane に対する実装の主張。discovery、wire、lifecycle、
-  optimistic concurrency、idempotency、identity、relation、artifact、error の規則を、その Host
-  自身の証拠で覆う必要があります。
-- **client adapter** — 宣言された desired state だけを送り、exact な FormRef と package digest の
-  境界を保ち、占有された identity や migration を運べないときに fail closed する。
-- **publisher trust** — release した bytes を immutable に保ち、exact な digest と provenance を
-  記録し、append-only な revocation policy を使う。
+- **Form Package data** — 一つの Definition、exact な FormRef、RFC 8785 canonical bytes、
+  閉じた file inventory、allowlist された data media type。
+- **Interface / Binding data** — digest-bound な ref と Definition schema、canonical bytes、
+  closed な operation / capability 語彙。
+- **Snapshot artifact** — package index と payload の closure、Interface と Binding の
+  digest pin、deterministic な immutable compile。
+- **Host protocol** — exact な Host API lane に対する discovery、wire、lifecycle、
+  optimistic concurrency、idempotency、identity、relation、artifact、error の証拠。
+- **client adapter** — declared desired state だけを送り、exact な FormRef と package
+  digest の境界を保つ local projection。
+- **publisher trust** — release bytes の provenance、署名、transparency、revocation の
+  証拠。
 
-## 参照 harness
+一つの claim から別の claim を導きません。package が検証できても Host Support、activation、
+production readiness、商用 Offering が証明されたことにはなりません。
 
-このrepositoryから動かせる参照検証器です。network を読まず、Resource を変更しません。
+## repository から実行できる harness
+
+[Start の準備](/start/#_0-準備)で依存を取得した後に実行します。以下の検証処理は network を
+読まず、Resource を変更しません。
+
+```console
+go run ./cmd/form-package verify conformance/takoform-v1/generic-host/external-family/counter-reservation
+```
+
+一つの package の index、payload closure、FormRef、digest を検証します。
 
 ```console
 go run ./cmd/generic-conformance verify --manifest conformance/takoform-v1/generic.json
 ```
 
-```console
-go run ./cmd/form-package verify <package-directory>
-```
+generic corpus は package、Interface、Binding、Snapshot の closure、入力順の独立性、
+失敗時の no-partial-result を検証します。`external-family` と `zero-family` の二つの
+synthetic Snapshot を含みますが、実在の Form catalog や family roster ではありません。
 
-```console
-go run ./cmd/takoform-trust --help
-```
+どちらも Host lifecycle の create / read / update / delete、fencing、relation mutation、
+runtime code、placement、activation を実行しません。
 
-generic corpus は意図的に family 中立です。synthetic な reverse-DNS group を使い、family
-package が零個でも通ります。roster も優遇される namespace もありません。
+## report を読むときの確認点
 
-## 通っても言えないこと
+1. `status` が `passed` でも、report の対象が package、Snapshot、Host、client のどれかを
+   先に確認する。
+2. `FormRef` の `apiVersion`、`kind`、`definitionVersion`、`schemaDigest` が一つの exact
+   identity を構成していることを確認する。
+3. `packageDigest` は配布 index の証拠で、`schemaDigest` は Definition の証拠であることを
+   分けて確認する。
+4. Host や publisher の外部操作を主張する場合は、その操作を行った owner の readback を
+   別の evidence として要求する。
 
-package と contract と Snapshot の検査に通ることが証明するのは、その data と compiler の
-性質だけです。動いている Host、lifecycle の実行、fencing、Host support、production の
-activation、revocation の強制、特定 backend との相互運用性は、どれも別の証拠です。
-外部の操作を実際に行った当事者からの readback が要ります。
+## source
 
-corpus は Host の lifecycle runner ではありません。create / read / update / delete、
-optimistic concurrency の fencing、relation の変更、runtime code、activation、Host Support、
-各 publisher の family 意味論を実行しません。
-
-## 実行する source
-
-harness と corpus は
+harness と corpus の source は
 [tako0614/takoform](https://github.com/tako0614/takoform) にあります。
 
 ```console
 git clone https://github.com/tako0614/takoform.git
 cd takoform
-bun install --frozen-lockfile
-bun run check
+go run ./cmd/generic-conformance verify --manifest conformance/takoform-v1/generic.json
 ```
+
+OpenTofu / Provider の検証は [terraform-provider-takoform](https://github.com/tako0614/terraform-provider-takoform)
+の project と report を参照してください。この page はその内容を複製しません。
+
+## 次に読む
+
+- [Start](/start/) — 実行 command と概念 Host API transcript。
+- [Host API v1 とは](/host-api/) — route、fence、error の案内。
+- [Reference](/reference/) — English / normative source と Japanese guide の区別。

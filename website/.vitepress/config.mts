@@ -16,6 +16,12 @@ import { defineConfig } from "vitepress";
 
 const repository = "https://github.com/tako0614/takoform";
 
+// The pinned esbuild 0.28 pair cannot downlevel object/array destructuring
+// during dependency pre-bundling. Keep the browser build target independent:
+// this only applies to Vite's development optimizer, not the release build.
+const DEV_OPTIMIZE_TARGET = "esnext";
+const BUILD_TARGET = "esnext";
+
 const contractSidebar = [
   {
     text: "Contract map",
@@ -59,6 +65,10 @@ const guideSidebar = [
   {
     text: "読む順番",
     items: [
+      { text: "Start", link: "/start/" },
+      { text: "Guides", link: "/guides/" },
+      { text: "Reference / authority", link: "/reference/" },
+      { text: "Glossary", link: "/glossary" },
       { text: "Host API v1 とは", link: "/host-api/" },
       { text: "共通モデル", link: "/model/" },
       { text: "conformance と参照実装", link: "/conformance/" },
@@ -81,6 +91,12 @@ export default defineConfig({
     "Takoform Host API v1 と publisher 中立な共通モデルの normative 契約、公開 schema、conformance。",
   cleanUrls: true,
   lastUpdated: false,
+  markdown: {
+    theme: {
+      light: "github-light-high-contrast",
+      dark: "github-dark-high-contrast",
+    },
+  },
   // VitePress 1.6 builds the local-search MiniSearch index through a concurrent
   // mapper. MiniSearch assigns numeric document IDs in completion order, so a
   // concurrency greater than one changes content-hashed asset names between
@@ -101,24 +117,61 @@ export default defineConfig({
   // default browser target list. Nothing here needs to run on a 2021 browser,
   // and building for one silently costs the pin.
   vite: {
-    build: { target: "esnext", chunkSizeWarningLimit: 700 },
+    optimizeDeps: {
+      esbuildOptions: { target: DEV_OPTIMIZE_TARGET },
+    },
+    build: { target: BUILD_TARGET, chunkSizeWarningLimit: 700 },
   },
   head: [
+    ["link", { rel: "icon", href: "/favicon.svg" }],
     ["meta", { property: "og:type", content: "website" }],
     ["meta", { property: "og:site_name", content: "Takoform" }],
+    ["meta", { property: "og:image", content: "https://takoform.com/social-card.png" }],
+    ["meta", { property: "og:image:alt", content: "Takoform — Portable resource contract" }],
+    ["meta", { name: "twitter:card", content: "summary_large_image" }],
+    ["meta", { name: "twitter:image", content: "https://takoform.com/social-card.png" }],
+    ["meta", { name: "twitter:image:alt", content: "Takoform — Portable resource contract" }],
     ["meta", { name: "color-scheme", content: "light dark" }],
   ],
+  transformHead({ pageData, title, description }) {
+    const route = pageData.relativePath
+      .replace(/(^|\/)index\.md$/u, "$1")
+      .replace(/\.md$/u, "");
+    return [
+      ["meta", { property: "og:title", content: title }],
+      ["meta", { property: "og:description", content: description }],
+      ["meta", { property: "og:url", content: new URL(route, "https://takoform.com/").href }],
+      ["meta", { name: "twitter:title", content: title }],
+      ["meta", { name: "twitter:description", content: description }],
+    ];
+  },
   themeConfig: {
     outline: { level: [2, 3] },
     search: { provider: "local" },
     nav: [
-      { text: "Host API v1", link: "/host-api/" },
-      { text: "API と概念", link: "/spec/" },
-      { text: "schema", link: "/schemas/" },
+      { text: "Start", link: "/start/" },
+      { text: "Guides", link: "/guides/" },
+      { text: "Reference", link: "/reference/" },
+      { text: "Glossary", link: "/glossary" },
       { text: "GitHub", link: repository },
     ],
     sidebar: {
       "/spec/": contractSidebar,
+      "/start/": [
+        { text: "Start", items: [{ text: "Start", link: "/start/" }] },
+      ],
+      "/guides/": [
+        { text: "Guides", items: [{ text: "Guides", link: "/guides/" }] },
+      ],
+      "/reference/": [
+        {
+          text: "Reference",
+          items: [{ text: "Reference", link: "/reference/" }],
+        },
+      ],
+      "/glossary": [
+        { text: "Glossary", items: [{ text: "Glossary", link: "/glossary" }] },
+      ],
       "/": guideSidebar,
     },
     socialLinks: [{ icon: "github", link: repository }],
@@ -143,7 +196,16 @@ export default defineConfig({
   // language for both would mislabel roughly half the pages, so the mirrored
   // tree states its own.
   transformHtml(code, _id, context) {
-    if (!context.pageData.relativePath.startsWith("spec/")) return code;
-    return code.replace(/<html([^>]*)\slang="ja-JP"/u, '<html$1 lang="en"');
+    const authority = context.pageData.frontmatter.normative === true
+      ? "normative"
+      : "non-normative";
+    let html = code.replace(
+      /<html\b/u,
+      `<html data-document-authority="${authority}"`,
+    );
+    if (context.pageData.relativePath.startsWith("spec/")) {
+      html = html.replace(/<html([^>]*)\slang="ja-JP"/u, '<html$1 lang="en"');
+    }
+    return html;
   },
 });

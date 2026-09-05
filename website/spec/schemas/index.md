@@ -1,5 +1,6 @@
 ---
 # Generated from spec/schemas/README.md by scripts/site.mjs. Edit the specification, not this page.
+normative: false
 canonicalSource: spec/schemas/README.md
 canonicalUrl: https://github.com/tako0614/takoform/blob/main/spec/schemas/README.md
 ---

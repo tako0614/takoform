@@ -10,20 +10,22 @@ Host API v1 を変更せず、新しい API version や specification release la
 一方、schema の exact bytes（および将来 freeze される normative API bytes）は consumer が
 参照する identity なので、presentation と同じ rollback 条件では扱いません。
 
-## repository 内の配置
+## 現在の repository 配置と local 開発
 
 ```text
 website/
 ├── .vitepress/            VitePress config と theme（手書き）
 ├── index.md               landing（手書き）
+├── start/  guides/  reference/  glossary.md
+│                          読み方・参照・用語の入口（手書き）
 ├── host-api/  model/  conformance/  site.md
 │                          読み方の案内（手書き）
-├── spec/                  normative 文面の mirror（生成）
-├── schemas/               schema 索引 page（生成）
+├── spec/                  freeze に含まれる source の mirror（生成）
+├── schemas/               schema 索引 page（生成・non-normative）
 └── public/
     ├── schemas/           公開 schema の bytes（生成）
-    ├── _headers  robots.txt
-    └                      配信 header と robots（手書き）
+    ├── _headers  robots.txt  favicon.svg  social-card.png
+    └                      配信 header、robots、site assets（手書き）
 ```
 
 生成部分の正本は次です。手で編集した内容は gate が差し戻します。
@@ -40,13 +42,47 @@ bun run site:dev                    # 手元で見る
 
 `bun run check` はこれらの検査を含みます。生成物が古いまま commit されることはありません。
 
+`site:dev` は VitePress の local search を含む手元の確認用です。dependency の開発時
+optimizer だけを `esnext` に合わせています。release build の target と schema の bytes は
+この設定では変わりません。
+
+`build:site` は生成後の全 HTML について、title、ページ別の OG / Twitter metadata、language、document authority、重複 ID、
+ARIA の参照先、内部 route / fragment、到達不能 page、mirror notice と home の主要構造を
+検査します。favicon / social card の形式と寸法、手書き public asset の source と build の
+byte 一致も検査します。pixel geometry や browser 固有の interaction は静的 HTML からは証明できない
+ため、presentation を変更したときは次の explicit browser lane も実行します。
+
+```console
+bun run check:site:browser
+```
+
+この command は再現可能な site build を作り、loopback の一時 port で配信して、installed
+Chrome / Chromium を headless で動かします。browser が見つからなければ失敗します。
+標準 path にない場合は `TAKOFORM_BROWSER=/absolute/path/to/chrome` を設定してください。
+browser の自動 download や、既存 browser profile の利用はしません。
+
+- `/`、`/start/`、`/guides/`、`/reference/`、`/glossary`、`/host-api/` を
+  320 / 375 / 414 / 768 px で開き、横 overflow と切れた操作要素がないことを確認する。
+- mobile navigation と sidebar を keyboard で開き、Escape で閉じたあと trigger へ focus が
+  戻ることを確認する。
+- 1280 px の light / dark 両方で first viewport の主要 CTA と keyboard focus indicator を確認する。
+- asset の HTTP error、JavaScript error、予期しない外部通信も失敗として扱う。
+
+本文、link、button、code highlighting の contrast と見た目の最終判断は、light / dark の
+実画面で別途確認します。この browser lane は live service や production mutation を必要とせず、
+portable な `bun run check` へ browser binary を暗黙に要求しません。
+
+`.hallmark/preflight.json` は変更前の visual inventory、`.hallmark/log.json` は redesign 時の
+判断と確認した viewport の履歴です。site/theme の owner が更新し、公開物へは含めません。
+`check:site` は JSON の構造を検査しますが、記録された目視評価を現在の検査結果として扱いません。
+
 ## 配信する path
 
 | path | 中身 |
 | --- | --- |
-| `/`、`/host-api/`、`/model/`、`/conformance/`、`/site` | 手書きの案内 |
-| `/spec/**` | normative 文面の mirror。正本は `spec/**` |
-| `/schemas/` | identity の索引 page |
+| `/`、`/start/`、`/guides/`、`/reference/`、`/host-api/`、`/model/`、`/conformance/`、`/glossary`、`/site` | 手書きの案内 |
+| `/spec/**` | freeze-listed source は normative mirror。それ以外の overview/index mirror は non-normative。正本は `spec/**` |
+| `/schemas/` | identity の non-normative 索引 page |
 | `/schemas/<$id と同じ path>` | 公開 schema の exact な bytes |
 | `/sitemap.xml`、`/robots.txt`、`/404.html` | site の付随物 |
 
@@ -59,7 +95,7 @@ publisherが自分のsiteへdeployします。site独自のwell-known statusや�
 で、各 entry の `public` field がこの repository 内の path を、`id` の path が配信 URL を
 名指します。両者が一致することは `bun run check:site` が検査します。
 
-## operator の手順
+## 現在の operator 手順（preview と定常公開）
 
 以下は operator が自分の account で行う操作です。この repository は account、zone、
 credential を持ちません。
@@ -87,6 +123,13 @@ credential を持ちません。
    から landing page、sitemap、ledger にある current 33件と retired 15件の schema を
    byte 単位で読み戻し、撤去した catalog/status/release/decision route も不在であることを
    確認します。schema の sample 2件だけで成功にはしません。
+## 一度限りの historical runbook（initial cutover の記録）
+
+以下の手順4〜6は、Host API v1 の identity/domain を最初に切り替えるための一度限りの
+historical runbook です。現在の routine production deploy と混同しないでください。手順、
+receipt、旧 owner の識別子は cutover evidence として保持しますが、通常の deploy path で
+再利用するものではありません。
+
 4. **最初の production deployment を作る。** domain を動かす前に、clean な public
    `main` で次を順に実行します。これは `takoform-api-v1-cutover` が一度だけ所有する
    Host API v1 の identity/domain cutover です。`--review` は変更を作成していない reviewer または
@@ -165,6 +208,8 @@ credential を持ちません。
    この確認と operator-retained receipt の保存が終わったら、一回限りの
    `--initial-cutover`、31/17 partition、旧 Worker 識別子は通常の deploy path から削除します。
    全48 schema の ledger-driven readback と forward-repair 制約は残します。
+## 現在の定常 production 更新
+
 7. **以後の production 更新。** initial cutover flag は再利用しません。
 
    ```console

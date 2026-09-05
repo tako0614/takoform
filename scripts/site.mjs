@@ -79,18 +79,95 @@ export const GENERATED_INDEX_PAGES = Object.freeze([
   `${SITE_ROOT}/schemas/index.md`,
 ]);
 
+// Reader-first entry points are hand-authored by the documentation owner. The
+// route inventory is explicit so a new page cannot become publishable merely
+// by appearing under website/; every listed source is required by the site
+// check and build route allowlist.
+export const HAND_AUTHORED_ROUTE_SOURCES = Object.freeze([
+  `${SITE_ROOT}/start/index.md`,
+  `${SITE_ROOT}/guides/index.md`,
+  `${SITE_ROOT}/reference/index.md`,
+  `${SITE_ROOT}/glossary.md`,
+]);
+
 export const HAND_AUTHORED_PAGE_SOURCES = Object.freeze([
   `${SITE_ROOT}/index.md`,
   `${SITE_ROOT}/host-api/index.md`,
   `${SITE_ROOT}/model/index.md`,
   `${SITE_ROOT}/conformance/index.md`,
   `${SITE_ROOT}/site.md`,
+  ...HAND_AUTHORED_ROUTE_SOURCES,
 ]);
+
+const REQUIRED_HAND_AUTHORED_PAGE_SOURCES = HAND_AUTHORED_PAGE_SOURCES;
 
 export const HAND_AUTHORED_PUBLIC_FILES = Object.freeze([
   `${SITE_PUBLIC_ROOT}/_headers`,
   `${SITE_PUBLIC_ROOT}/robots.txt`,
+  `${SITE_PUBLIC_ROOT}/favicon.svg`,
+  `${SITE_PUBLIC_ROOT}/social-card.png`,
 ]);
+
+export function inspectSiteAssets(root, distRoot) {
+  const problems = [];
+  for (const path of HAND_AUTHORED_PUBLIC_FILES) {
+    let bytes;
+    try {
+      bytes = readBytes(root, path);
+      if (bytes.length === 0) problems.push(`${path} is empty`);
+    } catch {
+      problems.push(`${path} is missing`);
+      continue;
+    }
+    if (path.endsWith("favicon.svg")) {
+      const svg = bytes.toString("utf8");
+      if (!/<svg\b[^>]*xmlns="http:\/\/www\.w3\.org\/2000\/svg"/u.test(svg) ||
+          !svg.trimEnd().endsWith("</svg>") ||
+          /<(?:script|foreignObject)\b|\b(?:href|src)\s*=|@import|url\(/iu.test(svg)) {
+        problems.push(`${path} must be a self-contained SVG`);
+      }
+    }
+    if (path.endsWith("social-card.png")) {
+      if (bytes.length < 33 ||
+          !bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])) ||
+          bytes.readUInt32BE(8) !== 13 || bytes.toString("ascii", 12, 16) !== "IHDR" ||
+          bytes.readUInt32BE(16) !== 1200 || bytes.readUInt32BE(20) !== 630 ||
+          bytes[24] !== 8 || ![2, 6].includes(bytes[25])) {
+        problems.push(`${path} must be a 1200x630 8-bit RGB/RGBA PNG`);
+      }
+    }
+    if (distRoot !== undefined) {
+      const target = `${distRoot}/${path.slice(SITE_PUBLIC_ROOT.length + 1)}`;
+      try {
+        if (!readBytes(root, target).equals(bytes)) problems.push(`${target} differs from ${path}`);
+      } catch {
+        problems.push(`${target} is missing`);
+      }
+    }
+  }
+  return problems;
+}
+
+export function inspectDesignRecords(root) {
+  const problems = [];
+  for (const [path, fields] of [
+    [".hallmark/preflight.json", ["scannedAt", "framework", "fonts", "palette", "motion", "spacing"]],
+    [".hallmark/log.json", ["date", "macrostructure", "theme", "enrichment", "brief", "slopTest"]],
+  ]) {
+    try {
+      const value = readJSON(root, path);
+      const records = path.endsWith("/log.json") ? value : [value];
+      if (!Array.isArray(records) || records.length === 0 || records.some((record) =>
+        fields.some((field) => typeof record?.[field] !== "string" || record[field].trim() === "") ||
+        (path.endsWith("/log.json") && (!Array.isArray(record.viewports) ||
+          record.viewports.length === 0 || record.viewports.some((width) => !Number.isInteger(width) || width <= 0)))
+      )) problems.push(`${path} has invalid design-record fields`);
+    } catch {
+      problems.push(`${path} is missing or invalid JSON`);
+    }
+  }
+  return problems;
+}
 
 // Everything a generated tree owns end to end. A file that lives under one of
 // these and is not produced by a derivation is deleted by `--write` and
@@ -342,6 +419,7 @@ export function renderMirroredDocument(specPath, source, context) {
   return [
     "---",
     `# Generated from ${specPath} by scripts/site.mjs. Edit the specification, not this page.`,
+    `normative: ${FROZEN_HOST_API_SPEC_DOCUMENTS.includes(specPath)}`,
     `canonicalSource: ${specPath}`,
     `canonicalUrl: ${SOURCE_BROWSE}/${specPath}`,
     "---",
@@ -372,6 +450,12 @@ This non-normative index is derived from the append-only identity ledger. It
 can track future identities without adding them to the frozen Host API v1
 closure or redefining their contracts.
 
+The non-retired/active identities below are a mixed inventory of
+current-authoring and retained-readable profiles. Non-retired status only says
+that the identity has not been retired; it does not say that a profile is valid
+or preferred for new authoring. Read the owning source contract and its
+current-authoring guidance before selecting an identity.
+
 Takoform の normative schema は、\`$id\` が名指す path でそのまま配信されます。
 配信される bytes は [\`spec/schemas/\`](${SOURCE_TREE}/spec/schemas) の source と
 byte 単位で同一で、digest は append-only ledger
@@ -387,7 +471,12 @@ contract を満たすとは限りません。意味規則は
 
 ## Active identity（${active.length}）
 
-authoring と verification の双方に使える identity です。
+The active section is the non-retired half of that mixed inventory. Its entries
+may be current-authoring or retained-readable; the source contract decides
+which role applies.
+
+For the exact role assigned to each identity, use the [schema role table](/spec/schemas/)
+before selecting an entry for authoring or retained-readable verification.
 
 | 配信 path | \`$id\` | digest | source |
 | --- | --- | --- | --- |
@@ -440,8 +529,17 @@ function generatedTreeContents(root) {
   return found;
 }
 
+export function siteRouteForPageSource(source) {
+  const relative = source.slice(`${SITE_ROOT}/`.length);
+  if (relative === "index.md") return "/";
+  if (relative.endsWith("/index.md")) {
+    return `/${relative.slice(0, -"index.md".length)}`;
+  }
+  return `/${relative.slice(0, -".md".length)}`;
+}
+
 export function inspectSite(root) {
-  const problems = [];
+  const problems = [...inspectSiteAssets(root), ...inspectDesignRecords(root)];
   let files;
   try {
     files = buildSiteFiles(root);
@@ -468,7 +566,7 @@ export function inspectSite(root) {
   for (const path of GENERATED_INDEX_PAGES) {
     if (!files.has(path)) problems.push(`generated index page ${path} was not derived`);
   }
-  for (const path of HAND_AUTHORED_PAGE_SOURCES) {
+  for (const path of REQUIRED_HAND_AUTHORED_PAGE_SOURCES) {
     if (!existsSync(resolve(root, path))) problems.push(`allowed page source ${path} is missing`);
   }
   const publicDocuments = new Map();
@@ -514,13 +612,181 @@ export function writeSite(root) {
 // Built output
 // ---------------------------------------------------------------------------
 
+function canonicalPageRoute(pathname) {
+  if (pathname === "/" || pathname === "/index.html") return "/";
+  return pathname
+    .replace(/\/index\.html$/u, "")
+    .replace(/\.html$/u, "")
+    .replace(/\/$/u, "");
+}
+
+function attribute(openingTag, name) {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+  return openingTag.match(new RegExp(`\\s${escaped}="([^"]*)"`, "u"))?.[1];
+}
+
+function readableText(markup) {
+  return markup
+    .replace(/<[^>]+>/gu, " ")
+    .replace(/&(?:[a-z]+|#\d+|#x[\da-f]+);/giu, "x")
+    .replace(/\s+/gu, " ")
+    .trim();
+}
+
+function decodedFragment(hash) {
+  try {
+    return decodeURIComponent(hash.slice(1));
+  } catch {
+    return hash.slice(1);
+  }
+}
+
+/**
+ * Inspect the semantic HTML readers and assistive technology actually receive.
+ * This stays browser-free so it remains part of the portable build gate; pixel
+ * geometry is checked separately in the explicit browser lane.
+ */
+export function inspectRenderedSitePages(pages, servedPaths = new Set()) {
+  const problems = [];
+  const byRoute = new Map(
+    pages.map((page) => [canonicalPageRoute(page.route), page]),
+  );
+  const linksByRoute = new Map();
+
+  for (const page of pages) {
+    const route = canonicalPageRoute(page.route);
+    const links = new Set();
+    linksByRoute.set(route, links);
+    const titles = [...page.html.matchAll(/<title(?:\s[^>]*)?>([\s\S]*?)<\/title>/gu)];
+    if (titles.length !== 1 || readableText(titles[0]?.[1] ?? "") === "") {
+      problems.push(`${page.path} must render exactly one non-empty title`);
+    }
+    const head = page.html.match(/<head\b[^>]*>([\s\S]*?)<\/head>/u)?.[1] ?? "";
+    const metadata = [...head.matchAll(/<meta\b[^>]*>/gu)].map((match) => match[0]);
+    for (const [key, expected] of [
+      ["og:title", titles[0]?.[1]],
+      ["og:url", new URL(page.route, "https://takoform.com").href],
+      ["twitter:title", titles[0]?.[1]],
+      ["og:description", undefined],
+      ["twitter:description", undefined],
+    ]) {
+      const values = metadata.filter((tag) =>
+        attribute(tag, "property") === key || attribute(tag, "name") === key,
+      ).map((tag) => attribute(tag, "content"));
+      if (values.length !== 1 || !values[0]?.trim() ||
+          (expected !== undefined && values[0] !== expected)) {
+        problems.push(`${page.path} must render matching non-empty ${key}`);
+      }
+    }
+
+    const htmlTag = page.html.match(/<html\b[^>]*>/u)?.[0];
+    if (htmlTag === undefined) {
+      problems.push(`${page.path} does not render an html element`);
+    } else {
+      if (attribute(htmlTag, "lang") !== page.lang) {
+        problems.push(`${page.path} must render lang=${page.lang}`);
+      }
+      if (attribute(htmlTag, "data-document-authority") !== page.authority) {
+        problems.push(`${page.path} must render authority=${page.authority}`);
+      }
+    }
+
+    const ids = [...page.html.matchAll(/\sid="([^"]+)"/gu)].map((match) => match[1]);
+    const idSet = new Set(ids);
+    for (const id of idSet) {
+      if (ids.filter((candidate) => candidate === id).length > 1) {
+        problems.push(`${page.path} renders duplicate id=${id}`);
+      }
+    }
+    for (const match of page.html.matchAll(/\saria-(?:labelledby|describedby)="([^"]+)"/gu)) {
+      for (const id of match[1].split(/\s+/u).filter(Boolean)) {
+        if (!idSet.has(id)) problems.push(`${page.path} references missing aria target #${id}`);
+      }
+    }
+
+    if (page.mirror === true) {
+      const notice = page.html.match(/<aside\b[^>]*class="[^"]*\bmirror-notice\b[^"]*"[^>]*>/u)?.[0];
+      if (notice === undefined) {
+        problems.push(`${page.path} does not render its source authority notice`);
+      } else if (attribute(notice, "data-document-authority") !== page.authority) {
+        problems.push(`${page.path} source notice disagrees with ${page.authority}`);
+      }
+    }
+
+    for (const match of page.html.matchAll(/<a\b([^>]*)\bhref="([^"]+)"([^>]*)>([\s\S]*?)<\/a>/gu)) {
+      const opening = `<a${match[1]}href="${match[2]}"${match[3]}>`;
+      if (readableText(match[4]) === "" && (attribute(opening, "aria-label") ?? "").trim() === "") {
+        problems.push(`${page.path} renders a link without an accessible name`);
+      }
+
+      let target;
+      try {
+        target = new URL(match[2], `https://takoform.com${page.route}`);
+      } catch {
+        problems.push(`${page.path} renders invalid link ${match[2]}`);
+        continue;
+      }
+      if (target.origin !== "https://takoform.com") continue;
+      const targetRoute = canonicalPageRoute(target.pathname);
+      const targetPage = byRoute.get(targetRoute);
+      if (targetPage === undefined) {
+        if (!servedPaths.has(target.pathname)) {
+          problems.push(`${page.path} links to missing internal route ${target.pathname}`);
+        }
+        continue;
+      }
+      links.add(targetRoute);
+      if (target.hash !== "") {
+        const targetIds = new Set(
+          [...targetPage.html.matchAll(/\sid="([^"]+)"/gu)].map((id) => id[1]),
+        );
+        const fragment = decodedFragment(target.hash);
+        if (!targetIds.has(fragment)) {
+          problems.push(`${page.path} links to missing fragment ${target.pathname}#${fragment}`);
+        }
+      }
+    }
+  }
+
+  const reachable = new Set();
+  const pending = byRoute.has("/") ? ["/"] : [];
+  while (pending.length > 0) {
+    const route = pending.pop();
+    if (reachable.has(route)) continue;
+    reachable.add(route);
+    pending.push(...(linksByRoute.get(route) ?? []));
+  }
+  for (const route of byRoute.keys()) {
+    if (route !== "/404" && !reachable.has(route)) problems.push(`${route} is not reachable from the home page`);
+  }
+
+  const home = byRoute.get("/");
+  if (home !== undefined) {
+    if ([...home.html.matchAll(/<main\b[^>]*class="[^"]*\btf-home\b[^"]*"/gu)].length !== 1) {
+      problems.push(`${home.path} must render exactly one main.tf-home`);
+    }
+    if ([...home.html.matchAll(/<h1\b/gu)].length !== 1) {
+      problems.push(`${home.path} must render exactly one h1`);
+    }
+    const flow = home.html.match(/<ol\b[^>]*class="[^"]*\btf-contract-flow\b[^"]*"[^>]*>([\s\S]*?)<\/ol>/u)?.[1];
+    if (flow === undefined || [...flow.matchAll(/<li\b/gu)].length !== 5) {
+      problems.push(`${home.path} must render the five-stage contract flow`);
+    }
+    const roles = home.html.match(/<ol\b[^>]*class="[^"]*\btf-role-index\b[^"]*"[^>]*>([\s\S]*?)<\/ol>/u)?.[1];
+    if (roles === undefined || [...roles.matchAll(/<li\b/gu)].length !== 4) {
+      problems.push(`${home.path} must render the four reader roles`);
+    }
+  }
+  return problems;
+}
+
 /**
  * Prove the built tree serves exactly the public surfaces this repository is
  * the authority for. The build is a bundler: it is trusted to render pages and
  * not trusted to carry the bytes an external consumer resolves by $id.
  */
 export function inspectDist(root, distRoot = SITE_DIST) {
-  const problems = [];
+  const problems = inspectSiteAssets(root, distRoot);
   if (!existsSync(resolve(root, distRoot))) {
     return [`${distRoot} does not exist; run bun scripts/site.mjs --build`];
   }
@@ -558,22 +824,60 @@ export function inspectDist(root, distRoot = SITE_DIST) {
     problems.push(`${extra} is served under /schemas/ but names no ledger identity`);
   }
 
-  const expectedPages = new Set([`${distRoot}/404.html`, `${distRoot}/schemas/index.html`]);
+  const expectedPageMetadata = new Map([
+    [`${distRoot}/404.html`, {
+      route: "/404",
+      lang: "ja-JP",
+      authority: "non-normative",
+      mirror: false,
+    }],
+    [`${distRoot}/schemas/index.html`, {
+      route: "/schemas/",
+      lang: "ja-JP",
+      authority: "non-normative",
+      mirror: false,
+    }],
+  ]);
   for (const source of HAND_AUTHORED_PAGE_SOURCES) {
-    expectedPages.add(distPagePathForSource(source, distRoot));
+    expectedPageMetadata.set(distPagePathForSource(source, distRoot), {
+      route: siteRouteForPageSource(source),
+      lang: "ja-JP",
+      authority: "non-normative",
+      mirror: false,
+    });
   }
   for (const specPath of MIRRORED_SPEC_DOCUMENTS) {
     const route = siteRouteForSpecDocument(specPath);
     const page = route.endsWith("/") ? `${route}index.html` : `${route}.html`;
-    expectedPages.add(`${distRoot}${page}`);
+    expectedPageMetadata.set(`${distRoot}${page}`, {
+      route,
+      lang: "en",
+      authority: FROZEN_HOST_API_SPEC_DOCUMENTS.includes(specPath)
+        ? "normative"
+        : "non-normative",
+      mirror: true,
+    });
   }
   const actualPages = new Set(walk(root, distRoot).filter((path) => path.endsWith(".html")));
-  for (const page of expectedPages) {
+  for (const page of expectedPageMetadata.keys()) {
     if (!actualPages.delete(page)) problems.push(`${page} is missing`);
   }
   for (const page of actualPages) {
     problems.push(`${page} is built outside the API/common-model route allowlist`);
   }
+  const renderedPages = [];
+  for (const [path, metadata] of expectedPageMetadata) {
+    if (!existsSync(resolve(root, path))) continue;
+    renderedPages.push({
+      path,
+      html: readText(root, path),
+      ...metadata,
+    });
+  }
+  const servedPaths = new Set(
+    walk(root, distRoot).map((path) => `/${path.slice(`${distRoot}/`.length)}`),
+  );
+  problems.push(...inspectRenderedSitePages(renderedPages, servedPaths));
   return problems;
 }
 

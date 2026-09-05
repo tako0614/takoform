@@ -1,0 +1,14 @@
+{
+  "scannedAt": "2026-09-04",
+  "framework": "VitePress 1.6.4 on Vite 6.4.3",
+  "fonts": "VitePress bundled Inter before this redesign; no project font package",
+  "palette": "warm paper with one vermilion accent in website/.vitepress/theme/custom.css",
+  "motion": "motion-cut; no motion library",
+  "spacing": "no project-wide named spacing scale before this redesign",
+  "preserve": [
+    "warm paper",
+    "vermilion accent",
+    "VitePress documentation behavior",
+    "light and dark color schemes"
+  ]
+}

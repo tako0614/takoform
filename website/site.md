@@ -4,62 +4,58 @@ title: この site について
 
 # この site について
 
-`takoform.com` は、Takoform の Host API v1 と publisher 中立な共通モデルだけを配信します。
+このページは non-normative な案内です。
 
-## 誰が所有するか
+この site は、Takoform の Host API v1 と publisher 中立な common model を読むための
+入口です。site の案内文は contract そのものではありません。
 
-この site の source、build、deploy entrypoint は
-[`tako0614/takoform`](https://github.com/tako0614/takoform) にあります。同じ repository が
-[`v1.freeze.json`](https://github.com/tako0614/takoform/blob/main/spec/host-api/v1.freeze.json)
-に列挙された normative な Host API v1/common-model 契約、exact な公開 schema、
-conformance contract を所有します。`/spec/` 配下でも overview、navigation、schema
-index は明示的に non-normative で、この hand-authored page も presentation です。
+## この repository が扱う範囲
 
-realized な CDN、DNS、account / zone / route、credential、operator の状態は、source
-repository の authority ではありません。公開を行う operator が所有します。この site は
-どの hostname が実際に解決するかを主張しません。
+[`tako0614/takoform`](https://github.com/tako0614/takoform) が、この site の source、build、
+deploy entrypoint と、次の public surface を所有します。
 
-## 何を配信し、何を配信しないか
+- `forms.takoform.com/v1` の Host API contract と machine document
+- FormRef、Form Definition、Form Package、Snapshot、Interface、Binding、artifact、
+  standard service、trust の publisher-neutral contract
+- `$id` が名指す path で配信する公開 schema の exact bytes
+- conformance language と synthetic corpus の読み方
 
-配信するもの:
-
-- Host API v1 の wire 契約と machine document の digest
-- publisher 中立な共通モデルの normative 文面
-- `$id` が名指す path の [公開 schema](/schemas/) bytes
-- conformance の語彙と class、参照 harness の使い方
-
-配信しないもの:
-
-- Form definition と Form ごとの example
-- publisher の Form catalog や roster
-- Form 固有の conformance report
-- client adapter の resource page、およびその availability と status
-- Host support、Form activation、商用 offering の状態
-- realized な DNS / CDN / account / credential の状態
-
-Form ごとの人間向け page は、その package を公開する publisher が、自分の site へ
-deploy し、canonical な repository / tag / sourcePath へ link します。この site は
-それを複製せず、publisher の中央 roster も持ちません。
-
-Takoform の client adapter（Terraform / OpenTofu 向け）の入手可否や status は、
-Terraform Registry と
-[`tako0614/terraform-provider-takoform`](https://github.com/tako0614/terraform-provider-takoform)
-を見てください。この site はそれについて何も述べません。
-
-## schema の `$id` について
-
-公開 schema の `$id` は `https://forms.takoform.com/schemas/...` です。これは仕様上の
-論理 identity であり、この site は `$id` の path と同じ path で同じ bytes を配信します。
-その hostname を実際にこの site へ向けるかどうかは operator の判断です。
-
-identity の append-only な正本は
+Host API v1 の frozen closure は
+[`spec/host-api/v1.freeze.json`](https://github.com/tako0614/takoform/blob/main/spec/host-api/v1.freeze.json)
+が列挙します。schema identity と digest の append-only な記録は
 [`release/public-schema-identities.json`](https://github.com/tako0614/takoform/blob/main/release/public-schema-identities.json)
-です。占有された `$id` の bytes が変わることはありません。撤回は retired 記録へ移り、
-bytes と理由を保ったまま残り、別の contract に再利用されません。
+にあります。
 
-## 以前の site
+## この site が主張しないこと
 
-`takoform.com` は以前、別の repository から build された site が配信していました。その
-site は superseded です。API と共通モデルの page はこの repository が所有し、Form catalog
-page は publisher が所有します。運用手順は source repository の
-[`docs/site.md`](https://github.com/tako0614/takoform/blob/main/docs/site.md) にあります。
+この site は次を配信・選択・証明しません。
+
+- 個別 Form の definition、実運用の example、publisher catalog や roster
+- Host implementation、Host support、activation、backend、target、credential
+- client adapter の対応状況、商用 Offering、billing、quota、SLA
+- realized な DNS、CDN、account、zone、route、operator configuration
+
+それぞれの事実は、その事実を実際に所有・実行した publisher、Host、client、operator が
+自分の source と readback で示します。ここにある conformance report だけから、別の事実を
+推測しません。
+
+## identity と配信
+
+公開 schema の `$id` は論理的な identity です。この site は、その `$id` が示す path と
+同じ path で、ledger が固定した bytes を配信します。どの hostname を実際にこの site へ
+向けるか、どの account から配信するかは公開 operator の判断です。
+
+schema bytes の変更ではなく、presentation page の変更だけであっても、build と readback
+の結果を別の evidence として扱います。過去の site や別の publisher の page を、この site
+の current contract として再掲しません。
+
+## source を読む
+
+- [Reference](/reference/) — English / normative source と Japanese / non-normative guide の区別
+- [Start](/start/) — 実行できる synthetic verification と概念 transcript
+- [公開 schema](/schemas/) — `$id` と digest の index
+- [`docs/site.md`](https://github.com/tako0614/takoform/blob/main/docs/site.md) — source repository の
+  build / publish procedure
+
+この site の所有境界や operator の realized state が必要な場合は、上の source repository と
+operator の記録を一緒に確認してください。

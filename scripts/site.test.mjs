@@ -1,9 +1,14 @@
 import { describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 
 import {
   GENERATED_INDEX_PAGES,
   FROZEN_HOST_API_SPEC_DOCUMENTS,
+  HAND_AUTHORED_ROUTE_SOURCES,
   HAND_AUTHORED_PAGE_SOURCES,
+  HAND_AUTHORED_PUBLIC_FILES,
   MIRRORED_SPEC_DOCUMENTS,
   SITE_PUBLIC_ROOT,
   buildSiteReproducibly,
@@ -12,11 +17,15 @@ import {
   distPagePathForSource,
   inspectPublishedSourceAllowlist,
   inspectPublicDocumentAuthority,
+  inspectRenderedSitePages,
   inspectSite,
+  inspectSiteAssets,
+  inspectDesignRecords,
   renderMirroredDocument,
   rewriteLinkTarget,
   servedPathForIdentity,
   siteRouteForSpecDocument,
+  siteRouteForPageSource,
   sitePathForSpecDocument,
 } from "./site.mjs";
 
@@ -32,6 +41,50 @@ const context = {
 };
 
 describe("takoform.com site derivation", () => {
+  test("requires intact source and built site assets", () => {
+    const root = mkdtempSync(join(tmpdir(), "takoform-site-assets-"));
+    try {
+      expect(inspectSiteAssets(root)).toContain("website/public/favicon.svg is missing");
+      for (const path of HAND_AUTHORED_PUBLIC_FILES) {
+        mkdirSync(dirname(join(root, path)), { recursive: true });
+        writeFileSync(join(root, path), readFileSync(path));
+        const target = join(root, "dist", path.slice(SITE_PUBLIC_ROOT.length + 1));
+        mkdirSync(dirname(target), { recursive: true });
+        writeFileSync(target, readFileSync(path));
+      }
+      expect(inspectSiteAssets(root, "dist")).toEqual([]);
+      writeFileSync(join(root, "dist/favicon.svg"), "changed");
+      expect(inspectSiteAssets(root, "dist")).toContain("dist/favicon.svg differs from website/public/favicon.svg");
+      rmSync(join(root, "dist/social-card.png"));
+      expect(inspectSiteAssets(root, "dist")).toContain("dist/social-card.png is missing");
+      writeFileSync(join(root, "website/public/favicon.svg"), '<svg><script>alert(1)</script></svg>');
+      expect(inspectSiteAssets(root)).toContain("website/public/favicon.svg must be a self-contained SVG");
+      const png = Buffer.from(readFileSync("website/public/social-card.png"));
+      png.writeUInt32BE(100, 16);
+      writeFileSync(join(root, "website/public/social-card.png"), png);
+      expect(inspectSiteAssets(root)).toContain("website/public/social-card.png must be a 1200x630 8-bit RGB/RGBA PNG");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("keeps design records explicit without treating a review score as a product gate", () => {
+    const root = mkdtempSync(join(tmpdir(), "takoform-design-records-"));
+    try {
+      expect(inspectDesignRecords(root)).toHaveLength(2);
+      mkdirSync(join(root, ".hallmark"));
+      for (const name of ["preflight", "log"]) {
+        writeFileSync(join(root, `.hallmark/${name}.json`), readFileSync(`.hallmark/${name}.json`));
+      }
+      expect(inspectDesignRecords(root)).toEqual([]);
+      writeFileSync(join(root, ".hallmark/log.json"), "[]");
+      expect(inspectDesignRecords(root)).toContain(".hallmark/log.json has invalid design-record fields");
+      writeFileSync(join(root, ".hallmark/log.json"), "broken");
+      expect(inspectDesignRecords(root)).toContain(".hallmark/log.json is missing or invalid JSON");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
   test("refuses a publishable tree that changes across consecutive builds", () => {
     const observed = ["sha256:first", "sha256:second"];
     expect(() =>
@@ -74,6 +127,16 @@ describe("takoform.com site derivation", () => {
     }
   });
 
+  test("describes non-retired identities as mixed authoring/readable inventory", () => {
+    const index = buildSiteFiles(".").get("website/schemas/index.md")?.toString("utf8");
+    expect(index).toContain("current-authoring");
+    expect(index).toContain("retained-readable");
+    expect(index).toContain("does not say that a profile is valid");
+    expect(index).toContain("current-authoring guidance");
+    expect(index).toContain("[schema role table](/spec/schemas/)");
+    expect(index).not.toContain("authoring と verification の双方に使える identity です。");
+  });
+
   test("mirrors README.md as a directory index and keeps other names", () => {
     expect(sitePathForSpecDocument("spec/README.md")).toBe("website/spec/index.md");
     expect(siteRouteForSpecDocument("spec/README.md")).toBe("/spec/");
@@ -92,6 +155,65 @@ describe("takoform.com site derivation", () => {
     expect(distPagePathForSource("website/site.md")).toBe(
       "website/.vitepress/dist/site.html",
     );
+    expect(siteRouteForPageSource("website/index.md")).toBe("/");
+    expect(siteRouteForPageSource("website/start/index.md")).toBe("/start/");
+    expect(siteRouteForPageSource("website/glossary.md")).toBe("/glossary");
+  });
+
+  test("checks rendered navigation, fragments, authority, and home semantics", () => {
+    const home = `<!doctype html>
+<html lang="ja-JP" data-document-authority="non-normative">
+<head><title>Takoform</title>
+<meta property="og:title" content="Takoform"><meta property="og:url" content="https://takoform.com/">
+<meta property="og:description" content="Contract"><meta name="twitter:title" content="Takoform"><meta name="twitter:description" content="Contract">
+</head><body>
+<a href="/guide">Guide</a>
+<main class="tf-home">
+  <h1>Contract</h1>
+  <section aria-labelledby="map-title"><h2 id="map-title">Map</h2>
+    <figure aria-describedby="map-caption">
+      <ol class="tf-contract-flow"><li>1</li><li>2</li><li>3</li><li>4</li><li>5</li></ol>
+      <figcaption id="map-caption">Caption</figcaption>
+    </figure>
+  </section>
+  <ol class="tf-role-index"><li>1</li><li>2</li><li>3</li><li>4</li></ol>
+</main></body></html>`;
+    const guide = `<!doctype html>
+<html lang="ja-JP" data-document-authority="non-normative">
+<head><title>Guide</title>
+<meta property="og:title" content="Guide"><meta property="og:url" content="https://takoform.com/guide">
+<meta property="og:description" content="Guide"><meta name="twitter:title" content="Guide"><meta name="twitter:description" content="Guide">
+</head><body><a href="/">Home</a><h1 id="guide">Guide</h1></body></html>`;
+    const pages = [
+      {
+        path: "dist/index.html",
+        route: "/",
+        html: home,
+        lang: "ja-JP",
+        authority: "non-normative",
+        mirror: false,
+      },
+      {
+        path: "dist/guide.html",
+        route: "/guide",
+        html: guide,
+        lang: "ja-JP",
+        authority: "non-normative",
+        mirror: false,
+      },
+    ];
+    expect(inspectRenderedSitePages(pages)).toEqual([]);
+    pages[0] = { ...pages[0], html: home.replace('href="/guide"', 'href="/guide#missing"') };
+    expect(inspectRenderedSitePages(pages)).toContain(
+      "dist/index.html links to missing fragment /guide#missing",
+    );
+    pages[1] = { ...pages[1], html: guide.replace('content="https://takoform.com/guide"', 'content="https://takoform.com/"') };
+    expect(inspectRenderedSitePages(pages)).toContain("dist/guide.html must render matching non-empty og:url");
+    pages[1] = { ...pages[1], html: guide.replace('property="og:title" content="Guide"', 'property="og:title" content="Takoform"') };
+    expect(inspectRenderedSitePages(pages)).toContain("dist/guide.html must render matching non-empty og:title");
+    pages[0] = { ...pages[0], html: home.replace('<a href="/guide">Guide</a>', '') };
+    pages[1] = { ...pages[1], html: guide.replace('<a href="/">Home</a>', '<a href="/guide#guide">Self</a>') };
+    expect(inspectRenderedSitePages(pages)).toContain("/guide is not reachable from the home page");
   });
 
   test("does not mirror the retired lanes or the decision bodies", () => {
@@ -154,6 +276,18 @@ describe("takoform.com site derivation", () => {
     )).toEqual([
       "website/guide.md defines normative behavior outside the frozen closure",
     ]);
+  });
+
+  test("marks frozen mirrors normative and mutable indexes non-normative", () => {
+    const normative = renderMirroredDocument(
+      "spec/host-api/v1.md",
+      "# Host API v1\n",
+      context,
+    );
+    expect(normative).toContain("normative: true");
+
+    const index = renderMirroredDocument("spec/README.md", "# Index\n", context);
+    expect(index).toContain("normative: false");
   });
 
   describe("link rewriting", () => {
@@ -241,6 +375,95 @@ describe("takoform.com site derivation", () => {
       "website/forms/example.md would publish a page outside the API/common-model allowlist",
       "website/public/site-status.json would publish a static file outside the schema/site-asset allowlist",
     ]);
+  });
+
+  test("allows the reader-first hand-authored route and asset inventory", () => {
+    expect(HAND_AUTHORED_PAGE_SOURCES).toEqual(
+      expect.arrayContaining([
+        "website/start/index.md",
+        "website/guides/index.md",
+        "website/reference/index.md",
+        "website/glossary.md",
+      ]),
+    );
+    expect(HAND_AUTHORED_ROUTE_SOURCES).toEqual([
+      "website/start/index.md",
+      "website/guides/index.md",
+      "website/reference/index.md",
+      "website/glossary.md",
+    ]);
+    expect(HAND_AUTHORED_PUBLIC_FILES).toEqual(
+      expect.arrayContaining([
+        "website/public/favicon.svg",
+        "website/public/social-card.png",
+      ]),
+    );
+    expect(
+      inspectPublishedSourceAllowlist(
+        [
+          "website/start/index.md",
+          "website/guides/index.md",
+          "website/reference/index.md",
+          "website/glossary.md",
+          "website/public/favicon.svg",
+          "website/public/social-card.png",
+        ],
+        new Set(),
+      ),
+    ).toEqual([]);
+  });
+
+  test("keeps the local optimizer target separate from the release build target", async () => {
+    const config = (await import("../website/.vitepress/config.mts")).default;
+    expect(config.vite?.optimizeDeps?.esbuildOptions?.target).toBe("esnext");
+    expect(config.vite?.build?.target).toBe("esnext");
+    expect(config.markdown?.theme).toEqual({
+      light: "github-light-high-contrast",
+      dark: "github-dark-high-contrast",
+    });
+    expect(config.themeConfig?.search?.provider).toBe("local");
+    expect(config.head).toContainEqual([
+      "meta",
+      { property: "og:image", content: "https://takoform.com/social-card.png" },
+    ]);
+    for (const [relativePath, route] of [["index.md", "/"], ["start/index.md", "/start/"], ["spec/host-api/v1.md", "/spec/host-api/v1"], ["glossary.md", "/glossary"]]) {
+      const head = config.transformHead({ pageData: { relativePath }, title: "Page | Takoform", description: "Page description" });
+      expect(head).toContainEqual(["meta", { property: "og:url", content: `https://takoform.com${route}` }]);
+      expect(head).toContainEqual(["meta", { property: "og:title", content: "Page | Takoform" }]);
+    }
+    expect(config.themeConfig?.nav?.slice(0, 3)).toEqual([
+      { text: "Start", link: "/start/" },
+      { text: "Guides", link: "/guides/" },
+      { text: "Reference", link: "/reference/" },
+    ]);
+    const links = [];
+    const collectLinks = (value) => {
+      if (Array.isArray(value)) {
+        for (const item of value) collectLinks(item);
+      } else if (value && typeof value === "object") {
+        if (typeof value.link === "string") links.push(value.link);
+        for (const child of Object.values(value)) collectLinks(child);
+      }
+    };
+    collectLinks(config.themeConfig?.nav);
+    collectLinks(config.themeConfig?.sidebar);
+    expect(links).toEqual(
+      expect.arrayContaining(["/start/", "/guides/", "/reference/", "/glossary"]),
+    );
+    const frozen = config.transformHtml?.(
+      '<html lang="ja-JP"><head></head></html>',
+      "spec/host-api/v1.md",
+      { pageData: { relativePath: "spec/host-api/v1.md", frontmatter: { normative: true } } },
+    );
+    expect(frozen).toContain('lang="en"');
+    expect(frozen).toContain('data-document-authority="normative"');
+    const guide = config.transformHtml?.(
+      '<html lang="ja-JP"><head></head></html>',
+      "start/index.md",
+      { pageData: { relativePath: "start/index.md", frontmatter: {} } },
+    );
+    expect(guide).toContain('lang="ja-JP"');
+    expect(guide).toContain('data-document-authority="non-normative"');
   });
 
   test("refuses a schema served at a path or origin other than its $id", () => {

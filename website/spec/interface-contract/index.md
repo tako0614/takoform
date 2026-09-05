@@ -1,5 +1,6 @@
 ---
 # Generated from spec/interface-contract/README.md by scripts/site.mjs. Edit the specification, not this page.
+normative: true
 canonicalSource: spec/interface-contract/README.md
 canonicalUrl: https://github.com/tako0614/takoform/blob/main/spec/interface-contract/README.md
 ---

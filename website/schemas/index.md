@@ -9,6 +9,12 @@ This non-normative index is derived from the append-only identity ledger. It
 can track future identities without adding them to the frozen Host API v1
 closure or redefining their contracts.
 
+The non-retired/active identities below are a mixed inventory of
+current-authoring and retained-readable profiles. Non-retired status only says
+that the identity has not been retired; it does not say that a profile is valid
+or preferred for new authoring. Read the owning source contract and its
+current-authoring guidance before selecting an identity.
+
 Takoform の normative schema は、`$id` が名指す path でそのまま配信されます。
 配信される bytes は [`spec/schemas/`](https://github.com/tako0614/takoform/tree/main/spec/schemas) の source と
 byte 単位で同一で、digest は append-only ledger
@@ -24,7 +30,12 @@ contract を満たすとは限りません。意味規則は
 
 ## Active identity（33）
 
-authoring と verification の双方に使える identity です。
+The active section is the non-retired half of that mixed inventory. Its entries
+may be current-authoring or retained-readable; the source contract decides
+which role applies.
+
+For the exact role assigned to each identity, use the [schema role table](/spec/schemas/)
+before selecting an entry for authoring or retained-readable verification.
 
 | 配信 path | `$id` | digest | source |
 | --- | --- | --- | --- |
