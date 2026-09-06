@@ -1,73 +1,61 @@
 ---
-title: Reference
+title: 仕様一覧
 ---
 
-# Reference
+# 仕様一覧
 
-このページは non-normative な索引です。
+実装の基準となる仕様と、理解を助けるガイドをまとめています。
+このページ自体は索引であり、新しい要件を定めるものではありません。
 
-ここは、英語で書かれた contract source と、日本語で書かれた案内を見分けるための
-reference です。英語だから自動的に normative になるわけでも、日本語だから無効に
-なるわけでもありません。下の `authority` 列と、Host API v1 の freeze manifest を
-基準にしてください。
+## 仕様
 
-## English source と authority
+以下は英語で記述された、変更内容が固定されている仕様です。
+各ページの冒頭から、リポジトリ内の原文を確認できます。
 
-| route | language | authority |
-| --- | --- | --- |
-| [`/spec/host-api/v1`](/spec/host-api/v1) | English | normative な Host API v1 wire prose。bytes は freeze 対象 |
-| [`/spec/conformance`](/spec/conformance) | English | normative な conformance language。freeze 対象 |
-| [`/spec/versioning`](/spec/versioning) | English | normative な version / identity rule。freeze 対象 |
-| [`/spec/form-definition/`](/spec/form-definition/) | English | normative な Form Definition contract。freeze 対象 |
-| [`/spec/form-package/`](/spec/form-package/) | English | normative な Form Package contract。freeze 対象 |
-| [`/spec/core/`](/spec/core/) | English | normative な Snapshot contract。freeze 対象 |
-| [`/spec/interface-contract/`](/spec/interface-contract/) | English | normative な Interface contract。freeze 対象 |
-| [`/spec/binding-contract/`](/spec/binding-contract/) | English | normative な Binding contract。freeze 対象 |
-| [`/spec/artifact-transport/`](/spec/artifact-transport/) | English | normative な artifact transport contract。freeze 対象 |
-| [`/spec/standard-services/`](/spec/standard-services/) | English | normative な standard-service contract。freeze 対象 |
-| [`/spec/trust/`](/spec/trust/) | English | normative な trust / revocation contract。freeze 対象 |
-| [`/spec/form-families`](/spec/form-families) | English | normative な versionless family-group rule。freeze 対象 |
-| [`/spec/portability-boundary`](/spec/portability-boundary) | English | normative な portable boundary。freeze 対象 |
-| [`/spec/host-api/`](/spec/host-api/) | English | non-normative な navigation |
-| [`/spec/README`](/spec/) | English | non-normative な contract map |
-| [`/spec/schemas/`](/spec/schemas/) | English | non-normative な schema navigation。bytes の authority ではない |
+| 文書 | 内容 |
+| --- | --- |
+| [Host API v1](/spec/host-api/v1) | HTTP APIのエンドポイントと要求・応答 |
+| [Conformance](/spec/conformance) | 要件の読み方と適合性の分類 |
+| [Versioning](/spec/versioning) | バージョン、識別子、互換性 |
+| [Form Definition](/spec/form-definition/) | Formの設定項目と振る舞いの定義 |
+| [Form Package](/spec/form-package/) | 定義の配布形式と検証 |
+| [Snapshot](/spec/core/) | 検証済みパッケージと参照関係のまとめ方 |
+| [Interface](/spec/interface-contract/) | 操作、入出力、エラーの定義 |
+| [Binding](/spec/binding-contract/) | リソース間の接続に必要な能力と役割 |
+| [Artifact transport](/spec/artifact-transport/) | ファイル等のデータの識別と転送 |
+| [Standard Services](/spec/standard-services/) | 外部プロトコルへの参照 |
+| [Trust and revocation](/spec/trust/) | 署名、信頼ポリシー、失効情報 |
+| [Form families](/spec/form-families) | 公開元が管理する名前空間 |
+| [Portability boundary](/spec/portability-boundary) | Formに含める内容と運用環境で決める内容 |
 
-`spec/host-api/v1.freeze.json` が列挙する normative prose、machine root、recursive
-schema closure だけが、現在の Host API v1/common-model の frozen closure です。
-mirror page の先頭にも canonical source が表示されます。mirror は link address を
-site 用に移した copy で、source repository の bytes が読み取りの基準です。
+固定対象のファイルとダイジェストは
+[`v1.freeze.json`](https://github.com/tako0614/takoform/blob/main/spec/host-api/v1.freeze.json)
+に列挙されています。サイト上の仕様は原文のリンク先だけを置き換えて掲載しています。
+要件を確認する際の正本は、リポジトリ内のファイルです。
 
-## Machine contract
+[仕様の概要](/spec/)、[Host APIの索引](/spec/host-api/)、
+[スキーマの索引](/spec/schemas/) は案内用のページで、固定された仕様本文ではありません。
 
-[公開 schema](/schemas/) は human page ではなく、各 schema の `$id` が示す path で
-exact な bytes を読むための入口です。schema が structural minimum を検査しても、
-Definition、Package、Snapshot、Host の semantic contract 全体を単独では保証しません。
-必要な意味規則は、上の frozen source と [conformance](/conformance/) を一緒に読んで
-ください。
+## JSON Schemaと検証データ
 
-操作 table と report を直接確認する場合は、repository の source を参照します。
+[スキーマ一覧](/schemas/) から、各スキーマの `$id` に対応するJSONファイルを取得できます。
+JSON Schemaが検証するデータ構造に加え、仕様本文にある意味上の制約も満たす必要があります。
 
 - [`operations-v1.json`](https://github.com/tako0614/takoform/blob/main/spec/host-api/operations-v1.json)
-  — route、fence、status、error の machine table
-- [`v1.freeze.json`](https://github.com/tako0614/takoform/blob/main/spec/host-api/v1.freeze.json)
-  — frozen closure の path と digest
+  — APIの操作、同時更新の制御、ステータス、エラーの一覧。
 - [`generic.json`](https://github.com/tako0614/takoform/blob/main/conformance/takoform-v1/generic.json)
-  — package / contract / Snapshot の synthetic corpus
+  — パッケージやSnapshotを検証するためのテストデータ。
 
-## Japanese guide の位置づけ
+## 日本語ガイド
 
-次の pages は reader のための hand-authored guide です。いずれも contract を拡張せず、
-route と読み方だけを説明します。
+ガイドは仕様の解説であり、仕様に要件を追加するものではありません。
 
-| route | 役割 |
+| 文書 | 内容 |
 | --- | --- |
-| [`/start/`](/start/) | 実行できる synthetic journey と概念 transcript |
-| [`/guides/`](/guides/) | audience 別の読み順 |
-| [`/host-api/`](/host-api/) | Host API v1 の短い読み方 |
-| [`/model/`](/model/) | common model の短い読み方 |
-| [`/conformance/`](/conformance/) | conformance claim の読み方 |
-| [`/glossary`](/glossary) | canonical English token と日本語説明 |
-| [`/site`](/site) | site の scope と ownership |
-
-これらの guide や site の presentation は、Host の稼働、publisher の公開、
-commercial Offering、client の対応状況を証明しません。
+| [はじめる](/start/) | 手元で実行する検証と、APIの要求・応答例 |
+| [実装ガイド](/guides/) | 作りたいものに応じた関連仕様 |
+| [Host APIの概要](/host-api/) | 接続先の取得とAPIの構成 |
+| [共通モデル](/model/) | 主なデータ型の関係 |
+| [適合性の検証](/conformance/) | 検証結果の読み方 |
+| [用語集](/glossary) | 仕様で使う用語の説明 |
+| [このサイトについて](/site) | 掲載内容と公開方法 |

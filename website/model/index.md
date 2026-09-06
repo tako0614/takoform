@@ -4,70 +4,64 @@ title: 共通モデル
 
 # 共通モデル
 
-このページは non-normative な案内です。Takoform の common model は publisher 中立で、
-誰が Form を書いても同じ identity 文法、package 形式、compile 規則、trust 入力を通ります。
-意味の正本は [API と共通概念](/spec/) からたどれる English contract document です。
+Takoformでは、リソースの設定や振る舞いをFormとして定義します。定義を配布する単位が
+Form Package、検証済みのパッケージと参照関係をまとめたものがSnapshotです。
 
-## identity の文法
+公開元によって形式や検証手順が変わることはありません。このページは概要を説明します。
+厳密な要件は [仕様一覧](/reference/) から確認してください。
 
-| 語 | 何を指すか |
+## 定義を識別する {#identity-の文法}
+
+| 項目 | 内容 |
 | --- | --- |
-| Form Family group | versionless な reverse-DNS namespace。path の一つの segment として運ばれ、`/` を含めない |
-| FormRef | `apiVersion` / `kind` / `definitionVersion` / `schemaDigest` の四要素 |
-| `definitionVersion` | その Form の portable な desired-state contract の SemVer |
-| `schemaDigest` | immutable な Definition の RFC 8785 canonical digest |
-| package digest | 配布 bytes の content digest。FormRef の equality には参加しない audit evidence |
+| Form Familyの名前空間 | 公開元が逆DNS形式で管理する名前。バージョンや `/` を含めない |
+| FormRef | `apiVersion`、`kind`、`definitionVersion`、`schemaDigest` の4項目 |
+| `definitionVersion` | Formの設定と振る舞いの互換性を表すバージョン |
+| `schemaDigest` | RFC 8785に従って正規化したForm Definitionのダイジェスト |
+| `packageDigest` | パッケージ索引のダイジェスト。FormRefには含まれない |
 
-group は namespace であって version ではありません。group を変えると digest で束縛された
-Definition が変わり、別の Form identity になります。
+名前空間を変更すると定義とダイジェストも変わり、別のFormになります。
 
-## data の層
+## 主なデータ型 {#data-の層}
 
-- [Form Definition](/spec/form-definition/) — 四要素の FormRef と portable な desired /
-  observed / output の形。
-- [Form Package](/spec/form-package/) — 一つの exact な Form のための、閉じた data-only
-  package。
-- [Immutable Snapshot](/spec/core/) — 検証済みで digest 固定された contract を、順序に
-  依存しない immutable graph へ deterministic に compile したもの。失敗時に部分的な
-  Snapshot を返しません。
-- [Interface contract](/spec/interface-contract/) と [Binding contract](/spec/binding-contract/)
-  — exact digest に束縛された data contract。名前や「互換に見える」ことから binding を
-  推測しません。
-- [Artifact transport](/spec/artifact-transport/) — content-addressed な manifest と blob。
-  digest は bytes を指し、権限を指しません。
-- [Standard services](/spec/standard-services/) — sealed slot と opaque な reverse-DNS
-  protocol identifier。中央 enum はありません。
-- [Trust と revocation](/spec/trust/) — caller が渡す provenance と offline verification の入力。
+- [Form Definition](/spec/form-definition/)：識別情報と、設定・状態・出力の形式を記述します。
+- [Form Package](/spec/form-package/)：一つのForm定義と収録ファイルをまとめます。実行コードは含みません。
+- [Snapshot](/spec/core/)：検証済みのデータと参照関係を、入力順に依存せず構築します。
+  構築後は変更できません。検証に失敗した場合、不完全なSnapshotは返しません。
+- [Interface](/spec/interface-contract/)・[Binding](/spec/binding-contract/)：操作やリソース間の
+  接続に必要な能力を定めます。名前から推測せず、ダイジェストで特定した定義を参照します。
+- [Artifact](/spec/artifact-transport/)：内容のダイジェストで識別するマニフェストとバイナリデータです。
+  ダイジェスト自体はアクセス権限や認証情報ではありません。
+- [Standard Services](/spec/standard-services/)：外部プロトコルを、定められた項目から参照します。
+- [署名と失効情報](/spec/trust/)：呼び出し側が指定する信頼ポリシーに従って、配布物の来歴を検証します。
 
-## named stream は四つ、domain axis は二つ
+## バージョンの関係 {#named-stream-は四つ、domain-axis-は二つ}
 
-Takoform が扱う version の名前付き stream は四つです。そのうち、portable な意味の
-互換性を表す domain axis は Host API lane と Form definition の二つだけです。
+APIとFormには、それぞれ互換性を表すバージョンがあります。CoreとProviderの
+リリース番号は、それらとは別に管理します。
 
-| named stream | identifier | 区分 |
-| --- | --- | --- |
-| Host API lane | `forms.takoform.com/v1` | domain axis: Host discovery / wire compatibility |
-| Form definition | 一つの FormRef の `definitionVersion` | domain axis: その Form の desired-state compatibility |
-| Core module | `v1.1.0` | software artifact: SDK、CLI、verifier、compiler、client |
-| Provider | 独立した SemVer | software artifact: Terraform / OpenTofu client |
+| 対象 | バージョンが示すもの |
+| --- | --- |
+| Host API | APIの互換性。現在は `forms.takoform.com/v1` |
+| Form定義 | 各Formの設定と振る舞いの互換性。`definitionVersion` で指定 |
+| Core | GoライブラリやCLIのリリース。現在は `v1.1.0` |
+| Provider | Terraform / OpenTofu向け実装のリリース |
 
-Core や Provider の release は Host lane や Form identity を動かしません。package の
-`$id`、schema の `$id`、Interface / Binding ref、trust record、client release identity は、
-それぞれ自分の bytes または reader を識別します。これらを三つ目以降の domain version
-axis として数えません。Host API に minor lane はありません。
+CoreやProviderを更新しても、APIやFormの識別子が自動的に変わることはありません。
+スキーマやパッケージの `$id`、InterfaceやBindingの参照、署名等の記録も、APIやFormとは
+別のバージョン軸を追加するものではありません。Host APIにマイナーバージョンのURLはありません。
 
-## publisher の平等
+## 公開元と利用先 {#publisher-の平等}
 
-すべての publisher が同じ FormRef、package 検証、canonical digest、trust、revocation、
-Snapshot、installation、Host support、activation の経路を通ります。provenance と policy を
-選ぶのは operator で、Core に privileged publisher allowlist や `official` bit はありません。
+Coreには特定の公開元を優先するリストや `official` フラグはありません。
+どの公開元を信頼するかは、利用者や運用者がポリシーとして指定します。
 
-検証、installation、support、activation、commercial Offering は、それぞれ独立した事実です。
-一つが真でも、ほかを導くことはできません。
+パッケージを検証できること、Hostにインストールされていること、対応・有効化されていること、
+商用サービスとして提供されていることは別です。利用するHostで必要な条件を確認してください。
 
 ## 次に読む
 
-- [Host API v1 とは](/host-api/) — wire identity と lifecycle。
-- [Start](/start/) — package から Snapshot までの synthetic journey。
-- [Versioning and compatibility](/spec/versioning) — frozen source の詳しい規則。
-- [Glossary](/glossary) — canonical English token の日本語説明。
+- [はじめる](/start/) — パッケージを検証してSnapshotを作成する。
+- [Host APIの概要](/host-api/) — リソースを操作するAPI。
+- [バージョンと互換性](/spec/versioning) — 詳しい規則。
+- [用語集](/glossary) — 用語の説明。

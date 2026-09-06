@@ -1,42 +1,40 @@
 ---
-title: Glossary
+title: 用語集
 ---
 
-# Glossary
+# 用語集
 
-このページは non-normative な用語案内です。canonical English token と、この site での日本語の
-説明をそろえるための表です。詳しい意味や検証条件は [Reference](/reference/) から
-英語の source をたどってください。
+仕様で使う用語を日本語で説明します。厳密な定義や検証条件は
+[仕様一覧](/reference/) から確認してください。
 
-| Canonical token | 日本語での説明 |
+| 用語 | 説明 |
 | --- | --- |
-| `Form` | 一つの portable な service shape を表す desired-state contract。 |
-| `Form Definition` | `Form` の identity、desired / observed / output schema、lifecycle capability、relation などを記述する data-only 定義。 |
-| `FormRef` | `apiVersion`、`kind`、`definitionVersion`、`schemaDigest` の4要素で一つの Definition を指す exact な参照。 |
-| `Form Family` | publisher が管理する versionless な reverse-DNS group。namespace であり、version や catalog ではない。 |
-| `Form Package` | 一つの exact な FormRef と、Definition、列挙された data-only payload を閉じ込めた package。 |
-| `Core` | Form Package の検証、Snapshot compile、Host API client、trust 検証、generic conformance を提供する Go module。現在の artifact identity は `v1.1.0`。 |
-| `Snapshot` | 検証済みの package、Interface、Binding を exact digest で束ね、入力順に依存せず compile した immutable graph。 |
-| `Host API` | client と Host の discovery、lifecycle、Operation、fence、error を運ぶ wire contract。現在の lane は `forms.takoform.com/v1`。 |
-| `Host` | `Host API` を受け、Form を install して resource lifecycle を実装する側。特定の Host が動いていることは Core の report からは分からない。 |
-| `Operation` | 時間のかかる mutation の受付と terminal result を表す record。 |
-| `Interface` | resource が公開する operation、input / output、error、consistency などを固定する exact contract。 |
-| `Binding` | source と target の間に必要な typed capability と role を digest で固定する contract。 |
-| `Artifact` | manifest と blob の content-addressed な data。digest は bytes を指し、権限や credential を与えない。 |
-| `Standard Service` | 外部 protocol を sealed slot として要求する参照。protocol の意味と実体化は Host integration 側に残る。 |
-| `publisher` | Form や package の source、provenance、release bytes を提供する主体。Core に privileged publisher はない。 |
-| `client adapter` | Snapshot と Host API を一つの client の schema、state、import、codec へ写像する実装。 |
-| `Conformance` | report が名指した artifact または実装について、決められた性質を確認した証拠。別の能力や公開状態までは含まない。 |
-| `trust / revocation` | caller が渡す publisher policy、署名、provenance、revocation の入力と、その offline 検証。 |
-| `desired` | 利用者が指定する portable な希望状態。 |
-| `observed` | Host が観測して返す状態。desired を別の identity に読み替えるものではない。 |
-| `output` | contract が宣言する typed な結果。Host の秘密や内部設定を意味しない。 |
-| `schemaDigest` | canonical な Form Definition bytes の SHA-256 digest。FormRef の一部。 |
-| `packageDigest` | canonical な package index bytes の SHA-256 digest。配布 bytes の証拠であり、FormRef の identity ではない。 |
-| `uid` | Host が一つの resource incarnation に発行する immutable な識別子。delete と recreate で変わる。 |
-| `generation` | portable desired state の変更で進む version fence。 |
-| `revision` | status や output を含む representation の変更で進む revision fence。 |
+| `Form` | サービスやリソースの設定と振る舞いを、実装から独立して定めたもの。 |
+| `Form Definition` | Formの識別情報、設定・状態・出力のスキーマ、対応する操作、他のリソースとの関係を記述したデータ。 |
+| `FormRef` | `apiVersion`、`kind`、`definitionVersion`、`schemaDigest` の4項目で、一つの定義を特定する参照。 |
+| `Form Family` | 公開元が逆DNS形式で管理する名前空間。名前にバージョンを含めない。 |
+| `Form Package` | 一つのFormRef、その定義、収録ファイルをまとめた配布単位。実行コードは含まない。 |
+| `Core` | パッケージの検証、Snapshotの構築、Host APIクライアント、署名等の検証を提供するGoライブラリ。 |
+| `Snapshot` | 検証済みのパッケージ、Interface、Bindingと参照関係をまとめた変更不可のデータ。入力順によらず同じ結果になる。 |
+| `Host API` | 接続先の取得、リソースの管理、非同期処理、同時更新の制御、エラーの形式を定めたHTTP API。APIバージョンは `forms.takoform.com/v1`。 |
+| `Host` | Host APIを提供し、対応するFormのリソースを作成・管理する実装。 |
+| `Operation` | 時間のかかる処理の受付状態と最終結果を表す記録。 |
+| `Interface` | リソースが提供する操作、入出力、エラー、一貫性などを定めたもの。ダイジェストで特定する。 |
+| `Binding` | 接続元と接続先に必要な能力と役割を定めたもの。ダイジェストで特定する。 |
+| `Artifact` | 内容のダイジェストで識別するマニフェストとバイナリデータ。ダイジェスト自体は認証情報ではない。 |
+| `Standard Service` | 外部プロトコルを、定義済みの参照項目として指定する仕組み。実際の提供方法はHostが実装する。 |
+| `publisher` | Formやパッケージのソース、来歴、配布物を公開する主体。 |
+| `client adapter` | SnapshotとHost APIを、クライアント固有のスキーマや状態管理に対応させる実装。 |
+| `Conformance` | 対象のデータや実装が、指定された仕様の要件を満たすか検証すること。 |
+| `trust / revocation` | 呼び出し側が指定した信頼ポリシーに従い、署名、来歴、失効情報をオフラインで検証する仕組み。 |
+| `desired` | 利用者が指定する、リソースに求める状態。 |
+| `observed` | Hostが観測して返す現在の状態。 |
+| `output` | Formが定義した型に従って返す結果。Hostの秘密情報や内部設定ではない。 |
+| `schemaDigest` | 規定の方法で正規化したForm DefinitionのSHA-256ダイジェスト。FormRefの一部。 |
+| `packageDigest` | 規定の方法で正規化したパッケージ索引のSHA-256ダイジェスト。FormRefには含まれない。 |
+| `uid` | Hostがリソースに発行する変更不可の識別子。同じ名前でも削除して作り直すと変わる。 |
+| `generation` | desiredの変更に伴って進む番号。同時更新の制御に使う。 |
+| `revision` | 状態や出力を含む応答データの変更に伴って進む番号。同時更新の制御に使う。 |
 
-FormRef は `official` bit を持たず、publisher を選ぶ中央 catalog も common model の
-一部ではありません。検証、installation、Host support、activation、commercial Offering
-は別の事実として扱います。
+パッケージの検証、公開、Hostへのインストール、対応、有効化、商用提供はそれぞれ別です。
+一つの検証結果から、ほかの状態まで確認できるわけではありません。

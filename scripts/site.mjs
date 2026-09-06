@@ -762,19 +762,11 @@ export function inspectRenderedSitePages(pages, servedPaths = new Set()) {
 
   const home = byRoute.get("/");
   if (home !== undefined) {
-    if ([...home.html.matchAll(/<main\b[^>]*class="[^"]*\btf-home\b[^"]*"/gu)].length !== 1) {
-      problems.push(`${home.path} must render exactly one main.tf-home`);
+    if ([...home.html.matchAll(/<main\b/gu)].length !== 1) {
+      problems.push(`${home.path} must render exactly one main`);
     }
     if ([...home.html.matchAll(/<h1\b/gu)].length !== 1) {
       problems.push(`${home.path} must render exactly one h1`);
-    }
-    const flow = home.html.match(/<ol\b[^>]*class="[^"]*\btf-contract-flow\b[^"]*"[^>]*>([\s\S]*?)<\/ol>/u)?.[1];
-    if (flow === undefined || [...flow.matchAll(/<li\b/gu)].length !== 5) {
-      problems.push(`${home.path} must render the five-stage contract flow`);
-    }
-    const roles = home.html.match(/<ol\b[^>]*class="[^"]*\btf-role-index\b[^"]*"[^>]*>([\s\S]*?)<\/ol>/u)?.[1];
-    if (roles === undefined || [...roles.matchAll(/<li\b/gu)].length !== 4) {
-      problems.push(`${home.path} must render the four reader roles`);
     }
   }
   return problems;

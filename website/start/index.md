@@ -1,37 +1,34 @@
 ---
-title: Start
+title: はじめる
 ---
 
-# Start: 最初の一周
+# はじめる
 
-ここは手元の fixture と report を読むための案内です。fixture は publisher 中立の
-synthetic data であり、実在の Form、catalog、稼働中の Host を示しません。
+テスト用のパッケージを検証し、Snapshotを作成します。後半ではHost APIの要求・応答例を
+説明します。ここで使うのは架空のFormのテストデータです。Hostへの接続やリソースの作成は行いません。
 
 ## 0. 準備
 
-repository root で作業します。Go module の依存が取得済みなら、以下の verifier は
-network access を使わず、local の fixture と module cache だけを読みます。clone 直後や
-module cache が空の場合は、依存を取得するため最初に次を実行します。
+Takoformリポジトリのルートで作業します。最初にGoの依存モジュールを取得してください。
+取得済みであれば、この手順の検証コマンドはネットワーク接続なしで実行できます。
 
 ```console
 go mod download
 ```
 
-この command は依存を用意するための一回限りの準備です（必要な場合は network access
-を使います）。site を見るための bun の install や Host への接続は、この journey には
-必要ありません。
+この準備にはネットワーク接続が必要な場合があります。BunやHostへの接続は不要です。
 
-## 1. Form Package を verify する（ここは実行する）
+## 1. パッケージを検証する
 
-一つの package は一つの exact な FormRef と、その Definition、列挙された data-only
-payload からなります。次の command は package の閉包、bytes、digest、FormRef を検証し、
-JSON report を標準出力へ返します。
+Form Packageは、一つのFormRef、その定義、収録ファイルからなります。
+次のコマンドで、必要なファイルが揃っていること、内容とダイジェスト、FormRefの一致を
+検証します。結果はJSONで標準出力に表示されます。
 
 ```console
 go run ./cmd/form-package verify conformance/takoform-v1/generic-host/external-family/counter-reservation
 ```
 
-実行時の出力の要点は次のとおりです（表示は report の抜粋です）。
+出力の抜粋です。
 
 ```json
 {
@@ -47,20 +44,20 @@ go run ./cmd/form-package verify conformance/takoform-v1/generic-host/external-f
 }
 ```
 
-`packageDigest` は配布された index の canonical bytes、`schemaDigest` は Definition の
-canonical bytesを指します。ここでの group と kind は fixture 専用です。verify に通った
-ことは公開、activation、Host support を意味しません。
+`packageDigest` は正規化したパッケージ索引、`schemaDigest` は正規化した定義の内容を指します。
+この例の名前空間とkindはテスト専用です。検証に成功しても、公開されていることや
+Hostで利用できることを確認したわけではありません。
 
-## 2. immutable Snapshot と generic conformance（ここは実行する）
+## 2. Snapshotを作成して検証する
 
-次の command は、manifest が指定する package、Interface、Binding を検証し、入力順に
-依存しない immutable Snapshot を compile します。
+次のコマンドは、マニフェストが指定するパッケージ、Interface、Bindingを検証し、
+入力順に依存しない、変更不可のSnapshotを構築します。
 
 ```console
 go run ./cmd/generic-conformance verify --manifest conformance/takoform-v1/generic.json
 ```
 
-report には現在、次のような値が入ります。
+検証レポートの抜粋です。
 
 ```json
 {
@@ -80,19 +77,18 @@ report には現在、次のような値が入ります。
 }
 ```
 
-これは artifact の conformance です。`snapshot-compilation` は exact な reference
-closure と digest を、`permutation-stable` は入力順の独立性を、`no-partial-snapshot` は
-失敗時に使える部分 Snapshot を返さないことを確認します。`zero-family` は family が
-内蔵されていないことを確認するケースです。この command も network、Host lifecycle、
-Resource mutation、runtime code の実行は行いません。
+`snapshot-compilation` は参照先とダイジェストの一致、`permutation-stable` は入力順に
+よらず結果が同じになること、`no-partial-snapshot` は失敗時に不完全なSnapshotを返さない
+ことを確認します。`zero-family` は特定のForm Familyが組み込まれていないことを確認します。
+この検証も、ネットワーク接続、Host上の操作、リソースの変更、実行コードの起動は行いません。
 
-## 3. Host API の transcript（ここは概念。実行しない）
+## 3. Host APIの要求・応答例を読む
 
-ここからは [Host API v1 wire contract](/spec/host-api/v1) の読み方です。以下は
-request / response の形を示す transcript で、実在する endpoint へ送ってはいけません。
-この例は Host の稼働、support、activation、backend を証明しません。
+ここからは [Host API v1](/spec/host-api/v1) の通信例です。実行するコマンドではありません。
+架空の接続先と応答を使って、要求・応答の形式を示します。
 
-まず discovery を読み、`api_versions` と一つの `endpoints.api` を得ます。
+まず接続先の情報を取得します。対応APIバージョンは `api_versions`、APIの接続先は
+`endpoints.api` に返ります。
 
 ```http
 GET /.well-known/takoform/v1
@@ -117,9 +113,9 @@ Content-Type: application/json
 }
 ```
 
-`https://host.example` は transcript の placeholder です。実際には discovery が返す endpoint と
-同じ origin/path を使い、versionless な Form Family group、kind、name から resource address を
-組み立てます。
+`https://host.example` は説明用の仮のURLです。実際には取得したAPI接続先をそのまま使い、
+Form Familyの名前空間、kind、リソース名を加えて操作先のURLを組み立てます。
+Form Familyの名前空間にはバージョンを含めません。
 
 ```http
 PUT https://host.example/apis/forms.takoform.com/v1/resources/resources.publisher.example/CounterReservation/counter-reservation
@@ -154,13 +150,12 @@ Content-Type: application/json
 HTTP/1.1 201 Created
 ```
 
-`review.prepareDigest` の all-`a` 値は transcript 専用の placeholder です。実際には
-`prepare` が返す exact な binding をそのまま渡し、client が値を発明することはありません。
-そのため、この transcript は実行用 command ではありません。
+`review.prepareDigest` に並べた `a` は説明用の仮の値です。実際には `prepare` の応答に
+含まれる値をそのまま渡します。クライアントが独自に生成する値ではありません。
 
-既存 resource を更新する場合は `If-None-Match: *` の代わりに、その resource の
-generation fence を送ります。処理が長い場合の応答は `202 Accepted` となり、返された
-operation ID を次のように読みます。
+既存リソースを更新する場合は、`If-None-Match: *` の代わりに現在の世代を指定して
+同時更新を制御します。時間のかかる処理は `202 Accepted` を返します。
+返されたOperationのIDを使って、処理の結果を取得できます。
 
 ```http
 GET https://host.example/apis/forms.takoform.com/v1/operations/op_counter_reservation_create
@@ -208,14 +203,13 @@ Content-Type: application/json
 }
 ```
 
-実際の field、status code、fence、error code は [normative な v1 source](/spec/host-api/v1)
-と [operation table](/spec/host-api/v1#artifacts-and-operations) を参照してください。ここで示した
-placeholder を Form catalog や Host の実装情報として読み替えないでください。
+各フィールド、ステータスコード、同時更新の制御、エラーコードの詳細は
+[Host API v1の仕様](/spec/host-api/v1) と
+[操作の一覧](/spec/host-api/v1#artifacts-and-operations) を参照してください。
 
 ## 次に進む
 
-- [Guides](/guides/) — architect、Core/artifact user、Host/client implementer、
-  verifier/reviewer の読み分け。
-- [共通モデル](/model/) — identity と Snapshot の data model。
-- [Host API v1 とは](/host-api/) — route、fence、error の短い案内。
-- [Reference](/reference/) — 英語の normative source と日本語の案内の区別。
+- [実装ガイド](/guides/) — 作りたいものに応じた関連仕様。
+- [共通モデル](/model/) — 識別子、パッケージ、Snapshotの関係。
+- [Host APIの概要](/host-api/) — 接続先と主な操作。
+- [仕様一覧](/reference/) — 実装の基準となる仕様と日本語の解説。

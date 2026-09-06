@@ -1,5 +1,9 @@
 # takoform.com の所有と公開
 
+表示にはVitePress標準の配色、フォント、部品を使います。トップページと日本語の案内では
+用途と操作を直接説明し、宣伝的なコピーや不要な内部用語を増やしません。正確なAPI名や
+フィールド名、固定済みの仕様本文は変更せず、解説と区別します。
+
 `takoform.com` は Host API v1 と publisher 中立な共通モデルだけを配信する site です。
 この repository がその source、build、deploy entrypoint を所有します。realized な CDN、
 DNS、account / zone / route、credential、operator の状態は所有しません。それらは公開を

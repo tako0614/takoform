@@ -16,31 +16,29 @@ withDefaults(
     :data-document-authority="normative ? 'normative' : 'non-normative'"
   >
     <p v-if="normative">
-      This page publishes
+      Specification source:
       <a v-if="url" :href="url"><code>{{ source }}</code></a>
       <code v-else>{{ source }}</code>
-      from the frozen source repository. That repository copy is the normative
-      one; this page moves only the link addresses.
+      (frozen). This copy changes link addresses only; the repository file is authoritative.
     </p>
     <p v-else>
-      This page publishes the non-normative index
+      Index source:
       <a v-if="url" :href="url"><code>{{ source }}</code></a>
       <code v-else>{{ source }}</code>
-      from the source repository. It is a navigation aid, not a contract; use
-      the contract links it names for normative requirements.
+      . This is a navigation guide, not a specification.
     </p>
   </aside>
 </template>
 
 <style scoped>
 .mirror-notice {
-  margin: 0 0 var(--space-xl);
-  padding: var(--space-sm) var(--space-md);
-  border-inline-start: var(--rule-strong) solid var(--vp-c-brand-1);
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  margin: 0 0 24px;
+  padding: 12px 16px;
+  border-inline-start: 2px solid var(--vp-c-brand-1);
+  border-radius: 0 4px 4px 0;
   background: var(--vp-c-bg-soft);
   color: var(--vp-c-text-2);
-  font-size: var(--text-sm);
+  font-size: 14px;
   line-height: 1.7;
 }
 

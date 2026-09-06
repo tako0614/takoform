@@ -63,24 +63,24 @@ const contractSidebar = [
 
 const guideSidebar = [
   {
-    text: "読む順番",
+    text: "ドキュメント",
     items: [
-      { text: "Start", link: "/start/" },
-      { text: "Guides", link: "/guides/" },
-      { text: "Reference / authority", link: "/reference/" },
-      { text: "Glossary", link: "/glossary" },
+      { text: "はじめる", link: "/start/" },
+      { text: "実装ガイド", link: "/guides/" },
+      { text: "仕様一覧", link: "/reference/" },
+      { text: "用語集", link: "/glossary" },
       { text: "Host API v1 とは", link: "/host-api/" },
       { text: "共通モデル", link: "/model/" },
-      { text: "conformance と参照実装", link: "/conformance/" },
+      { text: "適合性の検証", link: "/conformance/" },
     ],
   },
   {
-    text: "machine contract",
-    items: [{ text: "公開 schema", link: "/schemas/" }],
+    text: "JSON Schema",
+    items: [{ text: "スキーマ一覧", link: "/schemas/" }],
   },
   {
-    text: "この site",
-    items: [{ text: "所有と公開", link: "/site" }],
+    text: "サイト情報",
+    items: [{ text: "このサイトについて", link: "/site" }],
   },
 ];
 
@@ -88,7 +88,7 @@ export default defineConfig({
   lang: "ja-JP",
   title: "Takoform",
   description:
-    "Takoform Host API v1 と publisher 中立な共通モデルの normative 契約、公開 schema、conformance。",
+    "リソースの定義、検証、管理APIのための仕様とGoライブラリ。",
   cleanUrls: true,
   lastUpdated: false,
   markdown: {
@@ -127,10 +127,10 @@ export default defineConfig({
     ["meta", { property: "og:type", content: "website" }],
     ["meta", { property: "og:site_name", content: "Takoform" }],
     ["meta", { property: "og:image", content: "https://takoform.com/social-card.png" }],
-    ["meta", { property: "og:image:alt", content: "Takoform — Portable resource contract" }],
+    ["meta", { property: "og:image:alt", content: "Takoform" }],
     ["meta", { name: "twitter:card", content: "summary_large_image" }],
     ["meta", { name: "twitter:image", content: "https://takoform.com/social-card.png" }],
-    ["meta", { name: "twitter:image:alt", content: "Takoform — Portable resource contract" }],
+    ["meta", { name: "twitter:image:alt", content: "Takoform" }],
     ["meta", { name: "color-scheme", content: "light dark" }],
   ],
   transformHead({ pageData, title, description }) {
@@ -149,35 +149,20 @@ export default defineConfig({
     outline: { level: [2, 3] },
     search: { provider: "local" },
     nav: [
-      { text: "Start", link: "/start/" },
-      { text: "Guides", link: "/guides/" },
-      { text: "Reference", link: "/reference/" },
-      { text: "Glossary", link: "/glossary" },
+      { text: "はじめる", link: "/start/" },
+      { text: "ガイド", link: "/guides/" },
+      { text: "仕様", link: "/reference/" },
+      { text: "用語集", link: "/glossary" },
       { text: "GitHub", link: repository },
     ],
     sidebar: {
       "/spec/": contractSidebar,
-      "/start/": [
-        { text: "Start", items: [{ text: "Start", link: "/start/" }] },
-      ],
-      "/guides/": [
-        { text: "Guides", items: [{ text: "Guides", link: "/guides/" }] },
-      ],
-      "/reference/": [
-        {
-          text: "Reference",
-          items: [{ text: "Reference", link: "/reference/" }],
-        },
-      ],
-      "/glossary": [
-        { text: "Glossary", items: [{ text: "Glossary", link: "/glossary" }] },
-      ],
       "/": guideSidebar,
     },
     socialLinks: [{ icon: "github", link: repository }],
     footer: {
       message:
-        'normative source は <a href="https://github.com/tako0614/takoform">tako0614/takoform</a>。realized DNS と配信 account は公開 operator の authority です。',
+        '仕様とソースコードは <a href="https://github.com/tako0614/takoform">GitHub</a> で公開しています。',
       copyright: "MIT © 2026 Takoform contributors",
     },
     docFooter: { prev: "前へ", next: "次へ" },
@@ -187,7 +172,7 @@ export default defineConfig({
     outlineTitle: "このページ",
     notFound: {
       title: "ページがありません",
-      quote: "この site は Host API v1 と共通モデルだけを配信します。",
+      quote: "URLが正しいか確認するか、検索から探してください。",
       linkText: "トップへ",
     },
   },

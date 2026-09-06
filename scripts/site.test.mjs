@@ -41,6 +41,19 @@ const context = {
 };
 
 describe("takoform.com site derivation", () => {
+  test("keeps the standard-theme homepage useful without a custom palette", () => {
+    const source = readFileSync("website/index.md", "utf8");
+    for (const target of ["/start/", "/reference/", "/model/", "/host-api/"]) {
+      expect(source).toContain(`link: ${target}`);
+    }
+    expect(source).toContain("sidebar: false");
+    const component = readFileSync("website/.vitepress/theme/components/HomePage.vue", "utf8");
+    expect(component).toContain("<VPHomeHero />");
+    expect(component).toContain("<VPHomeFeatures />");
+    const css = readFileSync("website/.vitepress/theme/custom.css", "utf8");
+    expect(css).not.toMatch(/--vp-(?:c-|font-family)[\w-]*\s*:/u);
+    expect(css).not.toContain("tokens.css");
+  });
   test("requires intact source and built site assets", () => {
     const root = mkdtempSync(join(tmpdir(), "takoform-site-assets-"));
     try {
@@ -168,15 +181,8 @@ describe("takoform.com site derivation", () => {
 <meta property="og:description" content="Contract"><meta name="twitter:title" content="Takoform"><meta name="twitter:description" content="Contract">
 </head><body>
 <a href="/guide">Guide</a>
-<main class="tf-home">
-  <h1>Contract</h1>
-  <section aria-labelledby="map-title"><h2 id="map-title">Map</h2>
-    <figure aria-describedby="map-caption">
-      <ol class="tf-contract-flow"><li>1</li><li>2</li><li>3</li><li>4</li><li>5</li></ol>
-      <figcaption id="map-caption">Caption</figcaption>
-    </figure>
-  </section>
-  <ol class="tf-role-index"><li>1</li><li>2</li><li>3</li><li>4</li></ol>
+<main>
+  <h1>Resource definitions and management API</h1>
 </main></body></html>`;
     const guide = `<!doctype html>
 <html lang="ja-JP" data-document-authority="non-normative">
@@ -432,9 +438,9 @@ describe("takoform.com site derivation", () => {
       expect(head).toContainEqual(["meta", { property: "og:title", content: "Page | Takoform" }]);
     }
     expect(config.themeConfig?.nav?.slice(0, 3)).toEqual([
-      { text: "Start", link: "/start/" },
-      { text: "Guides", link: "/guides/" },
-      { text: "Reference", link: "/reference/" },
+      { text: "はじめる", link: "/start/" },
+      { text: "ガイド", link: "/guides/" },
+      { text: "仕様", link: "/reference/" },
     ]);
     const links = [];
     const collectLinks = (value) => {

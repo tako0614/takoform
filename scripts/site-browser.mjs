@@ -151,7 +151,7 @@ async function run() {
       await visit("/");
       assert.equal(await page.locator("html").evaluate((element) => element.classList.contains("dark")), colorScheme === "dark");
       assert.deepEqual(await page.evaluate(inspectGeometry), [], `1280px ${colorScheme}`);
-      const primary = page.locator(".tf-action--primary");
+      const primary = page.locator('.VPHero .VPButton[href="/start/"]');
       const bounds = await primary.boundingBox();
       assert.ok(bounds && bounds.y >= 0 && bounds.y + bounds.height <= 800, `${colorScheme}: primary action must fit first viewport`);
       await page.keyboard.press("Tab");
@@ -160,6 +160,7 @@ async function run() {
         const style = getComputedStyle(element);
         return element.matches(":focus-visible") && style.outlineStyle !== "none" && parseFloat(style.outlineWidth) >= 2;
       }), `${colorScheme}: primary action must have a keyboard focus indicator`);
+      await page.screenshot({ path: `/tmp/takoform-docs-home-${colorScheme}.png`, fullPage: true });
     }
     assert.deepEqual(networkFailures, [], "browser runtime and asset requests");
     console.log(`site-browser: ${widths.length * routes.length} responsive pages, 2 keyboard disclosures, 2 desktop themes passed (${browser.version()})`);

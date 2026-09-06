@@ -1,80 +1,64 @@
 ---
-title: conformance と参照実装
+title: 適合性の検証
 ---
 
-# conformance と参照実装
+# 適合性の検証 {#conformance-と参照実装}
 
-このページは non-normative な案内です。conformance の主張は、report が名指した artifact または実装
-だけに及びます。語彙と requirement keyword の正本は [Conformance language and classes](/spec/conformance)
-です。
+検証レポートは、対象として記載されたデータや実装について、決められた要件を満たすかを
+示します。たとえばパッケージの検証に成功しても、そのFormが特定のHostで使えるとは限りません。
 
-## claim を分けて読む
+このページは検証結果の読み方を説明します。要件の定義は
+[適合性に関する仕様](/spec/conformance) を参照してください。
 
-- **Form Package data** — 一つの Definition、exact な FormRef、RFC 8785 canonical bytes、
-  閉じた file inventory、allowlist された data media type。
-- **Interface / Binding data** — digest-bound な ref と Definition schema、canonical bytes、
-  closed な operation / capability 語彙。
-- **Snapshot artifact** — package index と payload の closure、Interface と Binding の
-  digest pin、deterministic な immutable compile。
-- **Host protocol** — exact な Host API lane に対する discovery、wire、lifecycle、
-  optimistic concurrency、idempotency、identity、relation、artifact、error の証拠。
-- **client adapter** — declared desired state だけを送り、exact な FormRef と package
-  digest の境界を保つ local projection。
-- **publisher trust** — release bytes の provenance、署名、transparency、revocation の
-  証拠。
+## 検証の対象 {#claim-を分けて読む}
 
-一つの claim から別の claim を導きません。package が検証できても Host Support、activation、
-production readiness、商用 Offering が証明されたことにはなりません。
+| 対象 | 主に確認する内容 |
+| --- | --- |
+| Form Package | 定義、FormRef、正規化した内容、収録ファイル、許可されたデータ形式 |
+| Interface / Binding | ダイジェストと定義の一致、操作や能力の定義 |
+| Snapshot | 必要なデータと参照先が揃っていること、入力順によらず構築結果が同じになること |
+| Host | API、リソース操作、同時更新の制御、再試行、識別子、エラー等の振る舞い |
+| クライアント | 宣言された設定だけを送ること、FormRefとパッケージの識別を混同しないこと |
+| 公開元の署名等 | 配布物の来歴、署名、公開記録、失効情報 |
 
-## repository から実行できる harness
+一つの検証結果から、ほかの対象の適合性や本番での利用可否まで判断することはできません。
 
-[Start の準備](/start/#_0-準備)で依存を取得した後に実行します。以下の検証処理は network を
-読まず、Resource を変更しません。
+## 手元で検証する {#repository-から実行できる-harness}
+
+[準備手順](/start/#_0-準備) に従って依存モジュールを取得した後、リポジトリのルートで
+実行してください。以下の検証はネットワークに接続せず、リソースも変更しません。
 
 ```console
 go run ./cmd/form-package verify conformance/takoform-v1/generic-host/external-family/counter-reservation
 ```
 
-一つの package の index、payload closure、FormRef、digest を検証します。
+パッケージ索引、収録ファイル、FormRef、ダイジェストを検証します。
 
 ```console
 go run ./cmd/generic-conformance verify --manifest conformance/takoform-v1/generic.json
 ```
 
-generic corpus は package、Interface、Binding、Snapshot の closure、入力順の独立性、
-失敗時の no-partial-result を検証します。`external-family` と `zero-family` の二つの
-synthetic Snapshot を含みますが、実在の Form catalog や family roster ではありません。
+パッケージ・Interface・Binding・Snapshotの参照関係、入力順への依存がないこと、失敗時に
+不完全な結果を返さないことを検証します。使用する `external-family` と `zero-family` は
+テスト用のデータで、実在のFormや稼働中のHostを表すものではありません。
 
-どちらも Host lifecycle の create / read / update / delete、fencing、relation mutation、
-runtime code、placement、activation を実行しません。
+どちらのコマンドも、Host上でのリソース操作やFormの有効化、実行コードの起動は行いません。
 
-## report を読むときの確認点
+## レポートの確認点 {#report-を読むときの確認点}
 
-1. `status` が `passed` でも、report の対象が package、Snapshot、Host、client のどれかを
-   先に確認する。
-2. `FormRef` の `apiVersion`、`kind`、`definitionVersion`、`schemaDigest` が一つの exact
-   identity を構成していることを確認する。
-3. `packageDigest` は配布 index の証拠で、`schemaDigest` は Definition の証拠であることを
-   分けて確認する。
-4. Host や publisher の外部操作を主張する場合は、その操作を行った owner の readback を
-   別の evidence として要求する。
+1. `status` だけでなく、何を対象に検証したレポートかを確認する。
+2. FormRefの4項目で、検証した定義を特定する。
+3. `packageDigest` はパッケージ索引、`schemaDigest` はForm定義の内容を指すことを区別する。
+4. 公開やHost上の操作の結果は、それを行った公開元やHostの記録で別に確認する。
 
-## source
+## ソースコード {#source}
 
-harness と corpus の source は
-[tako0614/takoform](https://github.com/tako0614/takoform) にあります。
-
-```console
-git clone https://github.com/tako0614/takoform.git
-cd takoform
-go run ./cmd/generic-conformance verify --manifest conformance/takoform-v1/generic.json
-```
-
-OpenTofu / Provider の検証は [terraform-provider-takoform](https://github.com/tako0614/terraform-provider-takoform)
-の project と report を参照してください。この page はその内容を複製しません。
+検証ツールとテストデータは [GitHub](https://github.com/tako0614/takoform) で公開しています。
+OpenTofu向け実装の検証は
+[terraform-provider-takoform](https://github.com/tako0614/terraform-provider-takoform) を参照してください。
 
 ## 次に読む
 
-- [Start](/start/) — 実行 command と概念 Host API transcript。
-- [Host API v1 とは](/host-api/) — route、fence、error の案内。
-- [Reference](/reference/) — English / normative source と Japanese guide の区別。
+- [はじめる](/start/) — コマンドの出力とAPIの要求・応答例。
+- [Host APIの概要](/host-api/) — 接続先と主な操作。
+- [仕様一覧](/reference/) — 実装の基準となる仕様。
