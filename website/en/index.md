@@ -4,8 +4,8 @@ title: Takoform
 description: Specifications and Go libraries for resource definitions, verification and management APIs.
 hero:
   name: Takoform
-  text: Shared definitions for configuration and behavior
-  tagline: Define configuration, update and deletion rules, and failure behavior so clients and Hosts can verify and use the same resource contract. Takoform provides the specifications and Go libraries.
+  text: Shared resource contracts
+  tagline: Specifications and Go libraries for defining configuration, updates, deletion and failure behavior so clients and Hosts can verify and use the same contract.
   actions:
     - theme: brand
       text: Get started
@@ -15,23 +15,19 @@ hero:
       link: /en/reference/
 features:
   - title: Define a Form
-    details: Describe settings and their meaning so Hosts that support the same definition provide the same application-visible behavior.
+    details: Define configuration and behavior in JSON, then build and verify a package.
     link: /en/authoring/
     linkText: Define and verify a Form
   - title: Verify a package
-    details: Use Core to verify contents and references, then build a Snapshot for a client or Host.
-    link: /en/start/
-    linkText: Try it locally
+    details: Check definitions and references, then use them together in a verified Snapshot.
+    link: /en/model/
+    linkText: How verification works
   - title: Use a Host from Go
-    details: Discover a Host, check Form availability, prepare a change and create a resource in a runnable Go example.
+    details: Discover a Host, check Form availability and run the prepare-to-apply sequence.
     link: /en/client/
     linkText: Client example
-  - title: Understand the common model
-    details: Identify definitions with FormRef, then verify package contents and references in a Snapshot.
-    link: /en/model/
-    linkText: Data model
   - title: Implement Host API
-    details: The HTTP API covers resource creation, reads, updates, deletion and progress tracking for asynchronous operations.
+    details: Implement resource operations, concurrency control and asynchronous progress through the shared API.
     link: /en/host-api/
     linkText: API overview
 ---
