@@ -104,8 +104,6 @@ const REQUIRED_HAND_AUTHORED_PAGE_SOURCES = HAND_AUTHORED_PAGE_SOURCES;
 export const HAND_AUTHORED_PUBLIC_FILES = Object.freeze([
   `${SITE_PUBLIC_ROOT}/_headers`,
   `${SITE_PUBLIC_ROOT}/robots.txt`,
-  `${SITE_PUBLIC_ROOT}/favicon.svg`,
-  `${SITE_PUBLIC_ROOT}/social-card.png`,
 ]);
 
 export function inspectSiteAssets(root, distRoot) {
@@ -118,23 +116,6 @@ export function inspectSiteAssets(root, distRoot) {
     } catch {
       problems.push(`${path} is missing`);
       continue;
-    }
-    if (path.endsWith("favicon.svg")) {
-      const svg = bytes.toString("utf8");
-      if (!/<svg\b[^>]*xmlns="http:\/\/www\.w3\.org\/2000\/svg"/u.test(svg) ||
-          !svg.trimEnd().endsWith("</svg>") ||
-          /<(?:script|foreignObject)\b|\b(?:href|src)\s*=|@import|url\(/iu.test(svg)) {
-        problems.push(`${path} must be a self-contained SVG`);
-      }
-    }
-    if (path.endsWith("social-card.png")) {
-      if (bytes.length < 33 ||
-          !bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])) ||
-          bytes.readUInt32BE(8) !== 13 || bytes.toString("ascii", 12, 16) !== "IHDR" ||
-          bytes.readUInt32BE(16) !== 1200 || bytes.readUInt32BE(20) !== 630 ||
-          bytes[24] !== 8 || ![2, 6].includes(bytes[25])) {
-        problems.push(`${path} must be a 1200x630 8-bit RGB/RGBA PNG`);
-      }
     }
     if (distRoot !== undefined) {
       const target = `${distRoot}/${path.slice(SITE_PUBLIC_ROOT.length + 1)}`;

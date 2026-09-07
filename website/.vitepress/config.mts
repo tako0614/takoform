@@ -123,14 +123,10 @@ export default defineConfig({
     build: { target: BUILD_TARGET, chunkSizeWarningLimit: 700 },
   },
   head: [
-    ["link", { rel: "icon", href: "/favicon.svg" }],
+    ["link", { rel: "icon", href: "data:," }],
     ["meta", { property: "og:type", content: "website" }],
     ["meta", { property: "og:site_name", content: "Takoform" }],
-    ["meta", { property: "og:image", content: "https://takoform.com/social-card.png" }],
-    ["meta", { property: "og:image:alt", content: "Takoform" }],
-    ["meta", { name: "twitter:card", content: "summary_large_image" }],
-    ["meta", { name: "twitter:image", content: "https://takoform.com/social-card.png" }],
-    ["meta", { name: "twitter:image:alt", content: "Takoform" }],
+    ["meta", { name: "twitter:card", content: "summary" }],
     ["meta", { name: "color-scheme", content: "light dark" }],
   ],
   transformHead({ pageData, title, description }) {

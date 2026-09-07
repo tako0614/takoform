@@ -57,7 +57,7 @@ describe("takoform.com site derivation", () => {
   test("requires intact source and built site assets", () => {
     const root = mkdtempSync(join(tmpdir(), "takoform-site-assets-"));
     try {
-      expect(inspectSiteAssets(root)).toContain("website/public/favicon.svg is missing");
+      expect(inspectSiteAssets(root)).toContain("website/public/_headers is missing");
       for (const path of HAND_AUTHORED_PUBLIC_FILES) {
         mkdirSync(dirname(join(root, path)), { recursive: true });
         writeFileSync(join(root, path), readFileSync(path));
@@ -66,16 +66,12 @@ describe("takoform.com site derivation", () => {
         writeFileSync(target, readFileSync(path));
       }
       expect(inspectSiteAssets(root, "dist")).toEqual([]);
-      writeFileSync(join(root, "dist/favicon.svg"), "changed");
-      expect(inspectSiteAssets(root, "dist")).toContain("dist/favicon.svg differs from website/public/favicon.svg");
-      rmSync(join(root, "dist/social-card.png"));
-      expect(inspectSiteAssets(root, "dist")).toContain("dist/social-card.png is missing");
-      writeFileSync(join(root, "website/public/favicon.svg"), '<svg><script>alert(1)</script></svg>');
-      expect(inspectSiteAssets(root)).toContain("website/public/favicon.svg must be a self-contained SVG");
-      const png = Buffer.from(readFileSync("website/public/social-card.png"));
-      png.writeUInt32BE(100, 16);
-      writeFileSync(join(root, "website/public/social-card.png"), png);
-      expect(inspectSiteAssets(root)).toContain("website/public/social-card.png must be a 1200x630 8-bit RGB/RGBA PNG");
+      writeFileSync(join(root, "dist/_headers"), "changed");
+      expect(inspectSiteAssets(root, "dist")).toContain("dist/_headers differs from website/public/_headers");
+      rmSync(join(root, "dist/robots.txt"));
+      expect(inspectSiteAssets(root, "dist")).toContain("dist/robots.txt is missing");
+      writeFileSync(join(root, "website/public/robots.txt"), "");
+      expect(inspectSiteAssets(root)).toContain("website/public/robots.txt is empty");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -400,8 +396,8 @@ describe("takoform.com site derivation", () => {
     ]);
     expect(HAND_AUTHORED_PUBLIC_FILES).toEqual(
       expect.arrayContaining([
-        "website/public/favicon.svg",
-        "website/public/social-card.png",
+        "website/public/_headers",
+        "website/public/robots.txt",
       ]),
     );
     expect(
@@ -411,8 +407,8 @@ describe("takoform.com site derivation", () => {
           "website/guides/index.md",
           "website/reference/index.md",
           "website/glossary.md",
-          "website/public/favicon.svg",
-          "website/public/social-card.png",
+          "website/public/_headers",
+          "website/public/robots.txt",
         ],
         new Set(),
       ),
@@ -429,9 +425,16 @@ describe("takoform.com site derivation", () => {
     });
     expect(config.themeConfig?.search?.provider).toBe("local");
     expect(config.head).toContainEqual([
-      "meta",
-      { property: "og:image", content: "https://takoform.com/social-card.png" },
+      "link",
+      { rel: "icon", href: "data:," },
     ]);
+    expect(config.themeConfig?.logo).toBeUndefined();
+    expect(config.head.some(([, attrs]) =>
+      /^(?:og:image|twitter:image)(?::|$)/u.test(attrs.property ?? attrs.name ?? ""),
+    )).toBe(false);
+    expect(inspectPublishedSourceAllowlist(
+      ["website/public/favicon.svg", "website/public/social-card.png"], new Set(),
+    )).toHaveLength(2);
     for (const [relativePath, route] of [["index.md", "/"], ["start/index.md", "/start/"], ["spec/host-api/v1.md", "/spec/host-api/v1"], ["glossary.md", "/glossary"]]) {
       const head = config.transformHead({ pageData: { relativePath }, title: "Page | Takoform", description: "Page description" });
       expect(head).toContainEqual(["meta", { property: "og:url", content: `https://takoform.com${route}` }]);

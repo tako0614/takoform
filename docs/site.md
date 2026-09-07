@@ -1,6 +1,7 @@
 # takoform.com の所有と公開
 
-表示にはVitePress標準の配色、フォント、部品を使います。トップページと日本語の案内では
+表示にはVitePress標準の配色、フォント、部品を使います。独自ロゴやロゴ入りの共有画像は
+使わず、サイト名をテキストで表示します。トップページと日本語の案内では
 用途と操作を直接説明し、宣伝的なコピーや不要な内部用語を増やしません。正確なAPI名や
 フィールド名、固定済みの仕様本文は変更せず、解説と区別します。
 
@@ -28,7 +29,7 @@ website/
 ├── schemas/               schema 索引 page（生成・non-normative）
 └── public/
     ├── schemas/           公開 schema の bytes（生成）
-    ├── _headers  robots.txt  favicon.svg  social-card.png
+    ├── _headers  robots.txt
     └                      配信 header、robots、site assets（手書き）
 ```
 
@@ -52,7 +53,7 @@ optimizer だけを `esnext` に合わせています。release build の target
 
 `build:site` は生成後の全 HTML について、title、ページ別の OG / Twitter metadata、language、document authority、重複 ID、
 ARIA の参照先、内部 route / fragment、到達不能 page、mirror notice と home の主要構造を
-検査します。favicon / social card の形式と寸法、手書き public asset の source と build の
+検査します。手書き public asset の source と build の
 byte 一致も検査します。pixel geometry や browser 固有の interaction は静的 HTML からは証明できない
 ため、presentation を変更したときは次の explicit browser lane も実行します。
 
