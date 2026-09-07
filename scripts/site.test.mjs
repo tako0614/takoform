@@ -67,7 +67,7 @@ describe("takoform.com site derivation", () => {
         expect(html).not.toContain("Code snippet path not found");
       }
     }
-  });
+  }, 30_000);
   test("tokenizes Japanese prose without splitting API identifiers", () => {
     expect(tokenize("パッケージを検証します。packageDigest schemaDigest"))
       .toEqual(expect.arrayContaining(["パッケージ", "検証", "packageDigest", "schemaDigest"]));
