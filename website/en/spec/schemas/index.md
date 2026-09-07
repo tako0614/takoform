@@ -64,7 +64,7 @@ column states the role of each identity.
 
 These retired entries remain byte-exact inputs for verification. They cannot be
 used to publish a new document under an occupied identity. Compatibility
-history is centralized in [`versioning.md`](/spec/versioning).
+history is centralized in [`versioning.md`](/en/spec/versioning).
 
 | Schema | Contract |
 | --- | --- |

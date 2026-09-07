@@ -10,14 +10,14 @@ canonicalUrl: https://github.com/tako0614/takoform/blob/main/spec/host-api/READM
 # Portable Form Host APIs
 
 This page is non-normative navigation. The immutable contract is
-[`v1.md`](/spec/host-api/v1), and its exact closure is named by
+[`v1.md`](/en/spec/host-api/v1), and its exact closure is named by
 [`v1.freeze.json`](https://github.com/tako0614/takoform/blob/main/spec/host-api/v1.freeze.json). Nothing on this page adds to or reinterprets
 that contract.
 
 ## Current Host API v1
 
 The current Host lane uses the unchanged literal, provider-neutral Host API v1
-contract ([`v1.md`](/spec/host-api/v1)). Its endpoints are:
+contract ([`v1.md`](/en/spec/host-api/v1)). Its endpoints are:
 
 - discovery: `GET /.well-known/takoform/v1`;
 - API root: `/apis/forms.takoform.com/v1`;
@@ -40,10 +40,10 @@ Host Support, or a family-wide corpus. A Host or publisher supplies those
 independent evidence sets through its own boundary.
 
 Requirement keywords are used as described in
-[`../conformance.md`](/spec/conformance).
+[`../conformance.md`](/en/spec/conformance).
 
 Version and retained-lane rules are centralized in
-[`../versioning.md`](/spec/versioning).
+[`../versioning.md`](/en/spec/versioning).
 
 
 </div>

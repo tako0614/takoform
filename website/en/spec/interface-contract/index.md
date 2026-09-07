@@ -67,7 +67,7 @@ environment belong to the Host or publisher that makes the claim, not to the
 portable contract.
 
 The artifact corpus in
-[`../conformance.md`](/spec/conformance) verifies Interface Definition bytes,
+[`../conformance.md`](/en/spec/conformance) verifies Interface Definition bytes,
 digest pins, and Snapshot closure. It does not execute runtime code or claim
 that any Host runs an Interface correctly. Runtime behavior requires separate
 evidence from the owner of that runtime.

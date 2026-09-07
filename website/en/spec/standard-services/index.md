@@ -16,7 +16,7 @@ standard-service slot. This contract participates in the
 `forms.takoform.com/v1` Host API lane.
 
 Requirement keywords are used as described in
-[`../conformance.md`](/spec/conformance).
+[`../conformance.md`](/en/spec/conformance).
 
 ## Portable declaration
 

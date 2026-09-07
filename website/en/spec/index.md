@@ -20,7 +20,7 @@ The current Host API is the unchanged literal v1 lane:
 
 - discovery: `GET /.well-known/takoform/v1`;
 - API root: `/apis/forms.takoform.com/v1`;
-- wire contract: [`host-api/v1.md`](/spec/host-api/v1); and
+- wire contract: [`host-api/v1.md`](/en/spec/host-api/v1); and
 - generic corpus: [`../conformance/takoform-v1/generic.json`](https://github.com/tako0614/takoform/blob/main/conformance/takoform-v1/generic.json).
 
 API v1 normative bytes are frozen by
@@ -42,27 +42,27 @@ All publishers use the same package, verification, trust, revocation,
 installation, and support paths; provenance is selected by the operator, and a
 FormRef has no `official` bit.
 
-- [`form-definition/`](/spec/form-definition/) defines the exact four-field FormRef
+- [`form-definition/`](/en/spec/form-definition/) defines the exact four-field FormRef
   and portable desired, observed, and output shapes.
-- [`form-package/`](/spec/form-package/) defines one closed data-only package for one
+- [`form-package/`](/en/spec/form-package/) defines one closed data-only package for one
   exact Form.
-- [`host-api/`](/spec/host-api/) defines discovery, lifecycle requests,
+- [`host-api/`](/en/spec/host-api/) defines discovery, lifecycle requests,
   asynchronous Operations, identity fences, and portable errors.
-- [`interface-contract/`](/spec/interface-contract/),
-  [`binding-contract/`](/spec/binding-contract/),
-  [`artifact-transport/`](/spec/artifact-transport/), and
-  [`standard-services/`](/spec/standard-services/) define digest-bound data
+- [`interface-contract/`](/en/spec/interface-contract/),
+  [`binding-contract/`](/en/spec/binding-contract/),
+  [`artifact-transport/`](/en/spec/artifact-transport/), and
+  [`standard-services/`](/en/spec/standard-services/) define digest-bound data
   contracts.
-- [`trust/`](/spec/trust/) defines caller-supplied provenance and offline
+- [`trust/`](/en/spec/trust/) defines caller-supplied provenance and offline
   verification inputs.
-- [`form-families.md`](/spec/form-families) defines versionless reverse-DNS group
+- [`form-families.md`](/en/spec/form-families) defines versionless reverse-DNS group
   ownership and group-first lookup.
-- [`versioning.md`](/spec/versioning) defines the four named version streams—Host
+- [`versioning.md`](/en/spec/versioning) defines the four named version streams—Host
   API major, each Form's `definitionVersion`, Core library SemVer, and Provider
   SemVer—and their compatibility rules.
 
 Requirement keywords and conformance classes are defined in
-[`conformance.md`](/spec/conformance). Generic conformance uses synthetic
+[`conformance.md`](/en/spec/conformance). Generic conformance uses synthetic
 reverse-DNS families and must pass without a built-in family; concrete Host
 adapters and family semantics belong to their publishers and Hosts.
 

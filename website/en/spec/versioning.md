@@ -200,7 +200,7 @@ its recorded identity, and no current tooling may renumber it.
 
 The exact Host API v1 lane is discovered at `/.well-known/takoform/v1` with API
 base `/apis/forms.takoform.com/v1`. Its wire contract is
-[`host-api/v1.md`](/spec/host-api/v1). Releasing a library or client does not alter
+[`host-api/v1.md`](/en/spec/host-api/v1). Releasing a library or client does not alter
 those addresses, publish a package, release another client, or change publisher
 trust.
 

@@ -14,7 +14,7 @@ related semantics. A family is not a package, a release channel, or a
 compatibility promise. The family model is described by
 [decision 0009](https://github.com/tako0614/takoform/blob/main/spec/decisions/0009-form-families-and-namespaced-api-versions.md);
 the portable-data rule for every member is
-[`portability-boundary.md`](/spec/portability-boundary).
+[`portability-boundary.md`](/en/spec/portability-boundary).
 
 ## Group identity
 
@@ -40,7 +40,7 @@ group name.
 The reverse-DNS group is carried as one path segment by Host API v1. A group
 containing `/` is invalid; a version belongs in the Form's
 `definitionVersion`, not in a second family segment. See
-[`host-api/v1.md`](/spec/host-api/v1) for the wire path rules.
+[`host-api/v1.md`](/en/spec/host-api/v1) for the wire path rules.
 
 ## Exact references
 
@@ -98,7 +98,7 @@ synthetic reverse-DNS groups and is independent of any publisher's catalog.
 
 Occupied versioned groups remain readable only under their exact historical
 identities. They are not current family namespaces and MUST NOT be reused for
-new semantics. [`versioning.md`](/spec/versioning) defines the shared retention
+new semantics. [`versioning.md`](/en/spec/versioning) defines the shared retention
 and non-reuse rules.
 
 A family groups related Form contracts; it does not combine them into one

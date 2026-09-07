@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { renderForSearch, tokenize } from "../website/.vitepress/search.mjs";
 
 import {
   GENERATED_INDEX_PAGES,
@@ -41,6 +42,16 @@ const context = {
 };
 
 describe("takoform.com site derivation", () => {
+  test("tokenizes Japanese prose without splitting API identifiers", () => {
+    expect(tokenize("パッケージを検証します。packageDigest schemaDigest"))
+      .toEqual(expect.arrayContaining(["パッケージ", "検証", "packageDigest", "schemaDigest"]));
+    expect(tokenize("  。  ")).toEqual([]);
+    const html = '<h2 id="guide">設定項目<a href="#guide">#</a></h2><p>パッケージを検証します。</p>';
+    const output = renderForSearch("", {}, { render: () => html });
+    expect(output).toContain('<h2 id="guide">設定項目<a href="#guide">#</a></h2>');
+    expect(output).toContain("パッケージ を 検証");
+    expect(renderForSearch("", { frontmatter: { search: false } }, { render: () => html })).toBe("");
+  });
   test("keeps the standard-theme homepage useful without a custom palette", () => {
     const source = readFileSync("website/index.md", "utf8");
     for (const target of ["/start/", "/reference/", "/model/", "/host-api/"]) {
@@ -54,9 +65,13 @@ describe("takoform.com site derivation", () => {
     expect(css).not.toMatch(/--vp-(?:c-|font-family)[\w-]*\s*:/u);
     expect(css).not.toContain("tokens.css");
   });
-  test("exposes every published page and top-level destination in one shared sidebar", async () => {
+  test("exposes every locale page and top-level destination in a complete sidebar", async () => {
     const config = (await import("../website/.vitepress/config.mts")).default;
-    const sidebar = config.themeConfig.sidebar;
+    expect(config.locales.root.label).toBe("日本語");
+    expect(config.locales.en.label).toBe("English");
+    for (const prefix of ["", "/en"]) {
+    const theme = prefix ? config.locales.en.themeConfig : config.themeConfig;
+    const sidebar = theme.sidebar;
     expect(Array.isArray(sidebar)).toBe(true);
     const links = [];
     const visit = (items) => {
@@ -70,12 +85,28 @@ describe("takoform.com site derivation", () => {
     const publishedRoutes = [
       ...HAND_AUTHORED_PAGE_SOURCES.map(siteRouteForPageSource),
       ...GENERATED_INDEX_PAGES.map(siteRouteForPageSource),
-      ...MIRRORED_SPEC_DOCUMENTS.map(siteRouteForSpecDocument),
-    ];
+      ...MIRRORED_SPEC_DOCUMENTS.map((source) => `${prefix}${siteRouteForSpecDocument(source)}`),
+    ].filter((route) => route.startsWith("/en/") === !!prefix);
     expect(links.filter((link) => link.startsWith("/")).sort()).toEqual(
       [...new Set(publishedRoutes)].sort(),
     );
-    for (const item of config.themeConfig.nav) expect(links).toContain(item.link);
+    for (const item of theme.nav) expect(links).toContain(item.link);
+    }
+  });
+  test("translations preserve every example byte and pair all guide headings", async () => {
+    const { createMarkdownRenderer } = await import("vitepress");
+    const markdown = await createMarkdownRenderer(process.cwd());
+    const ids = (source) => [...markdown.render(source).matchAll(/<h[1-6]\b[^>]*id="([^"]+)"/gu)].map((match) => match[1]);
+    const fences = (source) => source.match(/^```[^\n]*\n[\s\S]*?^```/gmu) ?? [];
+    const links = (source) => [...source.matchAll(/\[[^\]]*\]\(([^)]+)\)/gu)]
+      .map((match) => match[1].replace(/^\/en\//u, "/")).sort();
+    for (const source of HAND_AUTHORED_PAGE_SOURCES.filter((path) => !path.startsWith("website/en/"))) {
+      const japanese = readFileSync(source, "utf8");
+      const english = readFileSync(source.replace("website/", "website/en/"), "utf8");
+      expect(fences(english)).toEqual(fences(japanese));
+      expect(ids(english)).toEqual(ids(japanese));
+      expect(links(english)).toEqual(links(japanese));
+    }
   });
   test("requires intact source and built site assets", () => {
     const root = mkdtempSync(join(tmpdir(), "takoform-site-assets-"));
@@ -160,12 +191,15 @@ describe("takoform.com site derivation", () => {
   });
 
   test("describes non-retired identities as mixed authoring/readable inventory", () => {
-    const index = buildSiteFiles(".").get("website/schemas/index.md")?.toString("utf8");
+    const index = buildSiteFiles(".").get("website/en/schemas/index.md")?.toString("utf8");
     expect(index).toContain("current-authoring");
     expect(index).toContain("retained-readable");
     expect(index).toContain("does not say that a profile is valid");
     expect(index).toContain("current-authoring guidance");
-    expect(index).toContain("[schema role table](/spec/schemas/)");
+    expect(index).toContain("[schema role table](/en/spec/schemas/)");
+    const japanese = buildSiteFiles(".").get("website/schemas/index.md").toString("utf8");
+    expect(japanese).toContain("新規作成に適していることまでは示しません");
+    expect(japanese).toContain("[スキーマの用途一覧](/spec/schemas/)");
     expect(index).not.toContain("authoring と verification の双方に使える identity です。");
   });
 
@@ -301,6 +335,13 @@ describe("takoform.com site derivation", () => {
     )).toEqual([
       "website/guide.md defines normative behavior outside the frozen closure",
     ]);
+  });
+
+  test("requires an explicit non-normative declaration on the Japanese schema index", () => {
+    const path = "website/schemas/index.md";
+    const options = { classificationRequiredPaths: new Set([path]) };
+    expect(inspectPublicDocumentAuthority(new Map([[path, "この索引は案内用であり、仕様ではありません。"]]), new Set(), options)).toEqual([]);
+    expect(inspectPublicDocumentAuthority(new Map([[path, "この索引は仕様です。"]]), new Set(), options)).toHaveLength(1);
   });
 
   test("marks frozen mirrors normative and mutable indexes non-normative", () => {
@@ -487,7 +528,7 @@ describe("takoform.com site derivation", () => {
       "spec/host-api/v1.md",
       { pageData: { relativePath: "spec/host-api/v1.md", frontmatter: { normative: true } } },
     );
-    expect(frozen).toContain('lang="en"');
+    expect(frozen).toContain('lang="ja-JP"');
     expect(frozen).toContain('data-document-authority="normative"');
     const guide = config.transformHtml?.(
       '<html lang="ja-JP"><head></head></html>',

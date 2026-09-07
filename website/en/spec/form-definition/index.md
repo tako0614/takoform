@@ -11,7 +11,7 @@ canonicalUrl: https://github.com/tako0614/takoform/blob/main/spec/form-definitio
 
 A Form Definition is a deterministic, data-only description of one portable
 service shape. Requirement keywords are used as described in
-[`../conformance.md`](/spec/conformance).
+[`../conformance.md`](/en/spec/conformance).
 
 The current authoring profiles are
 [`form-definition-v1.schema.json`](https://forms.takoform.com/schemas/v1/form-definition.schema.json)
@@ -135,7 +135,7 @@ universal graph DSL.
 
 Current relations use exact digest-bound Interface and Binding contracts and
 UID-pinned resource references
-([`binding-contract/`](/spec/binding-contract/),
+([`binding-contract/`](/en/spec/binding-contract/),
 [decision 0015](https://github.com/tako0614/takoform/blob/main/spec/decisions/0015-cross-resource-references-are-uid-pinned-relations.md)).
 
 An artifact-backed Definition carries one content-addressed manifest digest,
@@ -188,7 +188,7 @@ proofs are consumed equally by every verifier and do not grant any client or
 Host authority to widen Form semantics.
 
 Version and retained-profile rules are centralized in
-[`../versioning.md`](/spec/versioning).
+[`../versioning.md`](/en/spec/versioning).
 
 
 </div>

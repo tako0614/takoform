@@ -11,7 +11,7 @@ canonicalUrl: https://github.com/tako0614/takoform/blob/main/spec/form-package/R
 
 A Form Package is a closed local directory with a root `package-index.json` and
 exactly the payload files listed by that index. Requirement keywords are used
-as described in [`../conformance.md`](/spec/conformance). The current Draft
+as described in [`../conformance.md`](/en/spec/conformance). The current Draft
 2020-12 index profile is
 [`package-index-v1alpha5.schema.json`](https://forms.takoform.com/schemas/v1alpha5/package-index.schema.json);
 it carries one exact FormRef whose group may belong to any publisher.
@@ -24,8 +24,8 @@ catalog or compatibility set is an external mapping of exact
 A Form Package carries a Form Definition and data-only supporting files. Takoform
 does not define a separate Interface or Binding Package envelope; those
 contracts are acquired and pinned independently by a caller
-([`interface-contract/`](/spec/interface-contract/),
-[`binding-contract/`](/spec/binding-contract/)).
+([`interface-contract/`](/en/spec/interface-contract/),
+[`binding-contract/`](/en/spec/binding-contract/)).
 
 ## Index and identity
 
@@ -97,7 +97,7 @@ go run ./cmd/form-package validate-revocation-checkpoint CHECKPOINT.json
 
 The current `trust.forms.takoform.com/v1` statement and checkpoint schemas use
 current versionless FormRefs. A new checkpoint chain begins with the signed
-sequence-zero genesis defined in [`../trust/`](/spec/trust/). A verifier derives a
+sequence-zero genesis defined in [`../trust/`](/en/spec/trust/). A verifier derives a
 checkpoint entry only from exact RFC 8785 statement bytes; pretty-printed or
 otherwise noncanonical signed statement input is rejected rather than hashed
 as different canonical bytes. Retained v1alpha1 statements and sequence-one
@@ -119,7 +119,7 @@ Form, implement a Host, build a client projection, or execute adapters. Those
 decisions belong to the caller that owns the corresponding boundary.
 
 Version and retained-profile rules are centralized in
-[`../versioning.md`](/spec/versioning).
+[`../versioning.md`](/en/spec/versioning).
 
 
 </div>

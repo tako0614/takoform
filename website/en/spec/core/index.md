@@ -137,7 +137,7 @@ Snapshot-level witnesses include:
 - exact Interface/Binding closure and immutable Definition views.
 
 Version and retained-history rules are centralized in
-[`../versioning.md`](/spec/versioning).
+[`../versioning.md`](/en/spec/versioning).
 
 
 </div>

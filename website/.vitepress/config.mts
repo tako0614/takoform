@@ -1,4 +1,5 @@
-import { defineConfig } from "vitepress";
+import { defineConfig, type DefaultTheme } from "vitepress";
+import { renderForSearch } from "./search.mjs";
 
 // takoform.com — the API and common-model-only site this repository owns.
 //
@@ -85,11 +86,69 @@ const guideSidebar = [
   },
 ];
 
+const englishLabels: Record<string, string> = {
+  トップ: "Home", ドキュメント: "Documentation", はじめる: "Getting started",
+  実装ガイド: "Implementation guides", 仕様一覧: "Reference", 用語集: "Glossary",
+  "Host API v1 とは": "About Host API v1", 共通モデル: "Common model",
+  適合性の検証: "Conformance checks", スキーマ一覧: "Schema index",
+  サイト情報: "Site information", このサイトについて: "About this site",
+};
+
+function englishSidebar(items: DefaultTheme.SidebarItem[]): DefaultTheme.SidebarItem[] {
+  return items.map((item) => ({
+    ...item,
+    text: englishLabels[item.text ?? ""] ?? item.text,
+    ...(item.link ? { link: `/en${item.link}` } : {}),
+    ...(item.items ? { items: englishSidebar(item.items) } : {}),
+  }));
+}
+
+const relatedSidebar = {
+  text: "関連リンク",
+  items: [
+    { text: "Edge Forms", link: "https://edge.forms.takoform.com/" },
+    { text: "GitHub", link: repository },
+  ],
+};
+
 export default defineConfig({
   lang: "ja-JP",
   title: "Takoform",
   description:
     "リソースの定義、検証、管理APIのための仕様とGoライブラリ。",
+  locales: {
+    root: { label: "日本語", lang: "ja-JP" },
+    en: {
+      label: "English",
+      lang: "en",
+      description: "Specifications and Go libraries for resource definitions, verification and management APIs.",
+      themeConfig: {
+        nav: [
+          { text: "Start", link: "/en/start/" },
+          { text: "Guides", link: "/en/guides/" },
+          { text: "Reference", link: "/en/reference/" },
+          { text: "Glossary", link: "/en/glossary" },
+          { text: "GitHub", link: repository },
+        ],
+        sidebar: [
+          ...englishSidebar([...guideSidebar, ...contractSidebar]),
+          { ...relatedSidebar, text: "Related links", items: [
+            { text: "Edge Forms", link: "https://edge.forms.takoform.com/" },
+            { text: "GitHub", link: repository },
+          ] },
+        ],
+        footer: {
+          message: 'Specifications and source code are available on <a href="https://github.com/tako0614/takoform">GitHub</a>.',
+          copyright: "MIT © 2026 Takoform contributors",
+        },
+        docFooter: { prev: "Previous page", next: "Next page" },
+        darkModeSwitchLabel: "Appearance", returnToTopLabel: "Return to top",
+        sidebarMenuLabel: "Menu", outlineTitle: "On this page",
+        langMenuLabel: "Change language",
+        notFound: { title: "Page not found", quote: "Check the URL or use search to find a page.", linkText: "Home" },
+      },
+    },
+  },
   cleanUrls: true,
   lastUpdated: false,
   markdown: {
@@ -144,7 +203,14 @@ export default defineConfig({
   },
   themeConfig: {
     outline: { level: [2, 3] },
-    search: { provider: "local" },
+    search: { provider: "local", options: { _render: renderForSearch, locales: { root: { translations: {
+      button: { buttonText: "検索", buttonAriaLabel: "検索" },
+      modal: {
+        displayDetails: "詳細を表示", resetButtonTitle: "検索をクリア",
+        backButtonTitle: "閉じる", noResultsText: "見つかりませんでした",
+        footer: { selectText: "選択", navigateText: "移動", closeText: "閉じる" },
+      },
+    } } } } },
     nav: [
       { text: "はじめる", link: "/start/" },
       { text: "ガイド", link: "/guides/" },
@@ -155,13 +221,7 @@ export default defineConfig({
     sidebar: [
       ...guideSidebar,
       ...contractSidebar,
-      {
-        text: "関連リンク",
-        items: [
-          { text: "Edge Forms", link: "https://edge.forms.takoform.com/" },
-          { text: "GitHub", link: repository },
-        ],
-      },
+      relatedSidebar,
     ],
     socialLinks: [{ icon: "github", link: repository }],
     footer: {
@@ -174,27 +234,22 @@ export default defineConfig({
     returnToTopLabel: "先頭へ",
     sidebarMenuLabel: "目次",
     outlineTitle: "このページ",
+    langMenuLabel: "言語を切り替える",
     notFound: {
       title: "ページがありません",
       quote: "URLが正しいか確認するか、検索から探してください。",
       linkText: "トップへ",
     },
   },
-  // The mirrored specification prose and non-normative indexes are authored
-  // in English while the site chrome and guides are Japanese. Declaring one
-  // language for both would mislabel roughly half the pages, so the mirrored
-  // tree states its own.
+  // The document follows its locale on both SSR and client navigation.
+  // Generated specification bodies declare lang="en" independently.
   transformHtml(code, _id, context) {
     const authority = context.pageData.frontmatter.normative === true
       ? "normative"
       : "non-normative";
-    let html = code.replace(
+    return code.replace(
       /<html\b/u,
       `<html data-document-authority="${authority}"`,
     );
-    if (context.pageData.relativePath.startsWith("spec/")) {
-      html = html.replace(/<html([^>]*)\slang="ja-JP"/u, '<html$1 lang="en"');
-    }
-    return html;
   },
 });

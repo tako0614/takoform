@@ -12,12 +12,12 @@ import {
 } from "./site.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const routes = ["/", "/start/", "/guides/", "/reference/", "/glossary", "/host-api/"];
+const routes = ["", "/en"].flatMap((prefix) => ["/", "/start/", "/guides/", "/reference/", "/glossary", "/host-api/"].map((route) => `${prefix}${route}`));
 const widths = [320, 375, 414, 768];
 const sidebarRoutes = [...new Set([
   ...HAND_AUTHORED_PAGE_SOURCES.map(siteRouteForPageSource),
   ...GENERATED_INDEX_PAGES.map(siteRouteForPageSource),
-  ...MIRRORED_SPEC_DOCUMENTS.map(siteRouteForSpecDocument),
+  ...MIRRORED_SPEC_DOCUMENTS.flatMap((source) => [siteRouteForSpecDocument(source), `/en${siteRouteForSpecDocument(source)}`]),
 ])].sort();
 
 function browserExecutable() {
@@ -78,7 +78,8 @@ function inspectGeometry() {
   const issues = [];
   if (document.documentElement.scrollWidth > documentWidth + 1 || document.body.scrollWidth > documentWidth + 1) issues.push("horizontal document overflow");
   if (document.querySelectorAll("main").length !== 1) issues.push("expected one main landmark");
-  if (document.documentElement.lang !== "ja-JP") issues.push("expected ja-JP document language");
+  const expectedLang = location.pathname.startsWith("/en/") ? "en" : "ja-JP";
+  if (document.documentElement.lang !== expectedLang) issues.push(`expected ${expectedLang} document language`);
   if (document.title.trim() === "") issues.push("missing document title");
   for (const element of document.querySelectorAll("a[href], button, input, summary")) {
     if (!element.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) continue;
@@ -104,6 +105,24 @@ async function checkDisclosure(page, selector) {
     const element = document.querySelector(target);
     return element?.getAttribute("aria-expanded") === "false" && document.activeElement === element;
   }, selector);
+}
+
+async function switchLanguage(page, width, label, expectedPath, expectedLang) {
+  let menu;
+  if (width < 768) {
+    await page.locator(".VPNavBarHamburger").click();
+    menu = page.locator(".VPNavScreenTranslations");
+    await menu.locator("button.title").click();
+  } else {
+    menu = page.locator(width < 1280 ? ".VPNavBarExtra" : ".VPNavBarTranslations");
+    await menu.locator("button.button").focus();
+    await page.keyboard.press("Enter");
+  }
+  const fragment = new URL(page.url()).hash;
+  await menu.getByRole("link", { name: label, exact: true }).click();
+  await page.waitForURL((url) => url.pathname === expectedPath && url.hash === fragment);
+  await page.waitForFunction((lang) => document.documentElement.lang === lang, expectedLang);
+  if (fragment) assert.ok(await page.evaluate((hash) => !!document.getElementById(decodeURIComponent(hash.slice(1))), fragment), "translated fragment must resolve");
 }
 
 async function run() {
@@ -143,7 +162,7 @@ async function run() {
       await page.evaluate(() => document.fonts.ready);
       assert.deepEqual(await page.locator('.VPSidebar a[href^="/"]').evaluateAll(
         (links) => links.map((link) => link.getAttribute("href")).sort(),
-      ), sidebarRoutes, `${route}: shared sidebar must contain every published page`);
+      ), sidebarRoutes.filter((entry) => entry.startsWith("/en/") === route.startsWith("/en/")), `${route}: shared sidebar must contain every locale page`);
       assert.equal(await page.locator(".VPSidebarItem.collapsed").count(), 0, `${route}: sidebar groups start expanded`);
     };
     for (const width of widths) {
@@ -153,6 +172,28 @@ async function run() {
         assert.deepEqual(await page.evaluate(inspectGeometry), [], `${width}px ${route}`);
       }
       await visit("/spec/host-api/v1");
+      await visit("/en/spec/host-api/v1");
+    }
+    for (const width of [375, 1024, 1280]) {
+      await page.setViewportSize({ width, height: 900 });
+      for (const [path, fragment] of [["/", ""], ["/start/", "#_0-準備"], ["/spec/host-api/v1", "#artifacts-and-operations"]]) {
+        await visit(path + fragment);
+        await switchLanguage(page, width, "English", `/en${path}`, "en");
+        await switchLanguage(page, width, "日本語", path, "ja-JP");
+        if (path.startsWith("/spec/")) assert.equal(await page.locator(".specification-source").getAttribute("lang"), "en");
+      }
+    }
+    await page.setViewportSize({ width: 375, height: 900 });
+    for (const prefix of ["", "/en"]) {
+      await visit(`${prefix}/start/`);
+      await page.locator(".VPNavBarSearch button").click();
+      await page.locator("#localsearch-input").fill(prefix ? "packageDigest" : "パッケージ");
+      const results = page.locator(".VPLocalSearchBox a.result");
+      await results.first().waitFor();
+      const links = await results.evaluateAll((nodes) => nodes.map((node) => node.getAttribute("href")));
+      assert.ok(links.length && links.every((link) => link.startsWith("/en/") === !!prefix), "search results must stay in the selected language");
+      await results.first().click();
+      await page.waitForFunction(() => !document.querySelector(".VPLocalSearchBox"));
     }
     await page.setViewportSize({ width: 320, height: 900 });
     await visit("/");
@@ -179,7 +220,7 @@ async function run() {
       await page.screenshot({ path: `/tmp/takoform-docs-home-${colorScheme}.png`, fullPage: true });
     }
     assert.deepEqual(networkFailures, [], "browser runtime and asset requests");
-    console.log(`site-browser: ${widths.length * routes.length} responsive pages, complete shared sidebar, 3 keyboard disclosures, 2 desktop themes passed (${browser.version()})`);
+    console.log(`site-browser: ${widths.length * routes.length} responsive pages, bilingual search, language/fragment round trips, complete shared sidebar, keyboard disclosures and themes passed (${browser.version()})`);
   } finally {
     process.removeListener("SIGINT", interrupted);
     process.removeListener("SIGTERM", interrupted);

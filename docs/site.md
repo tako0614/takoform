@@ -8,6 +8,11 @@
 左の目次はトップページ・ガイド・仕様で共通です。公開中の全ページと関連サイトへの
 リンクを載せ、閲覧中のページによって別の目次へ切り替えません。
 
+日本語は既存のルート、英語は`/en/`で公開します。VitePressの言語メニューは同じページの
+対応言語へ移動し、ページ内の位置も維持します。目次は選択した言語の全ページを含みます。
+ガイドは翻訳しますが、仕様本文は両言語とも英語の原文です。文書全体は選択言語を宣言し、
+仕様本文の範囲だけ`lang="en"`を指定します。公開JSONのパスとバイト列は複製・変更しません。
+
 `takoform.com` は Host API v1 と publisher 中立な共通モデルだけを配信する site です。
 この repository がその source、build、deploy entrypoint を所有します。realized な CDN、
 DNS、account / zone / route、credential、operator の状態は所有しません。それらは公開を
@@ -30,6 +35,7 @@ website/
 │                          読み方の案内（手書き）
 ├── spec/                  freeze に含まれる source の mirror（生成）
 ├── schemas/               schema 索引 page（生成・non-normative）
+├── en/                    英語ガイド（手書き）とspec/schema索引（生成）
 └── public/
     ├── schemas/           公開 schema の bytes（生成）
     ├── _headers  robots.txt
@@ -77,6 +83,8 @@ browser の自動 download や、既存 browser profile の利用はしません
   戻ることを確認する。
 - 1280 px の light / dark 両方で first viewport の主要 CTA と keyboard focus indicator を確認する。
 - asset の HTTP error、JavaScript error、予期しない外部通信も失敗として扱う。
+- 英語版にも同じレスポンシブ検査を行う。375 / 1024 / 1280 pxで言語メニューから
+  同一ページへ往復し、見出しの位置とhydration後の言語を確認する。
 
 本文、link、button、code highlighting の contrast と見た目の最終判断は、light / dark の
 実画面で別途確認します。この browser lane は live service や production mutation を必要とせず、
@@ -93,6 +101,7 @@ portable な `bun run check` へ browser binary を暗黙に要求しません�
 | `/`、`/start/`、`/guides/`、`/reference/`、`/host-api/`、`/model/`、`/conformance/`、`/glossary`、`/site` | 手書きの案内 |
 | `/spec/**` | freeze-listed source は normative mirror。それ以外の overview/index mirror は non-normative。正本は `spec/**` |
 | `/schemas/` | identity の non-normative 索引 page |
+| `/en/`と上記ページの`/en/**`版 | 英語の案内・索引と同じ英語の仕様原文 |
 | `/schemas/<$id と同じ path>` | 公開 schema の exact な bytes |
 | `/sitemap.xml`、`/robots.txt`、`/404.html` | site の付随物 |
 

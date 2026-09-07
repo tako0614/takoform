@@ -43,7 +43,7 @@ trust mechanisms.
 ### Form Package data
 
 A **conforming Form Package** MUST contain one Definition satisfying
-[`form-definition/`](/spec/form-definition/), one exact FormRef, RFC 8785 canonical
+[`form-definition/`](/en/spec/form-definition/), one exact FormRef, RFC 8785 canonical
 bytes, a closed file inventory, allowlisted data media types, and no executable,
 credential, placement, or commercial content. It MUST NOT depend on a Host to
 be valid.
@@ -89,7 +89,7 @@ verification produces no usable partial Snapshot.
 ### Host protocol
 
 A **conforming Host** is an implementation claim against an exact Host API
-lane, such as [`host-api/v1.md`](/spec/host-api/v1). Its own evidence MUST cover
+lane, such as [`host-api/v1.md`](/en/spec/host-api/v1). Its own evidence MUST cover
 the discovery, wire, lifecycle, optimistic-concurrency, idempotency,
 identity, relation, artifact, and error rules that it claims. Such a report is
 not produced by the generic artifact corpus and does not grant publication or
