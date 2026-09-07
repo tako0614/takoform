@@ -56,6 +56,8 @@ without adding requirements.
 | --- | --- |
 | [Getting started](/en/start/) | Local verification and API request/response examples |
 | [Implementation guides](/en/guides/) | Reading paths for different implementations |
+| [Create a Form](/en/authoring/) | A Go example defining, packaging and verifying a Form |
+| [Use a Host from Go](/en/client/) | An executable discovery, prepare and apply sequence |
 | [Host API overview](/en/host-api/) | Discovery and API structure |
 | [Common model](/en/model/) | Relationships between the main data types |
 | [Conformance checks](/en/conformance/) | Reading verification reports |

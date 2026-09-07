@@ -10,6 +10,16 @@ definition. A Snapshot collects verified packages and their references.
 Formats and verification rules do not vary by publisher. This guide is
 non-normative; precise requirements are in the [reference](/en/reference/).
 
+Matching configuration keys is not enough if updates or recovery after failure
+mean different things. A Form also establishes common application-visible
+behavior. Hosts conforming to the same definition preserve that promise;
+services with different semantics should not be forced into the same Form.
+
+A publisher creates a definition and package. Consumers verify their contents
+and references into a Snapshot, and a Host implements supported Forms. Clients
+check availability on that Host before making changes. This does not mean every
+Host supports every Form.
+
 ## Identify a definition {#identity-の文法}
 
 | Field | Meaning |
@@ -21,6 +31,11 @@ non-normative; precise requirements are in the [reference](/en/reference/).
 | `packageDigest` | Package index digest; not part of FormRef |
 
 Changing the namespace changes the definition and its digest, producing a different Form.
+
+Checking content digests as well as names and versions prevents a different
+definition from being loaded as the same one. A Snapshot verifies referenced
+definitions together so they cannot be substituted while it is in use. Content
+integrity is not, by itself, a decision to trust the publisher.
 
 ## Main data types {#data-の層}
 

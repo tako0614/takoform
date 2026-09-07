@@ -117,10 +117,46 @@ Content-Type: application/json
 Form Familyの名前空間、kind、リソース名を加えて操作先のURLを組み立てます。
 Form Familyの名前空間にはバージョンを含めません。
 
+この例では、同じspaceに参照先の `RangeSequence` が既にあり、呼び出し元が作成を許可されているものとします。まず正確なFormRefへの対応と許可を確認します。
+
 ```http
-PUT https://host.example/apis/forms.takoform.com/v1/resources/resources.publisher.example/CounterReservation/counter-reservation
-If-None-Match: *
-Idempotency-Key: create-counter-reservation-20260904
+GET https://host.example/apis/forms.takoform.com/v1/forms?group=resources.publisher.example&kind=CounterReservation&definitionVersion=0.1.0&schemaDigest=sha256%3A9981fb7988d13844b8e22ab2428407aa90e7e368df876086e0e456151ff61116&space=demo
+
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "forms": [
+    {
+      "identity": {
+        "formRef": {
+          "apiVersion": "resources.publisher.example",
+          "kind": "CounterReservation",
+          "definitionVersion": "0.1.0",
+          "schemaDigest": "sha256:9981fb7988d13844b8e22ab2428407aa90e7e368df876086e0e456151ff61116"
+        }
+      },
+      "definitionKnown": true,
+      "installed": true,
+      "executable": true,
+      "activated": true,
+      "availableToPrincipal": true,
+      "operations": [
+        "create",
+        "read",
+        "delete",
+        "import",
+        "observe"
+      ]
+    }
+  ]
+}
+```
+
+次に、作成する内容を `prepare` に送ります。Hostは内容を事前確認し、同じ内容のResourceと `review` を返します。この要求だけではリソースを作成しません。
+
+```http
+POST https://host.example/apis/forms.takoform.com/v1/resources/prepare
 Content-Type: application/json
 
 {
@@ -134,7 +170,76 @@ Content-Type: application/json
       "schemaDigest": "sha256:9981fb7988d13844b8e22ab2428407aa90e7e368df876086e0e456151ff61116"
     }
   },
-  "metadata": { "name": "counter-reservation", "space": "demo" },
+  "metadata": {
+    "name": "counter-reservation",
+    "space": "demo"
+  },
+  "spec": {
+    "target": {
+      "apiVersion": "resources.publisher.example",
+      "kind": "RangeSequence",
+      "name": "range-sequence"
+    }
+  }
+}
+
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "resource": {
+    "apiVersion": "resources.publisher.example",
+    "kind": "CounterReservation",
+    "form": {
+      "formRef": {
+        "apiVersion": "resources.publisher.example",
+        "kind": "CounterReservation",
+        "definitionVersion": "0.1.0",
+        "schemaDigest": "sha256:9981fb7988d13844b8e22ab2428407aa90e7e368df876086e0e456151ff61116"
+      }
+    },
+    "metadata": {
+      "name": "counter-reservation",
+      "space": "demo"
+    },
+    "spec": {
+      "target": {
+        "apiVersion": "resources.publisher.example",
+        "kind": "RangeSequence",
+        "name": "range-sequence"
+      }
+    }
+  },
+  "review": {
+    "prepareDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "specDigest": "sha256:2bf6bf2dbd6249a80082f45aebf696ebcf93c52a457a4a9234f18a29ed219e25"
+  }
+}
+```
+
+応答の `review.prepareDigest` を、内容を変えずにapplyへ渡します。以下の `a` の列は説明用の仮の値です。実Hostでは応答をそのまま使い、クライアントで生成しません。新規作成は `If-None-Match: *` で既存リソースの上書きを防ぎます。同期で完了すると、作成済みResource全体が返ります。
+
+```http
+PUT https://host.example/apis/forms.takoform.com/v1/resources/resources.publisher.example/CounterReservation/counter-reservation
+If-None-Match: *
+Idempotency-Key: create-counter-reservation-20260907
+Content-Type: application/json
+
+{
+  "apiVersion": "resources.publisher.example",
+  "kind": "CounterReservation",
+  "form": {
+    "formRef": {
+      "apiVersion": "resources.publisher.example",
+      "kind": "CounterReservation",
+      "definitionVersion": "0.1.0",
+      "schemaDigest": "sha256:9981fb7988d13844b8e22ab2428407aa90e7e368df876086e0e456151ff61116"
+    }
+  },
+  "metadata": {
+    "name": "counter-reservation",
+    "space": "demo"
+  },
   "spec": {
     "target": {
       "apiVersion": "resources.publisher.example",
@@ -148,14 +253,65 @@ Content-Type: application/json
 }
 
 HTTP/1.1 201 Created
+Content-Type: application/json
+ETag: "1"
+
+{
+  "apiVersion": "resources.publisher.example",
+  "kind": "CounterReservation",
+  "form": {
+    "formRef": {
+      "apiVersion": "resources.publisher.example",
+      "kind": "CounterReservation",
+      "definitionVersion": "0.1.0",
+      "schemaDigest": "sha256:9981fb7988d13844b8e22ab2428407aa90e7e368df876086e0e456151ff61116"
+    }
+  },
+  "metadata": {
+    "name": "counter-reservation",
+    "space": "demo",
+    "uid": "res_counter_reservation_1",
+    "generation": "1",
+    "revision": "1"
+  },
+  "spec": {
+    "target": {
+      "apiVersion": "resources.publisher.example",
+      "kind": "RangeSequence",
+      "name": "range-sequence"
+    }
+  },
+  "status": {
+    "observedGeneration": "1",
+    "conditions": [
+      {
+        "type": "Ready",
+        "status": "True",
+        "reason": "Available",
+        "lastTransitionTime": "2026-09-07T00:00:00Z"
+      }
+    ]
+  }
+}
 ```
 
-`review.prepareDigest` に並べた `a` は説明用の仮の値です。実際には `prepare` の応答に
-含まれる値をそのまま渡します。クライアントが独自に生成する値ではありません。
+時間のかかる処理では、上の `201 Created` の代わりに、次の `202 Accepted` が返ります。これは別の処理分岐であり、201の後に202が返るわけではありません。
 
-既存リソースを更新する場合は、`If-None-Match: *` の代わりに現在の世代を指定して
-同時更新を制御します。時間のかかる処理は `202 Accepted` を返します。
-返されたOperationのIDを使って、処理の結果を取得できます。
+```http
+HTTP/1.1 202 Accepted
+Content-Type: application/json
+
+{
+  "operation": {
+    "apiVersion": "operations.takoform.com/v1alpha1",
+    "kind": "Operation",
+    "id": "op_counter_reservation_create",
+    "done": false
+  }
+}
+```
+
+返されたOperationのIDで結果を取得します。`done: false` の間はHostの再試行案内に従って確認し、完了後は成功したResourceまたはエラーを読み取ります。下は成功して完了した応答です。
 
 ```http
 GET https://host.example/apis/forms.takoform.com/v1/operations/op_counter_reservation_create
@@ -196,12 +352,21 @@ Content-Type: application/json
       },
       "status": {
         "observedGeneration": "1",
-        "conditions": []
+        "conditions": [
+          {
+            "type": "Ready",
+            "status": "True",
+            "reason": "Available",
+            "lastTransitionTime": "2026-09-07T00:00:00Z"
+          }
+        ]
       }
     }
   }
 }
 ```
+
+更新では、読み取ったUIDとgenerationを使って同時更新を制御します。ただし、この `CounterReservation` の定義は更新操作を持ちません。更新可能かどうかもFormの定義とHostの対応情報で確認してください。Goで実際の呼び出し順を試す例は [GoからHostを使う](/client/) にあります。
 
 各フィールド、ステータスコード、同時更新の制御、エラーコードの詳細は
 [Host API v1の仕様](/spec/host-api/v1) と

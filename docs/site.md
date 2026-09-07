@@ -31,6 +31,7 @@ website/
 ├── index.md               landing（手書き）
 ├── start/  guides/  reference/  glossary.md
 │                          読み方・参照・用語の入口（手書き）
+├── authoring/  client/     Core所有の実行例を読むガイド（手書き）
 ├── host-api/  model/  conformance/  site.md
 │                          読み方の案内（手書き）
 ├── spec/                  freeze に含まれる source の mirror（生成）
@@ -56,6 +57,11 @@ bun run site:dev                    # 手元で見る
 
 `bun run check` はこれらの検査を含みます。生成物が古いまま commit されることはありません。
 
+`authoring/` と `client/` のコードは、GoのExampleテストからVitePressのsource snippetとして
+読み込みます。架空の定義とloopbackテスト環境を使い、実Hostの提供や配備手順とは区別します。
+`hostclient/documentation_test.go` はStartのHTTP例を実クライアントで同期・非同期とも再生し、
+要求・応答本文だけでなく、接続先・クエリ・必須ヘッダーも検査します。
+
 `site:dev` は VitePress の local search を含む手元の確認用です。dependency の開発時
 optimizer だけを `esnext` に合わせています。release build の target と schema の bytes は
 この設定では変わりません。
@@ -75,7 +81,7 @@ Chrome / Chromium を headless で動かします。browser が見つからな�
 標準 path にない場合は `TAKOFORM_BROWSER=/absolute/path/to/chrome` を設定してください。
 browser の自動 download や、既存 browser profile の利用はしません。
 
-- `/`、`/start/`、`/guides/`、`/reference/`、`/glossary`、`/host-api/` を
+- `/`、`/start/`、`/guides/`、`/authoring/`、`/client/`、`/reference/`、`/glossary`、`/host-api/` の日英を
   320 / 375 / 414 / 768 px で開き、横 overflow と切れた操作要素がないことを確認する。
 - 上記のページと `/spec/host-api/v1` で、左の目次が公開ページの一覧と一致し、
   全グループが最初から開いていることを確認する。
@@ -98,15 +104,16 @@ portable な `bun run check` へ browser binary を暗黙に要求しません�
 
 | path | 中身 |
 | --- | --- |
-| `/`、`/start/`、`/guides/`、`/reference/`、`/host-api/`、`/model/`、`/conformance/`、`/glossary`、`/site` | 手書きの案内 |
+| `/`、`/start/`、`/guides/`、`/authoring/`、`/client/`、`/reference/`、`/host-api/`、`/model/`、`/conformance/`、`/glossary`、`/site` | 手書きの案内 |
 | `/spec/**` | freeze-listed source は normative mirror。それ以外の overview/index mirror は non-normative。正本は `spec/**` |
 | `/schemas/` | identity の non-normative 索引 page |
 | `/en/`と上記ページの`/en/**`版 | 英語の案内・索引と同じ英語の仕様原文 |
 | `/schemas/<$id と同じ path>` | 公開 schema の exact な bytes |
 | `/sitemap.xml`、`/robots.txt`、`/404.html` | site の付随物 |
 
-個別FormのDefinition、example、catalog、Form pageは配信しません。それぞれの
-publisherが自分のsiteへdeployします。site独自のwell-known statusや文書集合versionも
+publisherが公開する個別FormのDefinition、family固有example、catalog、Form pageは
+配信しません。それぞれのpublisherが自分のsiteへdeployします。Core自身のライブラリを
+教える架空の定義・実行例はこのsiteが所有します。site独自のwell-known statusや文書集合versionも
 公開しません。
 
 公開 schema の `$id` は `https://forms.takoform.com/schemas/...` です。append-only な

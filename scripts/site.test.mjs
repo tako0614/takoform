@@ -42,6 +42,32 @@ const context = {
 };
 
 describe("takoform.com site derivation", () => {
+  test("publishes authoring and client guides with executable examples", () => {
+    for (const prefix of ["", "en/"]) {
+      for (const page of ["authoring", "client"]) {
+        const file = `website/${prefix}${page}/index.md`;
+        expect(HAND_AUTHORED_PAGE_SOURCES).toContain(file);
+        const source = readFileSync(file, "utf8");
+        expect(source).toContain("go test");
+        expect(source).toContain("<<<");
+      }
+      const start = readFileSync(`website/${prefix}start/index.md`, "utf8");
+      expect(start).toContain("POST https://host.example/apis/forms.takoform.com/v1/resources/prepare");
+      expect(start).toMatch(/HTTP\/1\.1 201 Created\nContent-Type: application\/json\nETag: "1"\n\n\{/u);
+    }
+  });
+  test("renders tested source regions in both authoring and client guides", async () => {
+    const { createMarkdownRenderer } = await import("vitepress");
+    const markdown = await createMarkdownRenderer(join(process.cwd(), "website"));
+    for (const prefix of ["", "en/"]) {
+      for (const [page, names] of [["authoring", ["exampleDefinition", "ExampleVerifyFS"]], ["client", ["ExampleClient_ApplyResource"]]]) {
+        const path = `website/${prefix}${page}/index.md`;
+        const html = markdown.render(readFileSync(path, "utf8"), { path: join(process.cwd(), path) });
+        for (const name of names) expect(html).toContain(name);
+        expect(html).not.toContain("Code snippet path not found");
+      }
+    }
+  });
   test("tokenizes Japanese prose without splitting API identifiers", () => {
     expect(tokenize("パッケージを検証します。packageDigest schemaDigest"))
       .toEqual(expect.arrayContaining(["パッケージ", "検証", "packageDigest", "schemaDigest"]));
@@ -95,8 +121,8 @@ describe("takoform.com site derivation", () => {
   });
   test("translations preserve every example byte and pair all guide headings", async () => {
     const { createMarkdownRenderer } = await import("vitepress");
-    const markdown = await createMarkdownRenderer(process.cwd());
-    const ids = (source) => [...markdown.render(source).matchAll(/<h[1-6]\b[^>]*id="([^"]+)"/gu)].map((match) => match[1]);
+    const markdown = await createMarkdownRenderer(join(process.cwd(), "website"));
+    const ids = (source, path) => [...markdown.render(source, { path: join(process.cwd(), path) }).matchAll(/<h[1-6]\b[^>]*id="([^"]+)"/gu)].map((match) => match[1]);
     const fences = (source) => source.match(/^```[^\n]*\n[\s\S]*?^```/gmu) ?? [];
     const links = (source) => [...source.matchAll(/\[[^\]]*\]\(([^)]+)\)/gu)]
       .map((match) => match[1].replace(/^\/en\//u, "/")).sort();
@@ -104,7 +130,8 @@ describe("takoform.com site derivation", () => {
       const japanese = readFileSync(source, "utf8");
       const english = readFileSync(source.replace("website/", "website/en/"), "utf8");
       expect(fences(english)).toEqual(fences(japanese));
-      expect(ids(english)).toEqual(ids(japanese));
+      expect(english.match(/^<<< .+$/gmu) ?? []).toEqual(japanese.match(/^<<< .+$/gmu) ?? []);
+      expect(ids(english, source.replace("website/", "website/en/"))).toEqual(ids(japanese, source));
       expect(links(english)).toEqual(links(japanese));
     }
   });
@@ -455,6 +482,8 @@ describe("takoform.com site derivation", () => {
     expect(HAND_AUTHORED_ROUTE_SOURCES).toEqual([
       "website/start/index.md",
       "website/guides/index.md",
+      "website/authoring/index.md",
+      "website/client/index.md",
       "website/reference/index.md",
       "website/glossary.md",
     ]);

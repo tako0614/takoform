@@ -13,8 +13,9 @@ the repository originals linked from each specification remain authoritative.
 - Host API v1 and its request/response data formats.
 - Shared mechanisms for Form definition, distribution and verification.
 - Public JSON Schemas and instructions for verification tools.
+- Executable Core examples using a fictional Form for packaging and a local HTTP fixture for the Go client.
 
-Individual Form settings and examples belong to their publishers. Check Host and
+Published individual Form settings and examples belong to their publishers. Check Host and
 client support, credentials, pricing and operating requirements with the product
 or environment you intend to use.
 

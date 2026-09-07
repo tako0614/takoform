@@ -16,8 +16,8 @@
 //      adds keeps publishing pages whose source was deleted, which is how a
 //      withdrawn lane stays reachable and readable as current.
 //
-// Form definitions, per-Form examples, publisher catalogs, and client adapter
-// pages are deliberately absent: they belong to the publisher or adapter that
+// Published Form definitions, family-specific examples, publisher catalogs, and
+// third-party client adapter pages are absent: they belong to the publisher or adapter that
 // owns them, and re-hosting them here would make this repository look like a
 // registry it is not.
 
@@ -87,6 +87,8 @@ export const GENERATED_INDEX_PAGES = Object.freeze([
 export const HAND_AUTHORED_ROUTE_SOURCES = Object.freeze([
   `${SITE_ROOT}/start/index.md`,
   `${SITE_ROOT}/guides/index.md`,
+  `${SITE_ROOT}/authoring/index.md`,
+  `${SITE_ROOT}/client/index.md`,
   `${SITE_ROOT}/reference/index.md`,
   `${SITE_ROOT}/glossary.md`,
 ]);

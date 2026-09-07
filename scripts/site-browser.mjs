@@ -12,7 +12,7 @@ import {
 } from "./site.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const routes = ["", "/en"].flatMap((prefix) => ["/", "/start/", "/guides/", "/reference/", "/glossary", "/host-api/"].map((route) => `${prefix}${route}`));
+const routes = ["", "/en"].flatMap((prefix) => ["/", "/start/", "/guides/", "/authoring/", "/client/", "/reference/", "/glossary", "/host-api/"].map((route) => `${prefix}${route}`));
 const widths = [320, 375, 414, 768];
 const sidebarRoutes = [...new Set([
   ...HAND_AUTHORED_PAGE_SOURCES.map(siteRouteForPageSource),

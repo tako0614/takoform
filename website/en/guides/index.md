@@ -4,9 +4,16 @@ title: Implementation guides
 
 # Implementation guides {#実装ガイド}
 
-Find the specifications relevant to what you are building. To try the tools first,
-read [Getting started](/en/start/). This guide is non-normative; the linked
+Form publishers, Go client users and Host implementers need different starting
+points. Choose the task below. This guide is non-normative; the linked
 specifications define the implementation requirements.
+
+| Task | Start here |
+| --- | --- |
+| Define and distribute resource settings and behavior | [Create a Form](/en/authoring/): definition → package → verification |
+| Manage resources from a Go application | [Use a Host from Go](/en/client/): discovery → availability → prepare → apply |
+| Verify existing packages | [Getting started](/en/start/): package verification and Snapshot construction |
+| Implement a resource Host | Continue to the Host implementation section below for API and conformance requirements |
 
 ## Understand the architecture {#architect}
 
@@ -28,7 +35,7 @@ pricing and backend selection belong to the Host or operating environment.
 
 These operations verify data. They do not connect to a Host or create resources.
 
-## Implement a Host or client {#host-client-implementer}
+## Implement a Host {#host-client-implementer}
 
 1. Read the [Host API overview](/en/host-api/) for discovery and the API structure.
 2. Implement the requests, responses, concurrency checks and errors in [Host API v1](/en/spec/host-api/v1).
@@ -38,6 +45,11 @@ These operations verify data. They do not connect to a Host or create resources.
 
 Client-specific schemas, state management and import behavior belong to the client.
 The Host manages backends, credentials, tenant policies and Form activation.
+
+Start with discovery, availability, preparation, creation and reads for one Form.
+Then implement and verify update conflicts, idempotent retries, asynchronous work
+and errors. Successful HTTP exchanges are only part of the job: implement the
+Form's promised behavior and the applicable [Host conformance checks](/en/conformance/).
 
 ## Interpret verification results {#verifier-reviewer}
 

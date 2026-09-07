@@ -118,9 +118,11 @@ OpenTofu / Provider の利用者は、[terraform-provider-takoform](https://gith
 
 この repository は API と common model の site source、build、deploy entrypoint を
 持ちます。site が配信するのは Host API v1、publisher 中立な common model、exact な公開
-schema bytes、conformance の語彙と案内です。Form definition、個別 example、catalog、
-Host support/status、client adapter page、realized な DNS / CDN / account / credential
-状態は配信しません。詳しくは [この site について](website/site.md) を読んでください。
+schema bytes、conformance の語彙と案内、Core 自身のライブラリを使う実行例です。
+publisher が公開する Form definition、family 固有の example、publisher catalog、
+Host support/status、第三者の client adapter page、realized な DNS / CDN / account /
+credential 状態は配信しません。架空の定義を使う Core の入門例と、publisher が配布する
+Form は区別します。詳しくは [この site について](website/site.md) を読んでください。
 
 ## 開発
 
