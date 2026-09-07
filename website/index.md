@@ -1,6 +1,5 @@
 ---
 layout: page
-sidebar: false
 title: Takoform
 description: リソースの定義、検証、管理APIのための仕様とGoライブラリ。
 hero:

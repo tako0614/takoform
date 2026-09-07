@@ -46,13 +46,36 @@ describe("takoform.com site derivation", () => {
     for (const target of ["/start/", "/reference/", "/model/", "/host-api/"]) {
       expect(source).toContain(`link: ${target}`);
     }
-    expect(source).toContain("sidebar: false");
+    expect(source).not.toContain("sidebar: false");
     const component = readFileSync("website/.vitepress/theme/components/HomePage.vue", "utf8");
     expect(component).toContain("<VPHomeHero />");
     expect(component).toContain("<VPHomeFeatures />");
     const css = readFileSync("website/.vitepress/theme/custom.css", "utf8");
     expect(css).not.toMatch(/--vp-(?:c-|font-family)[\w-]*\s*:/u);
     expect(css).not.toContain("tokens.css");
+  });
+  test("exposes every published page and top-level destination in one shared sidebar", async () => {
+    const config = (await import("../website/.vitepress/config.mts")).default;
+    const sidebar = config.themeConfig.sidebar;
+    expect(Array.isArray(sidebar)).toBe(true);
+    const links = [];
+    const visit = (items) => {
+      for (const item of items) {
+        expect(item.collapsed).not.toBe(true);
+        if (item.link) links.push(item.link);
+        if (item.items) visit(item.items);
+      }
+    };
+    visit(sidebar);
+    const publishedRoutes = [
+      ...HAND_AUTHORED_PAGE_SOURCES.map(siteRouteForPageSource),
+      ...GENERATED_INDEX_PAGES.map(siteRouteForPageSource),
+      ...MIRRORED_SPEC_DOCUMENTS.map(siteRouteForSpecDocument),
+    ];
+    expect(links.filter((link) => link.startsWith("/")).sort()).toEqual(
+      [...new Set(publishedRoutes)].sort(),
+    );
+    for (const item of config.themeConfig.nav) expect(links).toContain(item.link);
   });
   test("requires intact source and built site assets", () => {
     const root = mkdtempSync(join(tmpdir(), "takoform-site-assets-"));

@@ -62,6 +62,7 @@ const contractSidebar = [
 ];
 
 const guideSidebar = [
+  { text: "トップ", link: "/" },
   {
     text: "ドキュメント",
     items: [
@@ -151,10 +152,17 @@ export default defineConfig({
       { text: "用語集", link: "/glossary" },
       { text: "GitHub", link: repository },
     ],
-    sidebar: {
-      "/spec/": contractSidebar,
-      "/": guideSidebar,
-    },
+    sidebar: [
+      ...guideSidebar,
+      ...contractSidebar,
+      {
+        text: "関連リンク",
+        items: [
+          { text: "Edge Forms", link: "https://edge.forms.takoform.com/" },
+          { text: "GitHub", link: repository },
+        ],
+      },
+    ],
     socialLinks: [{ icon: "github", link: repository }],
     footer: {
       message:

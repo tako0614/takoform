@@ -5,11 +5,20 @@ import { once } from "node:events";
 import { dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
-import { inspectDist, inspectSite, SITE_DIST } from "./site.mjs";
+import {
+  inspectDist, inspectSite, SITE_DIST, HAND_AUTHORED_PAGE_SOURCES,
+  GENERATED_INDEX_PAGES, MIRRORED_SPEC_DOCUMENTS,
+  siteRouteForPageSource, siteRouteForSpecDocument,
+} from "./site.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const routes = ["/", "/start/", "/guides/", "/reference/", "/glossary", "/host-api/"];
 const widths = [320, 375, 414, 768];
+const sidebarRoutes = [...new Set([
+  ...HAND_AUTHORED_PAGE_SOURCES.map(siteRouteForPageSource),
+  ...GENERATED_INDEX_PAGES.map(siteRouteForPageSource),
+  ...MIRRORED_SPEC_DOCUMENTS.map(siteRouteForSpecDocument),
+])].sort();
 
 function browserExecutable() {
   const candidates = process.env.TAKOFORM_BROWSER
@@ -132,6 +141,10 @@ async function run() {
     const visit = async (route) => {
       await page.goto(origin + route, { waitUntil: "networkidle" });
       await page.evaluate(() => document.fonts.ready);
+      assert.deepEqual(await page.locator('.VPSidebar a[href^="/"]').evaluateAll(
+        (links) => links.map((link) => link.getAttribute("href")).sort(),
+      ), sidebarRoutes, `${route}: shared sidebar must contain every published page`);
+      assert.equal(await page.locator(".VPSidebarItem.collapsed").count(), 0, `${route}: sidebar groups start expanded`);
     };
     for (const width of widths) {
       await page.setViewportSize({ width, height: 900 });
@@ -139,16 +152,19 @@ async function run() {
         await visit(route);
         assert.deepEqual(await page.evaluate(inspectGeometry), [], `${width}px ${route}`);
       }
+      await visit("/spec/host-api/v1");
     }
     await page.setViewportSize({ width: 320, height: 900 });
     await visit("/");
     await checkDisclosure(page, ".VPNavBarHamburger");
+    await checkDisclosure(page, ".VPLocalNav button.menu");
     await visit("/start/");
     await checkDisclosure(page, ".VPLocalNav button.menu");
     await page.setViewportSize({ width: 1280, height: 800 });
     for (const colorScheme of ["light", "dark"]) {
       await page.emulateMedia({ colorScheme });
       await visit("/");
+      assert.equal(await page.locator(".VPSidebar").isVisible(), true, "homepage sidebar must be visible on desktop");
       assert.equal(await page.locator("html").evaluate((element) => element.classList.contains("dark")), colorScheme === "dark");
       assert.deepEqual(await page.evaluate(inspectGeometry), [], `1280px ${colorScheme}`);
       const primary = page.locator('.VPHero .VPButton[href="/start/"]');
@@ -163,7 +179,7 @@ async function run() {
       await page.screenshot({ path: `/tmp/takoform-docs-home-${colorScheme}.png`, fullPage: true });
     }
     assert.deepEqual(networkFailures, [], "browser runtime and asset requests");
-    console.log(`site-browser: ${widths.length * routes.length} responsive pages, 2 keyboard disclosures, 2 desktop themes passed (${browser.version()})`);
+    console.log(`site-browser: ${widths.length * routes.length} responsive pages, complete shared sidebar, 3 keyboard disclosures, 2 desktop themes passed (${browser.version()})`);
   } finally {
     process.removeListener("SIGINT", interrupted);
     process.removeListener("SIGTERM", interrupted);

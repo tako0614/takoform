@@ -5,6 +5,9 @@
 用途と操作を直接説明し、宣伝的なコピーや不要な内部用語を増やしません。正確なAPI名や
 フィールド名、固定済みの仕様本文は変更せず、解説と区別します。
 
+左の目次はトップページ・ガイド・仕様で共通です。公開中の全ページと関連サイトへの
+リンクを載せ、閲覧中のページによって別の目次へ切り替えません。
+
 `takoform.com` は Host API v1 と publisher 中立な共通モデルだけを配信する site です。
 この repository がその source、build、deploy entrypoint を所有します。realized な CDN、
 DNS、account / zone / route、credential、operator の状態は所有しません。それらは公開を
@@ -68,6 +71,8 @@ browser の自動 download や、既存 browser profile の利用はしません
 
 - `/`、`/start/`、`/guides/`、`/reference/`、`/glossary`、`/host-api/` を
   320 / 375 / 414 / 768 px で開き、横 overflow と切れた操作要素がないことを確認する。
+- 上記のページと `/spec/host-api/v1` で、左の目次が公開ページの一覧と一致し、
+  全グループが最初から開いていることを確認する。
 - mobile navigation と sidebar を keyboard で開き、Escape で閉じたあと trigger へ focus が
   戻ることを確認する。
 - 1280 px の light / dark 両方で first viewport の主要 CTA と keyboard focus indicator を確認する。
