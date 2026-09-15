@@ -186,6 +186,7 @@ export default defineConfig({
     build: { target: BUILD_TARGET, chunkSizeWarningLimit: 700 },
   },
   head: [
+    ["meta", { name: "adring-site-verification", content: "adring_vrf_EyXa-BuHjAKcQYWnxeap4odKOxDj5svQ" }],
     ["link", { rel: "icon", href: "data:," }],
     ["meta", { property: "og:type", content: "website" }],
     ["meta", { property: "og:site_name", content: "Takoform" }],

@@ -4,6 +4,7 @@ import { useData } from "vitepress";
 import { onBeforeUnmount, onMounted } from "vue";
 
 import MirrorNotice from "./components/MirrorNotice.vue";
+import AdringWidget from "./components/AdringWidget.vue";
 
 const { Layout } = DefaultTheme;
 const { frontmatter } = useData();
@@ -25,6 +26,9 @@ onBeforeUnmount(() => window.removeEventListener("keydown", closeMobileNavigatio
 
 <template>
   <Layout>
+    <template #layout-bottom>
+      <AdringWidget />
+    </template>
     <template #doc-before>
       <MirrorNotice
         v-if="frontmatter.canonicalSource"
