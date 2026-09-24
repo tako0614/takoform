@@ -46,10 +46,10 @@ go run ./cmd/generic-conformance verify --manifest conformance/takoform-v1/gener
 
 ## レポートの確認点 {#report-を読むときの確認点}
 
-1. `status` だけでなく、何を対象に検証したレポートかを確認する。
-2. FormRefの4項目で、検証した定義を特定する。
-3. `packageDigest` はパッケージ索引、`schemaDigest` はForm定義の内容を指すことを区別する。
-4. 公開やHost上の操作の結果は、それを行った公開元やHostの記録で別に確認する。
+1. `status` だけでなく、何を対象に検証したレポートかを確認します。
+2. FormRefの4項目で、検証した定義を特定します。
+3. `packageDigest` はパッケージ索引、`schemaDigest` はForm定義の内容を指すことを区別します。
+4. 公開やHost上の操作の結果は、それを行った公開元やHostの記録で別に確認します。
 
 ## ソースコード {#source}
 
