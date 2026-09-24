@@ -43,7 +43,7 @@ website/
     └                      配信 header、robots、site assets（手書き）
 ```
 
-生成部分の正本は次です。手で編集した内容は gate が差し戻します。
+生成部分の正本 (正とする情報) は次です。手で編集した内容は gate が差し戻します。
 
 - [`scripts/site.mjs`](../scripts/site.mjs) — mirror page、索引 page、公開 schema bytes、
   build 出力の検査
