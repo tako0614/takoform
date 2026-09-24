@@ -31,7 +31,7 @@ title: 仕様一覧
 固定対象のファイルとダイジェストは
 [`v1.freeze.json`](https://github.com/tako0614/takoform/blob/main/spec/host-api/v1.freeze.json)
 に列挙されています。サイト上の仕様は原文のリンク先だけを置き換えて掲載しています。
-要件を確認する際の正本は、リポジトリ内のファイルです。
+要件を確認する際に正とする情報は、リポジトリ内のファイルです。
 
 [仕様の概要](/spec/)、[Host APIの索引](/spec/host-api/)、
 [スキーマの索引](/spec/schemas/) は案内用のページで、固定された仕様本文ではありません。
