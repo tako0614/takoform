@@ -1,6 +1,10 @@
 # Host API v1beta4
 
-`forms.takoform.com/v1beta4` is the current Host API lane. It was minted for
+> Status: superseded. The current Host lane is `forms.takoform.com/v1`
+> ([`v1.md`](v1.md)); this document is retained as the record of the v1beta4
+> lane.
+
+`forms.takoform.com/v1beta4` was the current Host API lane. It was minted for
 protocol reasons ([decision 0039](../decisions/0039-a-lane-is-minted-for-one-of-two-reasons.md)):
 a Form Family group may now omit its version segment
 ([decision 0049](../decisions/0049-a-form-versions-alone.md)), which changes the

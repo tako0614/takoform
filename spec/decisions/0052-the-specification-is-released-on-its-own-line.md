@@ -3,6 +3,19 @@
 - Status: Accepted
 - Date: 2026-08-23
 
+> Current applicability (2026-09-24): the Specification 1.0 identity this
+> record released toward was withdrawn before publication; the first numbered
+> Specification release is 1.1, and the candidate-corpus and
+> reference-conformance prerequisites were narrowed to the normative source by
+> [0055](0055-specification-release-needs-only-normative-source.md). The
+> independent release-line decision itself stands. The current release
+> authority is
+> [0057](0057-specification-1-1-compatibility-and-independent-identities.md)
+> and
+> [`../../release/specification-releases.json`](../../release/specification-releases.json).
+> The commands named in the enforcement section belonged to the predecessor
+> repository and are not runnable here.
+
 ## Context
 
 Takoform has several independent compatibility and maturity axes. The Host API

@@ -1,6 +1,10 @@
 # Host API v1beta1
 
-`forms.takoform.com/v1beta1` is the current Host API lane
+> Status: superseded. The current Host lane is `forms.takoform.com/v1`
+> ([`v1.md`](v1.md)); this document is retained as the record of the v1beta1
+> lane.
+
+`forms.takoform.com/v1beta1` was the current Host API lane
 ([decision 0035](../decisions/0035-beta-contracts-ship-in-stable-provider-v2-1.md)).
 It carries namespaced FormRef groups, UID/generation/revision resource
 identity, long-running Operations, content-addressed artifact upload, and

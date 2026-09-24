@@ -5,6 +5,14 @@
 - Supersedes: decisions 0044 and 0046 as Takoform Specification/Provider release authorities
 - Stacks after: decision 0052 (`0052-the-specification-is-released-on-its-own-line.md`)
 
+> Current applicability (2026-09-24): the Specification 1.0 wording below is
+> historical — identity 1.0 was withdrawn unpublished and the first numbered
+> release is 1.1 under
+> [0057](0057-specification-1-1-compatibility-and-independent-identities.md).
+> The separate release-authorities decision itself stands. The commands named
+> in the enforcement section belonged to the predecessor repository and are
+> not runnable here.
+
 ## Context
 
 Takoform owns a normative specification and an official Terraform Provider. It
