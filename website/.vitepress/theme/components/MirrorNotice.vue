@@ -21,7 +21,7 @@ withDefaults(
       {{ normative ? '仕様の原文（英語・固定済み）:' : '案内文の原文（英語）:' }}
       <a v-if="url" :href="url"><code>{{ source }}</code></a>
       <code v-else>{{ source }}</code>。
-      {{ normative ? '本文は英語の原文を掲載しています。リンク先だけを置き換えており、正本はリポジトリ内のファイルです。' : '本文は英語の案内文です。仕様そのものではありません。' }}
+      {{ normative ? '本文は英語の原文を掲載しています。リンク先だけを置き換えており、正とする情報はリポジトリ内のファイルです。' : '本文は英語の案内文です。仕様そのものではありません。' }}
     </p>
     <p v-else-if="normative">
       Specification source:
