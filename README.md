@@ -78,7 +78,7 @@ normative な common model と Core の実装は、次の層に分かれてい�
 
 実装の入口は [`formpackage/`](formpackage/)、[`snapshot/`](snapshot/)、
 [`hostclient/`](hostclient/)、[`trust/`](trust/) です。CLI はこれらと同じ検証経路を
-使い、invalid input では fail closed します。
+使い、invalid input では安全側に停止します。
 
 ## version の読み方
 
