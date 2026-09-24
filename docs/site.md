@@ -82,15 +82,15 @@ Chrome / Chromium を headless で動かします。browser が見つからな�
 browser の自動 download や、既存 browser profile の利用はしません。
 
 - `/`、`/start/`、`/guides/`、`/authoring/`、`/client/`、`/reference/`、`/glossary`、`/host-api/` の日英を
-  320 / 375 / 414 / 768 px で開き、横 overflow と切れた操作要素がないことを確認する。
+  320 / 375 / 414 / 768 px で開き、横 overflow と切れた操作要素がないことを確認します。
 - 上記のページと `/spec/host-api/v1` で、左の目次が公開ページの一覧と一致し、
-  全グループが最初から開いていることを確認する。
+  全グループが最初から開いていることを確認します。
 - mobile navigation と sidebar を keyboard で開き、Escape で閉じたあと trigger へ focus が
-  戻ることを確認する。
-- 1280 px の light / dark 両方で first viewport の主要 CTA と keyboard focus indicator を確認する。
-- asset の HTTP error、JavaScript error、予期しない外部通信も失敗として扱う。
-- 英語版にも同じレスポンシブ検査を行う。375 / 1024 / 1280 pxで言語メニューから
-  同一ページへ往復し、見出しの位置とhydration後の言語を確認する。
+  戻ることを確認します。
+- 1280 px の light / dark 両方で first viewport の主要 CTA と keyboard focus indicator を確認します。
+- asset の HTTP error、JavaScript error、予期しない外部通信も失敗として扱います。
+- 英語版にも同じレスポンシブ検査を行います。375 / 1024 / 1280 pxで言語メニューから
+  同一ページへ往復し、見出しの位置とhydration後の言語を確認します。
 
 本文、link、button、code highlighting の contrast と見た目の最終判断は、light / dark の
 実画面で別途確認します。この browser lane は live service や production mutation を必要とせず、
