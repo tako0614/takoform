@@ -11,7 +11,7 @@ changed payload.
 
 ## Run the example {#run}
 
-Allow about five minutes. You need Go, Git and a network connection for the
+You need Go, Git and a network connection for the
 initial source and dependency downloads. In an existing checkout, run the last
 two commands from the repository root.
 
