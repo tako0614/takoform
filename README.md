@@ -135,6 +135,9 @@ bun run check
 portable tests、generic conformance、standalone build、site build を行います。公開や
 Resource の mutation は行いません。
 
+この repository の provenance を記録した extraction receipt と byte map は
+[docs/extraction/](docs/extraction/) にあります。
+
 ## License
 
 MIT

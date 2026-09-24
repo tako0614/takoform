@@ -74,5 +74,10 @@ Form publication, Host support, activation, and commercial offerings are
 decisions made by their respective owners. No central Form status record is
 part of the current contract.
 
+Proposed contract changes under review live in
+[`proposals/`](https://github.com/tako0614/takoform/tree/main/spec/proposals); they are not current contract. Core software
+releases follow
+[`release/core-release-policy.md`](https://github.com/tako0614/takoform/blob/main/release/core-release-policy.md).
+
 
 </div>

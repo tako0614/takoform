@@ -64,3 +64,8 @@ does not collect or republish them as a central registry.
 Form publication, Host support, activation, and commercial offerings are
 decisions made by their respective owners. No central Form status record is
 part of the current contract.
+
+Proposed contract changes under review live in
+[`proposals/`](proposals/); they are not current contract. Core software
+releases follow
+[`release/core-release-policy.md`](../release/core-release-policy.md).
