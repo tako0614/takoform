@@ -73,7 +73,7 @@ Coreには特定の公開元を優先するリストや `official` フラグは�
 
 ## 次に読む
 
-- [はじめる](/start/) — パッケージを検証してSnapshotを作成する。
+- [はじめる](/start/) — パッケージを検証してSnapshotを作成します。
 - [Host APIの概要](/host-api/) — リソースを操作するAPI。
 - [バージョンと互換性](/spec/versioning) — 詳しい規則。
 - [用語集](/glossary) — 用語の説明。
