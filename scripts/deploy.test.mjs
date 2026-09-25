@@ -103,7 +103,7 @@ describe("Takoform deploy entrypoint", () => {
       triggers: [],
     });
     expect(site.requiresTools).toContain("wrangler");
-    expect(site.requiresEnv).toEqual([]);
+    expect(site.requiresEnv).toEqual(["TAKOFORM_BROWSER"]);
     expect(site.obligations).toHaveProperty("no-overwrite");
     expect(site.obligations).not.toHaveProperty("pre-mutation-proof");
     expect(site.obligations).not.toHaveProperty("independent-review");
@@ -111,7 +111,9 @@ describe("Takoform deploy entrypoint", () => {
 
   test("uses the standard Wrangler login/profile instead of environment token requirements", () => {
     const site = DEPLOY_CONTRACT.surfaces.find((surface) => surface.surface === SITE_SURFACE);
-    expect(site.requiresEnv).toEqual([]);
+    // TAKOFORM_BROWSER selects the local browser the site gate drives; it is
+    // not a credential, so the surface still requires no environment token.
+    expect(site.requiresEnv).toEqual(["TAKOFORM_BROWSER"]);
     const obligations = Object.values(site.obligations).join("\n");
     expect(obligations).toContain("wrangler login");
     expect(obligations).toContain("pages project list --json");
