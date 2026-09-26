@@ -244,7 +244,9 @@ export default defineConfig({
       .replace(/\.md$/u, "");
     const ogDescription = pageData.frontmatter?.description
       ? description
-      : (firstParagraph(siteConfig.srcDir, pageData.relativePath) ?? description);
+      : (siteConfig?.srcDir
+          ? firstParagraph(siteConfig.srcDir, pageData.relativePath)
+          : undefined) ?? description;
     const pageUrl = new URL(route, "https://takoform.com/").href;
     // hreflang targets the same page in the other locale when that source file
     // exists; x-default points at the root (Japanese) locale.
@@ -254,8 +256,12 @@ export default defineConfig({
     const jaRoute = jaPath
       .replace(/(^|\/)index\.md$/u, "$1")
       .replace(/\.md$/u, "");
-    const hasJa = existsSync(path.join(siteConfig.srcDir, jaPath));
-    const hasEn = existsSync(path.join(siteConfig.srcDir, `en/${jaPath}`));
+    const hasJa =
+      siteConfig?.srcDir !== undefined &&
+      existsSync(path.join(siteConfig.srcDir, jaPath));
+    const hasEn =
+      siteConfig?.srcDir !== undefined &&
+      existsSync(path.join(siteConfig.srcDir, `en/${jaPath}`));
     const jaUrl = new URL(jaRoute, "https://takoform.com/").href;
     const enUrl = new URL(`en/${jaRoute}`, "https://takoform.com/").href;
     const alternates = [];
