@@ -4,7 +4,7 @@ title: About this site
 
 # About this site {#この-site-について}
 
-Documentation for Takoform specifications, Go libraries and verification tools.
+This site explains the data model shared by Forms, the Host API, Go libraries and verification tools.
 This guide is non-normative. Japanese and English guides explain the contracts;
 the repository originals linked from each specification remain authoritative.
 
@@ -18,6 +18,9 @@ the repository originals linked from each specification remain authoritative.
 Published individual Form settings and examples belong to their publishers. Check Host and
 client support, credentials, pricing and operating requirements with the product
 or environment you intend to use.
+For HCL usage with OpenTofu or Terraform, see the Provider's
+[HCL quick start](https://github.com/tako0614/terraform-provider-takoform/blob/main/README.md#quick-start).
+Each Form publisher maintains its own site for definitions and examples.
 
 ## Specifications and schemas {#identity-と配信}
 
@@ -42,4 +45,4 @@ with the publisher and the Host separately.
 - [Reference](/en/reference/)
 - [Schema index](/en/schemas/)
 - [Source code](https://github.com/tako0614/takoform)
-- [Site build and publication](https://github.com/tako0614/takoform/blob/main/docs/site.md)
+- [OpenTofu / Terraform HCL quick start](https://github.com/tako0614/terraform-provider-takoform/blob/main/README.md#quick-start)

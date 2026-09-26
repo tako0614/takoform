@@ -61,11 +61,15 @@ Host側ではバックエンド、認証情報、テナントごとのポリシ�
 
 ## OpenTofuから使う {#opentofu-provider-を使う-reader}
 
-OpenTofuの設定例やProviderのスキーマ、状態管理、インポートについては、
-[terraform-provider-takoform](https://github.com/tako0614/terraform-provider-takoform) の
-ドキュメントを参照してください。
+OpenTofuやTerraformからHostを使う場合は、
+[ProviderのHCLクイックスタート](https://github.com/tako0614/terraform-provider-takoform/blob/main/README.md#quick-start)
+から始めてください。
+Takoform ProviderはHost API v1を利用するOpenTofu / Terraformクライアントの一つです。
+他の業界向けProviderも同じHCLの設定で組み合わせられます。詳しくは
+[他のProviderと組み合わせる例](https://github.com/tako0614/terraform-provider-takoform/blob/main/README.md#native-opentofu-provider-composition)
+を参照してください。
 
 ## 個別のFormを調べる {#この-site-にないもの}
 
-各Formの設定項目や利用例は、そのFormの公開元が提供します。このサイトでは、
-Formに共通するデータ形式とAPIを説明しています。
+各Formの設定項目や利用例は、そのFormの公開元が案内するサイトを参照してください。
+このサイトでは、Formに共通するデータ形式とHost APIを説明しています。

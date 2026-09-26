@@ -62,10 +62,13 @@ Check publication and Host support with their respective owners.
 
 ## Use OpenTofu {#opentofu-provider-を使う-reader}
 
-See [terraform-provider-takoform](https://github.com/tako0614/terraform-provider-takoform)
-for OpenTofu examples, provider schemas, state management and import behavior.
+If you use a Host from OpenTofu or Terraform, start with the Provider's
+[HCL quick start](https://github.com/tako0614/terraform-provider-takoform/blob/main/README.md#quick-start).
+Takoform Provider is one OpenTofu / Terraform client for Host API v1. Industry
+providers can be declared alongside it in the same HCL module. See the example
+for [composing native providers](https://github.com/tako0614/terraform-provider-takoform/blob/main/README.md#native-opentofu-provider-composition).
 
 ## Look up an individual Form {#この-site-にないもの}
 
-Each publisher provides its own Form settings and examples. This site documents
-the data formats and API shared by Forms.
+For an individual Form's settings and examples, use its publisher's site.
+This site documents the data formats and Host API shared by Forms.

@@ -1,17 +1,20 @@
 ---
 layout: page
 title: Takoform
-description: リソースの定義、検証、管理APIのための仕様とGoライブラリ。
+description: Formの共通モデルと、リソースを管理するHost APIの仕様・Goライブラリ。
 hero:
   name: Takoform
-  text: リソースの共通仕様
-  tagline: 設定・更新・削除・失敗時の扱いを定義し、クライアントとHostで同じ内容を検証・利用するための仕様とGoライブラリです。
+  text: Formの共通モデルとHost API
+  tagline: リソースの設定や振る舞いをFormで表し、対応するHostを共通のAPIから操作できます。このサイトではFormに共通するモデルとHost APIを説明します。
   actions:
     - theme: brand
       text: はじめる
       link: /start/
     - theme: alt
-      text: 仕様を読む
+      text: Host API v1を読む
+      link: /host-api/
+    - theme: alt
+      text: 仕様一覧を読む
       link: /reference/
 features:
   - title: Formを定義する

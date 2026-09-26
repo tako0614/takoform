@@ -16,6 +16,10 @@ import { renderForSearch } from "./search.mjs";
 // navigation, and schema-index mirrors explicitly say they are non-normative.
 
 const repository = "https://github.com/tako0614/takoform";
+const providerQuickStart =
+  "https://github.com/tako0614/terraform-provider-takoform/blob/main/README.md#quick-start";
+const providerComposition =
+  "https://github.com/tako0614/terraform-provider-takoform/blob/main/README.md#native-opentofu-provider-composition";
 
 // The pinned esbuild 0.28 pair cannot downlevel object/array destructuring
 // during dependency pre-bundling. Keep the browser build target independent:
@@ -107,9 +111,10 @@ function englishSidebar(items: DefaultTheme.SidebarItem[]): DefaultTheme.Sidebar
 }
 
 const relatedSidebar = {
-  text: "関連リンク",
+  text: "関連する利用案内",
   items: [
-    { text: "Edge Forms", link: "https://edge.forms.takoform.com/" },
+    { text: "OpenTofu / Terraform の HCL クイックスタート", link: providerQuickStart },
+    { text: "他のProviderと組み合わせる", link: providerComposition },
     { text: "GitHub", link: repository },
   ],
 };
@@ -130,13 +135,17 @@ export default defineConfig({
           { text: "Start", link: "/en/start/" },
           { text: "Guides", link: "/en/guides/" },
           { text: "Reference", link: "/en/reference/" },
+          { text: "Common model", link: "/en/model/" },
+          { text: "Host API v1", link: "/en/host-api/" },
+          { text: "OpenTofu / Terraform HCL", link: providerQuickStart },
           { text: "Glossary", link: "/en/glossary" },
           { text: "GitHub", link: repository },
         ],
         sidebar: [
           ...englishSidebar([...guideSidebar, ...contractSidebar]),
           { ...relatedSidebar, text: "Related links", items: [
-            { text: "Edge Forms", link: "https://edge.forms.takoform.com/" },
+            { text: "OpenTofu / Terraform HCL quick start", link: providerQuickStart },
+            { text: "Combine with other providers", link: providerComposition },
             { text: "GitHub", link: repository },
           ] },
         ],
@@ -219,6 +228,9 @@ export default defineConfig({
       { text: "はじめる", link: "/start/" },
       { text: "ガイド", link: "/guides/" },
       { text: "仕様", link: "/reference/" },
+      { text: "共通モデル", link: "/model/" },
+      { text: "Host API v1", link: "/host-api/" },
+      { text: "OpenTofu / Terraform", link: providerQuickStart },
       { text: "用語集", link: "/glossary" },
       { text: "GitHub", link: repository },
     ],

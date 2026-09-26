@@ -1,17 +1,20 @@
 ---
 layout: page
 title: Takoform
-description: Specifications and Go libraries for resource definitions, verification and management APIs.
+description: The common Form model and Host API for managing resources, with specifications and Go libraries.
 hero:
   name: Takoform
-  text: Shared resource contracts
-  tagline: Specifications and Go libraries for defining configuration, updates, deletion and failure behavior so clients and Hosts can verify and use the same contract.
+  text: A common Form model and Host API
+  tagline: Describe resource settings and behavior as Forms, then manage them through a shared API on a compatible Host. This site explains the model shared by Forms and the Host API.
   actions:
     - theme: brand
       text: Get started
       link: /en/start/
     - theme: alt
-      text: Read the specifications
+      text: Read Host API v1
+      link: /en/host-api/
+    - theme: alt
+      text: Browse specifications
       link: /en/reference/
 features:
   - title: Define a Form
