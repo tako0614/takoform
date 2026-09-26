@@ -248,6 +248,7 @@ export default defineConfig({
     return [
       ["meta", { property: "og:title", content: title }],
       ["meta", { property: "og:description", content: ogDescription }],
+      ["meta", { property: "og:locale", content: route.startsWith("en/") ? "en_US" : "ja_JP" }],
       ["meta", { property: "og:url", content: new URL(route, "https://takoform.com/").href }],
       ["meta", { name: "twitter:title", content: title }],
       ["meta", { name: "twitter:description", content: ogDescription }],
