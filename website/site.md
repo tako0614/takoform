@@ -4,7 +4,7 @@ title: このサイトについて
 
 # このサイトについて {#この-site-について}
 
-Takoformの仕様、Goライブラリ、検証ツールのドキュメントを掲載しています。
+Formに共通するデータモデルとHost API、Goライブラリ、検証ツールを説明するサイトです。
 日本語のページは解説です。実装の基準となる仕様は、各ページからリンクしている
 リポジトリ内の原文を参照してください。
 
@@ -17,6 +17,9 @@ Takoformの仕様、Goライブラリ、検証ツールのドキュメントを�
 
 公開する個別Formの設定項目や利用例は、そのFormの公開元が提供します。
 Hostやクライアントの対応状況、認証情報、料金等は、利用する製品や運用環境で確認してください。
+OpenTofuやTerraformでHostを使う場合は、Providerの
+[HCLクイックスタート](https://github.com/tako0614/terraform-provider-takoform/blob/main/README.md#quick-start)
+を参照してください。Formの公開元はそれぞれのサイトで定義や利用例を案内します。
 
 ## 仕様とスキーマ {#identity-と配信}
 
@@ -40,4 +43,4 @@ Hostやクライアントの対応状況、認証情報、料金等は、利用�
 - [仕様一覧](/reference/)
 - [スキーマ一覧](/schemas/)
 - [ソースコード](https://github.com/tako0614/takoform)
-- [サイトのビルド・公開手順](https://github.com/tako0614/takoform/blob/main/docs/site.md)
+- [OpenTofu / Terraform の HCLクイックスタート](https://github.com/tako0614/terraform-provider-takoform/blob/main/README.md#quick-start)
