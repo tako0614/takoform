@@ -72,4 +72,6 @@ Takoform ProviderはHost API v1を利用するOpenTofu / Terraformクライア�
 ## 個別のFormを調べる {#この-site-にないもの}
 
 各Formの設定項目や利用例は、そのFormの公開元が案内するサイトを参照してください。
+たとえば [Edge Forms](https://edge.forms.takoform.com/ja/) では、Workerやストレージなどの
+Formを選び、バージョンごとの仕様を確認できます。
 このサイトでは、Formに共通するデータ形式とHost APIを説明しています。

@@ -104,6 +104,14 @@ export const publishingPlatformDocPaths = Object.freeze(new Set([
   "docs/site.md",
 ]));
 
+// These non-normative entry pages point readers to individual publishers.
+// External HTTPS destinations are navigation, not Core vocabulary; keep the
+// link label and surrounding prose in the vocabulary scan.
+const guideEntryDocPaths = Object.freeze(new Set([
+  "website/guides/index.md",
+  "website/en/guides/index.md",
+]));
+
 const exceptionWords = /\b(?:histor(?:y|ical)|predecessor|retained|withdrawn|legacy|proposal|proposed|verify-only|compatibility[- ]only|not\s+current|not\s+a\s+current|old\s+repository|former|superseded|unserved|forbidden|never\s+reuse)\b/iu;
 const negationWords = /\b(?:no|not|never|without|neither|nor|cannot|does\s+not|do\s+not|doesn't|don't|isn't|aren't|none)\b/iu;
 
@@ -170,12 +178,33 @@ function matchesInLine(line, token) {
   return line.matchAll(new RegExp(token.source, flags));
 }
 
+function maskExternalHTTPSLinkDestinations(line) {
+  const maskDestinations = (text) => text.replace(
+    /(\]\(\s*)(<https:\/\/[^>\s]+>|https:\/\/[^\s)]+)/gu,
+    (_match, opener, destination) => `${opener}${" ".repeat(destination.length)}`,
+  );
+
+  // Preserve inline code exactly as the vocabulary scanner currently sees it;
+  // only Markdown-like destinations outside code spans are treated as links.
+  let result = "";
+  let offset = 0;
+  for (const match of line.matchAll(/(`+)[\s\S]*?\1/gu)) {
+    const start = match.index ?? 0;
+    result += maskDestinations(line.slice(offset, start));
+    result += match[0];
+    offset = start + match[0].length;
+  }
+  return result + maskDestinations(line.slice(offset));
+}
+
 function checkVocabulary(path, content, problems) {
   const normalizedContent = content.replace(/\r\n?/gu, "\n");
   const lines = normalizedContent.split("\n");
   let lineOffset = 0;
   for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index];
+    const line = guideEntryDocPaths.has(path)
+      ? maskExternalHTTPSLinkDestinations(lines[index])
+      : lines[index];
     const absoluteOffset = lineOffset;
     for (const token of deletedRunnerTokens) {
       for (const match of matchesInLine(line, token)) {

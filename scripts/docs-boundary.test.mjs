@@ -23,6 +23,33 @@ describe("current documentation boundary", () => {
     );
   });
 
+  test("treats external HTTPS destinations as navigation on guide entry pages only", () => {
+    const entries = baseEntries();
+    entries.set(
+      "website/guides/index.md",
+      "For example, [Edge Forms](https://edge.forms.takoform.com/ja/) has publisher-owned details.\n",
+    );
+    entries.set(
+      "website/en/guides/index.md",
+      "For example, [another publisher](https://publisher.example/forms/) has details.\n",
+    );
+    expect(inspectDocs(entries)).toEqual([]);
+
+    entries.set(
+      "website/guides/index.md",
+      "For example, [edge.forms.takoform.com](https://publisher.example/) is the current Edge platform family.\n",
+    );
+    expect(inspectDocs(entries)).toContain(
+      "website/guides/index.md:1 reintroduces current implementation or publisher authority: edge.forms.takoform.com",
+    );
+
+    entries.set(
+      "spec/current.md",
+      "For example, [Edge Forms](https://edge.forms.takoform.com/ja/) is the current Edge platform family.\n",
+    );
+    expect(inspectDocs(entries)).not.toEqual([]);
+  });
+
   test.each([
     ["deleted command", "See `cmd/portable-host-conformance/` for the runner."],
     ["deleted corpus", "Use `conformance/portable-host-v1beta1/contract.json`."],

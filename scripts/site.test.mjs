@@ -124,16 +124,28 @@ describe("takoform.com site derivation", () => {
     const markdown = await createMarkdownRenderer(join(process.cwd(), "website"));
     const ids = (source, path) => [...markdown.render(source, { path: join(process.cwd(), path) }).matchAll(/<h[1-6]\b[^>]*id="([^"]+)"/gu)].map((match) => match[1]);
     const fences = (source) => source.match(/^```[^\n]*\n[\s\S]*?^```/gmu) ?? [];
-    const links = (source) => [...source.matchAll(/\[[^\]]*\]\(([^)]+)\)/gu)]
-      .map((match) => match[1].replace(/^\/en\//u, "/")).sort();
+    const links = (source, normalizeExternalLocale = false) => [...source.matchAll(/\[[^\]]*\]\(([^)]+)\)/gu)]
+      .map((match) => {
+        const target = match[1].replace(/^\/en\//u, "/");
+        return normalizeExternalLocale
+          ? target.replace(/^(https:\/\/[^/]+)\/(?:en|ja)(?=\/|[?#]|$)(.*)$/iu, "$1$2")
+          : target;
+      }).sort();
     for (const source of HAND_AUTHORED_PAGE_SOURCES.filter((path) => !path.startsWith("website/en/"))) {
       const japanese = readFileSync(source, "utf8");
       const english = readFileSync(source.replace("website/", "website/en/"), "utf8");
       expect(fences(english)).toEqual(fences(japanese));
       expect(english.match(/^<<< .+$/gmu) ?? []).toEqual(japanese.match(/^<<< .+$/gmu) ?? []);
       expect(ids(english, source.replace("website/", "website/en/"))).toEqual(ids(japanese, source));
-      expect(links(english)).toEqual(links(japanese));
+      const isGuideEntry = source === "website/guides/index.md";
+      expect(links(english, isGuideEntry)).toEqual(links(japanese, isGuideEntry));
     }
+    expect(links("[guide](https://publisher.example/en/forms/?lang=en#start)", true))
+      .toEqual(links("[guide](https://publisher.example/forms/?lang=en#start)", true));
+    expect(links("[guide](https://publisher.example/en/forms/)", true))
+      .not.toEqual(links("[guide](https://other.example/forms/)", true));
+    expect(links("[guide](https://publisher.example/en/forms/)", true))
+      .not.toEqual(links("[guide](https://publisher.example/other/forms/)", true));
   });
   test("requires intact source and built site assets", () => {
     const root = mkdtempSync(join(tmpdir(), "takoform-site-assets-"));
