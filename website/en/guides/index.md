@@ -70,7 +70,8 @@ for [composing native providers](https://github.com/tako0614/terraform-provider-
 
 ## Look up an individual Form {#この-site-にないもの}
 
-For an individual Form's settings and examples, use its publisher's site.
-For example, [Edge Forms](https://edge.forms.takoform.com/) lets you browse Worker
-and storage Forms and read the specification for each version.
-This site documents the data formats and Host API shared by Forms.
+For an individual Form's definition and usage examples, use the site of the
+publisher that publishes it. For example, [Edge Forms](https://edge.forms.takoform.com/)
+lists Worker and storage Forms with their definitions and usage examples. Each
+publisher describes its Forms on its own site. This site documents the data
+formats and Host API shared across publishers; it does not define individual Forms.
