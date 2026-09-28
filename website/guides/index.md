@@ -73,5 +73,5 @@ Takoform ProviderはHost API v1を利用するOpenTofu / Terraformクライア�
 
 各Formの具体的な定義や利用例は、そのFormを公開するpublisherのサイトで確認してください。
 たとえば [Edge Forms](https://edge.forms.takoform.com/ja/) では、Workerやストレージなどの
-Formと、それぞれの定義・利用例を確認できます。どのpublisherも、自身のFormの情報を自身のサイトで案内します。
+Formと、それぞれの定義・利用例を確認できます。
 このサイトではpublisher間で共通するデータ形式とHost APIを説明し、個々のFormの内容は定義しません。
