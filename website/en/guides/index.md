@@ -63,7 +63,7 @@ Check publication and Host support with their respective owners.
 ## Use OpenTofu {#opentofu-provider-を使う-reader}
 
 If you use a Host from OpenTofu or Terraform, start with the Provider's
-[HCL quick start](https://github.com/tako0614/terraform-provider-takoform/blob/main/README.md#quick-start).
+[getting-started guide](https://github.com/tako0614/terraform-provider-takoform/blob/main/docs/getting-started.md).
 Takoform Provider is one OpenTofu / Terraform client for Host API v1. Industry
 providers can be declared alongside it in the same HCL module. See the example
 for [composing native providers](https://github.com/tako0614/terraform-provider-takoform/blob/main/README.md#native-opentofu-provider-composition).
