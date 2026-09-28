@@ -128,7 +128,12 @@ describe("takoform.com site derivation", () => {
       .map((match) => {
         const target = match[1].replace(/^\/en\//u, "/");
         return normalizeExternalLocale
-          ? target.replace(/^(https:\/\/[^/]+)\/(?:en|ja)(?=\/|[?#]|$)(.*)$/iu, "$1$2")
+          ? target
+            .replace(/^(https:\/\/[^/]+)\/(?:en|ja)(?=\/|[?#]|$)(.*)$/iu, "$1$2")
+            .replace(
+              "https://github.com/tako0614/terraform-provider-takoform/blob/main/docs/ja/getting-started.md",
+              "https://github.com/tako0614/terraform-provider-takoform/blob/main/docs/getting-started.md",
+            )
           : target;
       }).sort();
     for (const source of HAND_AUTHORED_PAGE_SOURCES.filter((path) => !path.startsWith("website/en/"))) {
@@ -138,6 +143,14 @@ describe("takoform.com site derivation", () => {
       expect(english.match(/^<<< .+$/gmu) ?? []).toEqual(japanese.match(/^<<< .+$/gmu) ?? []);
       expect(ids(english, source.replace("website/", "website/en/"))).toEqual(ids(japanese, source));
       const isGuideEntry = source === "website/guides/index.md";
+      if (isGuideEntry) {
+        expect(japanese).toContain(
+          "https://github.com/tako0614/terraform-provider-takoform/blob/main/docs/ja/getting-started.md",
+        );
+        expect(english).toContain(
+          "https://github.com/tako0614/terraform-provider-takoform/blob/main/docs/getting-started.md",
+        );
+      }
       expect(links(english, isGuideEntry)).toEqual(links(japanese, isGuideEntry));
     }
     expect(links("[guide](https://publisher.example/en/forms/?lang=en#start)", true))
