@@ -150,6 +150,15 @@ async function run() {
       networkFailures.push(`unexpected external request: ${route.request().url()}`);
       return route.abort();
     });
+    // Layout.vue mounts the Adring placement, which is the only external script
+    // the site loads. Answer it locally so this lane stays offline while still
+    // reporting any other external request as a failure. Playwright resolves
+    // routes in reverse registration order, so this specific route wins.
+    await context.route("https://ar-cdn.net/**", (route) => route.fulfill({
+      status: 200,
+      contentType: "text/javascript",
+      body: "",
+    }));
     const page = await context.newPage();
     page.setDefaultTimeout(10000);
     page.on("pageerror", (error) => networkFailures.push(error.message));
