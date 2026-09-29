@@ -4,10 +4,11 @@
 - Date: 2026-08-24
 - Supersedes: decisions 0052 and 0053 only where they require candidate-corpus and reference-Host evidence for Specification 1.0
 
-> Current applicability (2026-09-24): the normative-source-only rule stands;
-> the Specification 1.0 numbering it names is historical — the first numbered
-> release is 1.1 under
-> [0057](0057-specification-1-1-compatibility-and-independent-identities.md).
+> Current applicability (2026-09-29): the normative-source-only rule stands.
+> The numbering this record names is historical and was retired by
+> [0060](0060-two-version-axes-and-no-numbered-specification-stream.md);
+> Takoform has exactly two version axes, the API version and each Form's
+> `definitionVersion`.
 
 ## Context
 

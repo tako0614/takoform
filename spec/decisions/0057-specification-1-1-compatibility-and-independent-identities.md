@@ -1,5 +1,11 @@
 # 0057 — Specification 1.1 freezes compatibility and independent identities
 
+> Current applicability (2026-09-29): this record documents the sealed
+> predecessor publication. The document-set numbering it describes is retired
+> by [0060](0060-two-version-axes-and-no-numbered-specification-stream.md);
+> the per-Form identity rules below, where each Form versions on its own
+> `definitionVersion`, are the part that still applies.
+
 ## Status
 
 Accepted for the W09 Specification 1.1 release. This decision supersedes the

@@ -26,9 +26,10 @@ The current Host API is the unchanged literal v1 lane:
 API v1 normative bytes are frozen by
 [`host-api/v1.freeze.json`](https://github.com/tako0614/takoform/blob/main/spec/host-api/v1.freeze.json). Errata are non-normative
 and cannot reinterpret v1; every behavior change requires a future v2 proposal.
-There is no Host API minor lane such as `/v1.1`, and no separately numbered
-Specification 1.x lane. Form compatibility is versioned independently by each
-Form's `definitionVersion`.
+There is no Host API minor lane such as `/v1.1`. Form compatibility is
+versioned independently by each Form's `definitionVersion`, and that and the
+literal v1 lane are the only two compatibility axes
+([decision 0060](https://github.com/tako0614/takoform/blob/main/spec/decisions/0060-two-version-axes-and-no-numbered-specification-stream.md)).
 
 ## Authority and contract map
 

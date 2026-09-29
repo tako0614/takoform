@@ -19,7 +19,8 @@ DNS、account / zone / route、credential、operator の状態は所有しませ
 行う operator の authority です。
 
 site の見た目や案内文は Host API v1 とは独立して配信できます。この deploy は固定された
-Host API v1 を変更せず、新しい API version や specification release lane を作りません。
+Host API v1 を変更せず、新しい API version や、それとは別の文書セットのバージョン軸も
+作りません。
 一方、schema の exact bytes（および将来 freeze される normative API bytes）は consumer が
 参照する identity なので、presentation と同じ rollback 条件では扱いません。
 
@@ -115,6 +116,11 @@ publisherが公開する個別FormのDefinition、family固有example、catalog�
 配信しません。それぞれのpublisherが自分のsiteへdeployします。Core自身のライブラリを
 教える架空の定義・実行例はこのsiteが所有します。site独自のwell-known statusや文書集合versionも
 公開しません。
+
+そのため `/.well-known/` に置くのは Host API の discovery path
+（`/.well-known/takoform/v1`）だけです。以前の site が公開していた site 自身の status 文書
+（`/.well-known/takoform-site.json`）は consumer がなく、公開する version 軸でもないため
+削除しました。deploy の readback は、この path が存在しないことを毎回確認します。
 
 公開 schema の `$id` は `https://forms.takoform.com/schemas/...` です。append-only な
 正本は [`release/public-schema-identities.json`](../release/public-schema-identities.json)

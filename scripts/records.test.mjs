@@ -68,17 +68,17 @@ describe("sealed W09 history and platform-neutral schema records", () => {
     expect(await validateRepositoryRecords(".")).toEqual([]);
   });
 
-  test("Specification 1.1 is exact history and no numbered successor is accepted", () => {
+  test("the sealed predecessor document-set receipt is exact history and no numbered successor is accepted", () => {
     expect(validateSpecificationLedger(specification)).toEqual([]);
     const future = structuredClone(specification);
     future.releases.push({ version: "1.2", tag: "specification/1.2" });
     expect(validateSpecificationLedger(future)).toContain(
-      "Specification ledger must remain the sealed one-record historical 1.1 receipt",
+      "the sealed predecessor document-set ledger must remain its one-record receipt",
     );
     const rewritten = structuredClone(specification);
     rewritten.releases[0].tagObject = "0".repeat(40);
     expect(validateSpecificationLedger(rewritten)).toContain(
-      "Specification 1.1 immutable receipt changed",
+      "the sealed predecessor document-set receipt changed",
     );
   });
 

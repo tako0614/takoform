@@ -3,18 +3,15 @@
 - Status: Accepted
 - Date: 2026-08-23
 
-> Current applicability (2026-09-24): the Specification 1.0 identity this
-> record released toward was withdrawn before publication; the first numbered
-> Specification release is 1.1, and the candidate-corpus and
-> reference-conformance prerequisites were narrowed to the normative source by
-> [0055](0055-specification-release-needs-only-normative-source.md). The
-> independent release-line decision itself stands. The current release
-> authority is
-> [0057](0057-specification-1-1-compatibility-and-independent-identities.md)
-> and
-> [`../../release/specification-releases.json`](../../release/specification-releases.json).
-> The commands named in the enforcement section belonged to the predecessor
-> repository and are not runnable here.
+> Current applicability (2026-09-29): the numbered document-set release line
+> this record established is retired by
+> [0060](0060-two-version-axes-and-no-numbered-specification-stream.md).
+> Takoform has exactly two version axes, the API version
+> `forms.takoform.com/v1` and each Form's `definitionVersion`. What stands
+> from this record is the separation of document publication from the API and
+> from Forms. The predecessor receipt in `release/` is sealed history, not a
+> stream that can advance. The commands named in the enforcement section
+> belonged to the predecessor repository and are not runnable here.
 
 ## Context
 

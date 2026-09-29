@@ -4,6 +4,12 @@
 - Date: 2026-08-27
 - Scope: API versioning, Go module identity, Host wire compatibility, and release entrypoint
 
+> Current applicability (2026-09-29): superseded by
+> [0059](0059-core-semver-identifies-the-software-artifact.md). The sealed
+> predecessor receipt named in the context is history; the document-set
+> numbering around it was retired by
+> [0060](0060-two-version-axes-and-no-numbered-specification-stream.md).
+
 ## Context
 
 Specification 1.1 is a sealed historical source receipt. It did not publish a

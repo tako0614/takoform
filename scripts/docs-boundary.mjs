@@ -81,8 +81,32 @@ const unreleasedCurrentHostAPITokens = Object.freeze([
   /\b(?:candidate|unpublished|unreleased)\b[^\n.!?]{0,100}\b(?:Host API|API)\s+(?:v)?1\b/iu,
 ]);
 
-const futureSpecificationWriterToken =
-  /\b(?:current|future|continuing|new)\s+(?:numbered\s+)?Specification(?:\s+1\.x)?\s+(?:writer|release|stream)\b/iu;
+// The numbered document-set release line is retired (decision 0060). Takoform
+// has exactly two compatibility axes: the literal `forms.takoform.com/v1` API
+// version and each Form's `definitionVersion`. A current document must not
+// reintroduce a numbered document-set stream as a version, a release, a lane,
+// a writer, or a receipt kind. A sentence that denies the concept or marks it
+// as predecessor history stays allowed: the frozen Host API v1 contract denies
+// that lane, and the sealed receipts are described as history.
+const retiredNumberedDocumentSetTokens = Object.freeze([
+  /\bSpecification\s+(?:v)?1\.[0-9]+\b/iu,
+  /\bSpecification\s+1\.x\b/iu,
+  /\bnumbered\s+Specification\b/iu,
+  /\bspecification\/1\.[0-9]+\b/iu,
+  /\bspecification-(?:releases?|release-receipt|writer|authority)\b/iu,
+  /\btakoform\.specification-releases@/iu,
+  /\bSpecification\s+(?:writer|release|releases|stream|lane|line|axis|series|receipt|snapshot|candidate|document[- ]set)\b/iu,
+]);
+
+// A "Current applicability" overlay states what still applies today, so the
+// retirement is absolute there: naming the numbered lane at all is a defect,
+// even inside a denial. Overlays name the two axes instead.
+const retiredNumberedDocumentSetOverlayTokens = Object.freeze([
+  /\bSpecification\s+(?:v)?1\.[0-9]+\b/iu,
+  /\bSpecification\s+1\.x\b/iu,
+  /\bnumbered\s+Specification\b/iu,
+  /\bspecification\/1\.[0-9]+\b/iu,
+]);
 
 // Schema hosting once had a bespoke authority in this repository: its own
 // ledger, its own writer, its own deploy path. It was removed because an
@@ -234,7 +258,7 @@ function checkVocabulary(path, content, problems) {
         !hasExceptionContext(normalizedContent, absoluteV11) &&
         !isExplicitHostAPIAbsence(normalizedContent, absoluteV11)
       ) {
-        problems.push(`${path}:${index + 1} conflates Specification 1.1 with a Host API lane: ${v11[0]}`);
+        problems.push(`${path}:${index + 1} conflates a document-set number with a Host API lane: ${v11[0]}`);
       }
     }
     for (const apiSemver of matchesInLine(line, takoformApiSemverToken)) {
@@ -252,7 +276,7 @@ function checkVocabulary(path, content, problems) {
       }
     }
     for (const ambiguous of matchesInLine(line, ambiguousPostSpecificationToken)) {
-      problems.push(`${path}:${index + 1} uses ambiguous 1.1 shorthand instead of naming the historical Specification snapshot: ${ambiguous[0]}`);
+      problems.push(`${path}:${index + 1} uses ambiguous 1.1 shorthand; name the Host API lane or the Form's definitionVersion instead: ${ambiguous[0]}`);
     }
     for (const unreleased of matchesInLine(line, unreleasedDraftToken)) {
       problems.push(`${path}:${index + 1} retains an unreleased-draft label after Host API v1 convergence: ${unreleased[0]}`);
@@ -262,10 +286,14 @@ function checkVocabulary(path, content, problems) {
         problems.push(`${path}:${index + 1} describes the current Host API v1 lane as an unpublished candidate: ${stalled[0]}`);
       }
     }
-    for (const writer of matchesInLine(line, futureSpecificationWriterToken)) {
-      const absoluteWriter = { ...writer, index: absoluteOffset + (writer.index ?? 0) };
-      if (!hasExceptionContext(normalizedContent, absoluteWriter) && !isNegated(normalizedContent, absoluteWriter)) {
-        problems.push(`${path}:${index + 1} claims retired numbered Specification authority: ${writer[0]}`);
+    for (const token of retiredNumberedDocumentSetTokens) {
+      for (const retired of matchesInLine(line, token)) {
+        const absoluteRetired = { ...retired, index: absoluteOffset + (retired.index ?? 0) };
+        if (!hasExceptionContext(normalizedContent, absoluteRetired) && !isNegated(normalizedContent, absoluteRetired)) {
+          problems.push(
+            `${path}:${index + 1} reintroduces the retired numbered Specification document-set stream: ${retired[0]}`,
+          );
+        }
       }
     }
     for (const retired of matchesInLine(line, retiredSchemaOriginToken)) {
@@ -292,6 +320,13 @@ function checkDecisionCurrentApplicability(path, content, problems) {
       problems.push(
         `${path}:${overlayStart} retains a superseded API SemVer axis in a current-applicability overlay: ${staleAxis[0]}`,
       );
+    }
+    for (const token of retiredNumberedDocumentSetOverlayTokens) {
+      for (const retired of matchesInLine(overlay, token)) {
+        problems.push(
+          `${path}:${overlayStart} names the retired numbered document-set stream in a current-applicability overlay: ${retired[0]}`,
+        );
+      }
     }
     overlayLines = [];
   };

@@ -66,12 +66,45 @@ describe("current documentation boundary", () => {
     ["unreleased successor draft", "This tree is an unreleased draft after the historical Specification 1.1 snapshot."],
     ["Provider implementation authority", "Core owns the Provider projection and Terraform resource schema."],
     ["future numbered writer", "Core owns the future Specification writer."],
+    ["numbered document-set release as current", "Takoform Specification 1.1 is the current release."],
+    ["numbered document-set lane", "The Specification 1.x lane continues."],
+    ["numbered document-set stream", "The current Specification stream continues after the receipt."],
+    ["numbered document-set tag", "The release is tagged specification/1.1."],
+    ["numbered document-set receipt kind", "The ledger kind is takoform.specification-releases@v1."],
+    ["numbered document-set writer", "The repository keeps a numbered Specification writer."],
+    ["document-set number as API version", "Specification 1.0 is the API version you pin."],
     ["retired schema-origin authority", "Core deploys the schema-origin projection."],
     ["publishing platform in a contract document", "The schemas are served from Cloudflare Pages."],
   ])("rejects %s", (_name, text) => {
     const entries = baseEntries();
     entries.set("spec/current.md", text);
     expect(inspectDocs(entries)).not.toEqual([]);
+  });
+
+  test("allows the frozen Host API v1 denial and sealed predecessor history", () => {
+    const entries = baseEntries();
+    entries.set(
+      "spec/versioning.md",
+      "There is no Host API minor lane such as `/v1.1`, and no separately numbered Specification 1.x lane.\n",
+    );
+    expect(inspectDocs(entries)).toEqual([]);
+
+    entries.set(
+      "docs/extraction/history/legacy.md",
+      "Specification 1.1 remains the release published by the old repository.\n",
+    );
+    expect(inspectDocs(entries)).toEqual([]);
+  });
+
+  test("rejects the retired numbered document-set stream in a current-applicability overlay", () => {
+    const entries = baseEntries();
+    entries.set(
+      "spec/decisions/0052-example.md",
+      "# 0052 — example\n\n> Current applicability (2026-09-29): Specification 1.1 remains the release authority.\n",
+    );
+    expect(inspectDocs(entries)).toContain(
+      "spec/decisions/0052-example.md:3 names the retired numbered document-set stream in a current-applicability overlay: Specification 1.1",
+    );
   });
 
   test("allows explicit retained predecessor references", () => {

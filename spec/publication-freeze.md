@@ -1,8 +1,8 @@
 # Publication and change guide
 
 This page is non-normative navigation. It is not a freeze authority, release
-record, receipt, sequence, maturity record, or independently versioned
-Specification. The one-time Host API v1 closure is named only by
+record, receipt, sequence, maturity record, or separately versioned document
+set. The one-time Host API v1 closure is named only by
 [`host-api/v1.freeze.json`](host-api/v1.freeze.json), and the checker anchors it
 to that manifest's first-add Git commit.
 
