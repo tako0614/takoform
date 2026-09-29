@@ -150,13 +150,13 @@ export function validateSpecificationLedger(ledger) {
   ) {
     problem(
       problems,
-      "Specification ledger must remain the sealed one-record historical 1.1 receipt",
+      "the sealed predecessor document-set ledger must remain its one-record receipt",
     );
     return problems;
   }
   const withdrawn = ledger.reserved?.find((entry) => entry?.version === "1.0");
   if (withdrawn?.status !== "withdrawn-retained" || withdrawn?.noReuse !== true) {
-    problem(problems, "Specification 1.0 must remain withdrawn and non-reusable");
+    problem(problems, "the withdrawn 1.0 document-set identity must stay withdrawn and non-reusable");
   }
   const release = ledger.releases[0];
   if (
@@ -170,11 +170,11 @@ export function validateSpecificationLedger(ledger) {
     release?.assets?.length !== 1 ||
     objectSha256(release) !== specification11ReceiptObjectSha256
   ) {
-    problem(problems, "Specification 1.1 immutable receipt changed");
+    problem(problems, "the sealed predecessor document-set receipt changed");
   }
   const serialized = JSON.stringify(ledger);
   if (/forms\.takoform\.com\/v2|specification\/(?:v)?2|"version":"(?:1\.[2-9]|[2-9])/u.test(serialized)) {
-    problem(problems, "Specification history contains a future numbered or API v2 identity");
+    problem(problems, "the sealed receipt history contains a future numbered or API v2 identity");
   }
   return problems;
 }
@@ -294,7 +294,7 @@ export function validateRecordPrefixChain(chain, specificationLedger, schemaLedg
         previousEntrySha256: specification.previousEntrySha256,
       })}`
   ) {
-    problem(problems, "signed Specification 1.1 prefix seal changed");
+    problem(problems, "the signed predecessor document-set prefix seal changed");
   }
   const prefix = {
     identities: schemaLedger.identities.slice(0, schema.activeCount),

@@ -4,6 +4,12 @@
 - Date: 2026-08-25
 - Scope: neutral Core, Form publisher, Provider and conformance dependency boundary
 
+> Current applicability (2026-09-29): the numbered document-set line named
+> below was retired by
+> [0060](0060-two-version-axes-and-no-numbered-specification-stream.md). The
+> Snapshot decision itself stands; the compatible Core/API boundary is
+> recorded by the API version and Core SemVer, not by a document-set number.
+
 ## Context
 
 The repository already validates data-only Form Packages and represents exact
@@ -65,9 +71,8 @@ after artifact parity and deletion gates close.
 - Terraform names, schemas, imports, state and diagnostics stay Provider-owned.
 - Provider 3.0.0 public/state/history behavior is locked before the Provider
   Adapter changes.
-- Specification 1.1 may record this compatible Core/API boundary independently
-  from Forms, packages, Provider, Host adoption and literal Host API v1
-  graduation.
+- The compatible Core/API boundary is independent of Forms, packages, Provider,
+  Host adoption and literal Host API v1 graduation.
 
 ## Rejected alternatives
 

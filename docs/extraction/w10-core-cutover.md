@@ -2,8 +2,10 @@
 
 This document records the non-destructive extraction that establishes
 `github.com/tako0614/takoform` as the final neutral Core owner. It is an
-extraction receipt, not a replacement for the immutable Specification 1.1
-release receipt.
+extraction receipt, not a replacement for the sealed predecessor receipt in
+[release/specification-releases.json](../../release/specification-releases.json).
+That receipt is a historical record of the Host API v1 specification bytes at
+that time, not a version stream.
 
 ## Fixed source identities
 
@@ -25,12 +27,17 @@ release receipt.
   `6542239003656464f8c78f87dca7d37f5e2b2ae358a49734d8f48a939bc52dad`
 
 The extraction started from a main-only, no-tag clone. No Provider, Form,
-admission, or Specification tag is copied to the new repository.
+admission, or document-set tag is copied to the new repository.
 
-## Immutable Specification 1.1 history
+## Sealed predecessor document-set receipt
 
-Specification 1.1 remains the release published by the old repository. It is
-not recreated or retagged here.
+The predecessor repository published one immutable document set of the Host API
+v1 specification bytes under the annotated tag below. It remains that record;
+it is not recreated or retagged here, and it is not a selectable version. The
+numbered document-set release line is retired by
+[decision 0060](../../spec/decisions/0060-two-version-axes-and-no-numbered-specification-stream.md);
+the two compatibility axes are the literal `forms.takoform.com/v1` API version
+and each Form's `definitionVersion`.
 
 - normative source commit: `00ae5ee4e2ea2eb62ea796499a93081374dc36b9`
 - release/evidence commit: `35c03a76326c808e859aa77172e086f15a2aeb5d`
@@ -43,7 +50,8 @@ not recreated or retagged here.
 - immutable GitHub Release ID: `377480828`
 
 The imported receipt remains byte-for-byte bound to those identities. W10
-adds a separate authority-transfer receipt; it never changes the 1.1 receipt.
+adds a separate authority-transfer receipt; it never changes the sealed
+receipt.
 
 ## Extraction command
 
@@ -99,14 +107,14 @@ Historical presence in an extracted commit does not grant current authority.
 
 Core owns:
 
-- the normative Specification and complete active/verify-only neutral schema
+- the normative Host API v1 specification and complete active/verify-only neutral schema
   closure;
 - `formpackage`, the public immutable Snapshot compiler, the neutral Host API
   client, generic conformance, and their SDK/CLI surfaces;
 - caller-supplied publisher/trust policy formats and offline verification;
 - the active and verify-only public-schema identity ledger as a logical,
-  platform-neutral contract; the numbered Specification writer ended with the
-  W09 1.1 receipt.
+  platform-neutral contract; the numbered document-set writer ended with the
+  predecessor W09 receipt.
 
 Core does not own:
 
@@ -127,9 +135,9 @@ compatibility inputs. They do not authorize new publication or Host support.
 2. Record the complete source/path/blob/digest map and the final Core commit.
 3. Land forward tombstone T at predecessor commit
    `220d37b284d8288e6e12d31375ecfdca6a5f15c5`, freezing its
-   Specification/schema ledgers and disabling both old writers.
+   document-set/schema ledgers and disabling both old writers.
 4. Land one direct cleanup child C that deletes the dormant numbered
-   Specification writer and every platform-specific schema hosting surface,
+   document-set writer and every platform-specific schema hosting surface,
    dependency, credential lane, and authority record from Core.
 5. Remove old workflow/OIDC/tag-creation authority.
 6. When separately requested, publish Takoform API 1.0.0 and the matching Core
@@ -138,10 +146,10 @@ compatibility inputs. They do not authorize new publication or Host support.
    source-archive readback. There is no preceding Core `v0.1.0` or independent
    Core version line.
 
-A permanent zero-writer state for numbered Specifications is intentional. A
-dual-writer interval is forbidden. Published Provider and Specification
+A permanent zero-writer state for numbered document sets is intentional. A
+dual-writer interval is forbidden. Published Provider and document-set
 identities are never rewritten. Core carries logical schema identities, not a
 hosting or cutover claim, and there is no activation-only A between P and C.
 The ordinary release entrypoint is a small facade over the create-only release
-helper; the extracted broker, ledger, and numbered Specification machinery do
+helper; the extracted broker, ledger, and numbered document-set machinery do
 not return.
