@@ -58,6 +58,7 @@ without adding requirements.
 | [Implementation guides](/en/guides/) | Reading paths for different implementations |
 | [Create a Form](/en/authoring/) | A Go example defining, packaging and verifying a Form |
 | [Use a Host from Go](/en/client/) | An executable discovery, prepare and apply sequence |
+| [Use from OpenTofu / Terraform](/en/use/) | Entry point for using Host API v1 from configuration |
 | [Host API overview](/en/host-api/) | Discovery and API structure |
 | [Common model](/en/model/) | Relationships between the main data types |
 | [Conformance checks](/en/conformance/) | Reading verification reports |

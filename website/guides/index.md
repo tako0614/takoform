@@ -61,10 +61,14 @@ Host側ではバックエンド、認証情報、テナントごとのポリシ�
 
 ## OpenTofuから使う {#opentofu-provider-を使う-reader}
 
-OpenTofuやTerraformからHostを使う場合は、
+設定ファイル（Terraform / OpenTofuのHCL）からHostを使う場合は、
+[OpenTofu / Terraformから使う](/use/) から始めてください。接続先の取得、route、正確なFormRef、
+バージョンの軸、providerとpublisherの境界をまとめています。Takoformは公式のproviderを
+指定しません。Host API v1を話すproviderなら、同じAPIをそのまま扱えます。
+
+使うproviderのHCLの書き方は
 [ProviderのHCLクイックスタート](https://github.com/tako0614/terraform-provider-takoform/blob/main/docs/ja/getting-started.md)
-から始めてください。
-Takoform ProviderはHost API v1を利用するOpenTofu / Terraformクライアントの一つです。
+にあります。Takoform ProviderはHost API v1を利用するOpenTofu / Terraformクライアントの一つです。
 他の業界向けProviderも同じHCLの設定で組み合わせられます。詳しくは
 [他のProviderと組み合わせる例](https://github.com/tako0614/terraform-provider-takoform/blob/main/README.md#native-opentofu-provider-composition)
 を参照してください。

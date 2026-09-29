@@ -56,6 +56,7 @@ JSON Schemaが検証するデータ構造に加え、仕様本文にある意味
 | [実装ガイド](/guides/) | 作りたいものに応じた関連仕様 |
 | [Formを作る](/authoring/) | 定義を作り、パッケージを組み立てて検証するGoの例 |
 | [GoからHostを使う](/client/) | 接続先確認からprepare・applyまでを実行する例 |
+| [OpenTofu / Terraform から使う](/use/) | 設定ファイルからHost API v1を扱うときの入口 |
 | [Host APIの概要](/host-api/) | 接続先の取得とAPIの構成 |
 | [共通モデル](/model/) | 主なデータ型の関係 |
 | [適合性の検証](/conformance/) | 検証結果の読み方 |

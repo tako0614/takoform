@@ -1,38 +1,31 @@
 ---
 layout: page
 title: Takoform
-description: The common Form model and Host API for managing resources, with specifications and Go libraries.
+description: The Host API v1 contract, the Form model shared across publishers, the public schema identities, and executable Core library examples.
 hero:
   name: Takoform
-  text: A common Form model and Host API
-  tagline: Describe resource settings and behavior as Forms, then manage them through a shared API on a compatible Host. This site explains the model shared by Forms and the Host API.
+  text: A common Form model and Host API v1
+  tagline: This site publishes the Host API v1 contract, the Form model shared across publishers, the public schema identities and executable Core library examples. An individual Form's settings live on the site of the publisher that publishes it.
   actions:
     - theme: brand
       text: Get started
       link: /en/start/
     - theme: alt
-      text: Read Host API v1
-      link: /en/host-api/
+      text: Use from OpenTofu / Terraform
+      link: /en/use/
     - theme: alt
-      text: Browse specifications
+      text: Reference
       link: /en/reference/
 features:
-  - title: Define a Form
-    details: Define configuration and behavior in JSON, then build and verify a package.
-    link: /en/authoring/
-    linkText: Define and verify a Form
-  - title: Verify a package
-    details: Check definitions and references, then use them together in a verified Snapshot.
+  - title: Common model
+    details: FormRef, Form Definition, Form Package, Snapshot and how they relate.
     link: /en/model/
-    linkText: How verification works
-  - title: Use a Host from Go
-    details: Discover a Host, check Form availability and run the prepare-to-apply sequence.
-    link: /en/client/
-    linkText: Client example
   - title: Implement Host API
-    details: Implement resource operations, concurrency control and asynchronous progress through the shared API.
+    details: Discovery, resource operations, concurrency fences, asynchronous work and errors.
     link: /en/host-api/
-    linkText: API overview
+  - title: Find the entry for your role
+    details: Reading paths for Form publishers, Go client users and Host implementers.
+    link: /en/guides/
 ---
 
 <HomePage />

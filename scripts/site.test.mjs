@@ -509,6 +509,7 @@ describe("takoform.com site derivation", () => {
       "website/guides/index.md",
       "website/authoring/index.md",
       "website/client/index.md",
+      "website/use/index.md",
       "website/reference/index.md",
       "website/glossary.md",
     ]);
