@@ -1,38 +1,31 @@
 ---
 layout: page
 title: Takoform
-description: Formの共通モデルと、リソースを管理するHost APIの仕様・Goライブラリ。
+description: Host API v1の契約、publisherに共通するFormのモデル、公開schemaの識別子、Coreライブラリの実行例を掲載します。
 hero:
   name: Takoform
-  text: Formの共通モデルとHost API
-  tagline: リソースの設定や振る舞いをFormで表し、対応するHostを共通のAPIから操作できます。このサイトではFormに共通するモデルとHost APIを説明します。
+  text: Formの共通モデルとHost API v1
+  tagline: このサイトが公開するのは、Host API v1の契約、publisherに共通するFormのモデル、公開schemaの識別子、Coreライブラリの実行例です。個々のFormの設定項目は、そのFormを公開するpublisherのサイトにあります。
   actions:
     - theme: brand
       text: はじめる
       link: /start/
     - theme: alt
-      text: Host API v1を読む
-      link: /host-api/
+      text: OpenTofu / Terraform から使う
+      link: /use/
     - theme: alt
       text: 仕様一覧を読む
       link: /reference/
 features:
-  - title: Formを定義する
-    details: 設定と振る舞いをJSONで定義し、パッケージを作成・検証します。
-    link: /authoring/
-    linkText: 定義から検証まで試す
-  - title: パッケージを検証する
-    details: 定義と参照先の一致を確かめ、検証済みのSnapshotとして利用します。
+  - title: 共通モデルを読む
+    details: FormRef、Form Definition、Form Package、Snapshotの関係。
     link: /model/
-    linkText: 検証の仕組み
-  - title: GoからHostを使う
-    details: 接続先とFormへの対応を確認し、prepareからapplyまでを実行します。
-    link: /client/
-    linkText: クライアントの実行例
   - title: Host APIを実装する
-    details: リソース操作、同時更新の制御、非同期処理を扱うAPIを実装します。
+    details: 接続先の取得、リソース操作、同時更新の制御、非同期処理、エラー。
     link: /host-api/
-    linkText: APIの概要
+  - title: 役割ごとの入口を探す
+    details: Formを作る人、Goから使う人、Hostを実装する人の読む順。
+    link: /guides/
 ---
 
 <HomePage />
