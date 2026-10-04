@@ -129,6 +129,23 @@ const guideSidebar = [
   },
 ];
 
+const v2Sidebar = [
+  { text: "Host API v2 仕様", link: "/v2/" },
+  {
+    text: "Host API v2",
+    items: [
+      { text: "概要", link: "/spec/host-api/v2/" },
+      { text: "HTTP API", link: "/spec/host-api/v2/http" },
+      { text: "Form 仕様", link: "/spec/host-api/v2/forms" },
+      { text: "具体例", link: "/spec/host-api/v2/examples" },
+    ],
+  },
+  {
+    text: "公開済みの参考仕様",
+    items: [{ text: "Host API v1（凍結）", link: "/spec/host-api/v1" }],
+  },
+];
+
 const englishLabels: Record<string, string> = {
   トップ: "Home", ドキュメント: "Documentation", はじめる: "Getting started",
   実装ガイド: "Implementation guides", 仕様一覧: "Reference", 用語集: "Glossary",
@@ -137,6 +154,10 @@ const englishLabels: Record<string, string> = {
   "Host API v1 とは": "About Host API v1", 共通モデル: "Common model",
   適合性の検証: "Conformance checks", スキーマ一覧: "Schema index",
   サイト情報: "Site information", このサイトについて: "About this site",
+  "Host API v2 仕様": "Host API v2 specification",
+  "HTTP wire format": "HTTP API", 概要: "Overview", "Form 仕様": "Form requirements",
+  具体例: "Examples", "公開済みの参考仕様": "Published reference",
+  "Host API v1（凍結）": "Host API v1 (frozen)",
 };
 
 function englishSidebar(items: DefaultTheme.SidebarItem[]): DefaultTheme.SidebarItem[] {
@@ -161,28 +182,32 @@ export default defineConfig({
   lang: "ja-JP",
   title: "Takoform",
   description:
-    "リソースの定義、検証、管理APIのための仕様とGoライブラリ。",
+    "仕様をURLで公開し、対応するサーバーでリソースを管理するための共通API。",
   locales: {
     root: { label: "日本語", lang: "ja-JP" },
     en: {
       label: "English",
       lang: "en",
-      description: "Specifications and Go libraries for resource definitions, verification and management APIs.",
+      description: "A common API for managing resources on servers that implement a specification published at a URL.",
       themeConfig: {
         nav: [
-          { text: "Start", link: "/en/start/" },
-          { text: "Guides", link: "/en/guides/" },
-          { text: "Reference", link: "/en/reference/" },
-          { text: "Host API v1", link: "/en/host-api/" },
+          { text: "Docs", link: "/en/v2/" },
+          { text: "HTTP API", link: "/en/spec/host-api/v2/http" },
+          { text: "Forms", link: "/en/spec/host-api/v2/forms" },
+          { text: "v1 reference", link: "/en/spec/host-api/v1" },
         ],
-        sidebar: [
-          ...englishSidebar([...guideSidebar, ...contractSidebar]),
-          { ...relatedSidebar, text: "Related links", items: [
+        sidebar: {
+          "/en/v2/": englishSidebar(v2Sidebar),
+          "/en/spec/host-api/v2/": englishSidebar(v2Sidebar),
+          "/": [
+            ...englishSidebar([...guideSidebar, ...contractSidebar]),
+            { ...relatedSidebar, text: "Related links", items: [
             { text: "OpenTofu / Terraform HCL quick start", link: providerQuickStart },
             { text: "Combine with other providers", link: providerComposition },
             { text: "GitHub", link: repository },
-          ] },
-        ],
+            ] },
+          ],
+        },
         footer: {
           message: 'Specifications and source code are available on <a href="https://github.com/tako0614/takoform">GitHub</a>.',
           copyright: "MIT © 2026 Takoform contributors",
@@ -294,16 +319,16 @@ export default defineConfig({
       },
     } } } } },
     nav: [
-      { text: "はじめる", link: "/start/" },
-      { text: "ガイド", link: "/guides/" },
-      { text: "仕様", link: "/reference/" },
-      { text: "Host API v1", link: "/host-api/" },
+      { text: "ドキュメント", link: "/v2/" },
+      { text: "HTTP API", link: "/spec/host-api/v2/http" },
+      { text: "Form", link: "/spec/host-api/v2/forms" },
+      { text: "v1参照", link: "/spec/host-api/v1" },
     ],
-    sidebar: [
-      ...guideSidebar,
-      ...contractSidebar,
-      relatedSidebar,
-    ],
+    sidebar: {
+      "/v2/": v2Sidebar,
+      "/spec/host-api/v2/": v2Sidebar,
+      "/": [...guideSidebar, ...contractSidebar, relatedSidebar],
+    },
     socialLinks: [{ icon: "github", link: repository }],
     footer: {
       message:

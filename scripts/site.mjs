@@ -75,6 +75,36 @@ export const MIRRORED_SPEC_DOCUMENTS = Object.freeze([...new Set([
   "spec/trust/README.md",
 ])]);
 
+// V2 sources are an explicit, unfrozen specification set. Normative authority
+// and release state are separate: normative documents are not yet published or
+// frozen, and examples remain non-normative.
+export const V2_SPEC_DOCUMENTS = Object.freeze([
+  Object.freeze({
+    path: "spec/host-api/v2/README.md",
+    normative: true,
+    sourceLanguage: "ja-JP",
+    releaseState: "unpublished",
+  }),
+  Object.freeze({
+    path: "spec/host-api/v2/http.md",
+    normative: true,
+    sourceLanguage: "ja-JP",
+    releaseState: "unpublished",
+  }),
+  Object.freeze({
+    path: "spec/host-api/v2/forms.md",
+    normative: true,
+    sourceLanguage: "ja-JP",
+    releaseState: "unpublished",
+  }),
+  Object.freeze({
+    path: "spec/host-api/v2/examples.md",
+    normative: false,
+    sourceLanguage: "ja-JP",
+    releaseState: "unpublished",
+  }),
+]);
+
 export const GENERATED_INDEX_PAGES = Object.freeze([
   `${SITE_ROOT}/schemas/index.md`,
   `${SITE_ROOT}/en/schemas/index.md`,
@@ -91,6 +121,7 @@ export const HAND_AUTHORED_ROUTE_SOURCES = Object.freeze([
   `${SITE_ROOT}/client/index.md`,
   `${SITE_ROOT}/use/index.md`,
   `${SITE_ROOT}/reference/index.md`,
+  `${SITE_ROOT}/v2/index.md`,
   `${SITE_ROOT}/glossary.md`,
 ]);
 
@@ -166,6 +197,9 @@ const GENERATED_TREES = Object.freeze([
   `${SITE_ROOT}/en/spec`,
   `${SITE_ROOT}/en/schemas`,
   `${SITE_ROOT}/decisions`,
+  // Removed draft-route trees stay generator-owned until --write cleans them.
+  `${SITE_ROOT}/drafts/v2`,
+  `${SITE_ROOT}/en/drafts/v2`,
   `${SITE_ROOT}/releases`,
   `${SITE_PUBLIC_ROOT}/.well-known`,
   `${SITE_PUBLIC_ROOT}/schemas`,
@@ -200,7 +234,7 @@ function walk(root, relativeDir) {
 }
 
 const NON_NORMATIVE_DECLARATION =
-  /\b(?:This (?:page|document|index|guide) is non-normative|This non-normative (?:page|document|index|guide))\b|この索引は案内用であり、仕様ではありません。/iu;
+  /\b(?:This (?:page|document|index|guide) is non-normative|This non-normative (?:page|document|index|guide))\b|この索引は案内用であり、仕様ではありません。|非規範の解説/iu;
 const NORMATIVE_REQUIREMENT =
   /\b(?:MUST(?: NOT)?|REQUIRED|SHALL(?: NOT)?|SHOULD(?: NOT)?|RECOMMENDED|MAY|OPTIONAL)\b/u;
 const SELF_NORMATIVE_CLAIM =
@@ -215,11 +249,11 @@ function markdownProse(source) {
 export function inspectPublicDocumentAuthority(
   documents,
   frozenPaths,
-  { classificationRequiredPaths = new Set() } = {},
+  { classificationRequiredPaths = new Set(), normativePaths = new Set() } = {},
 ) {
   const problems = [];
   for (const [path, source] of documents) {
-    if (frozenPaths.has(path)) continue;
+    if (frozenPaths.has(path) || normativePaths.has(path)) continue;
     const prose = markdownProse(source);
     const explicitlyNonNormative = NON_NORMATIVE_DECLARATION.test(prose.slice(0, 512));
     if (classificationRequiredPaths.has(path) && !explicitlyNonNormative) {
@@ -333,6 +367,22 @@ export function siteRouteForSpecDocument(specPath) {
   return `/spec/${rest.slice(0, -".md".length)}`;
 }
 
+export function sitePathForV2SpecDocument(specPath, locale = "ja") {
+  const doc = V2_SPEC_DOCUMENTS.find((entry) => entry.path === specPath);
+  if (doc === undefined) throw new Error(`unlisted v2 specification source: ${specPath}`);
+  const prefix = locale === "en" ? `${SITE_ROOT}/en` : SITE_ROOT;
+  if (specPath.endsWith("/README.md")) return `${prefix}/spec/host-api/v2/index.md`;
+  return `${prefix}/spec/host-api/v2/${posix.basename(specPath)}`;
+}
+
+export function siteRouteForV2SpecDocument(specPath, locale = "ja") {
+  const doc = V2_SPEC_DOCUMENTS.find((entry) => entry.path === specPath);
+  if (doc === undefined) throw new Error(`unlisted v2 specification source: ${specPath}`);
+  const prefix = locale === "en" ? "/en" : "";
+  if (specPath.endsWith("/README.md")) return `${prefix}/spec/host-api/v2/`;
+  return `${prefix}/spec/host-api/v2/${posix.basename(specPath, ".md")}`;
+}
+
 export function distPagePathForSource(source, distRoot = SITE_DIST) {
   const relative = source.slice(`${SITE_ROOT}/`.length);
   if (relative === "index.md") return `${distRoot}/index.html`;
@@ -381,11 +431,13 @@ export function rewriteLinkTarget(specPath, rawTarget, context) {
   const isDirectory = pathPart.endsWith("/") ||
     (existsSync(resolve(context.root, resolved)) &&
       statSync(resolve(context.root, resolved)).isDirectory());
-  const base = isDirectory ? SOURCE_TREE : SOURCE_BROWSE;
+  const base = isDirectory
+    ? (context.sourceTree ?? SOURCE_TREE)
+    : (context.sourceBrowse ?? SOURCE_BROWSE);
   return `${base}/${resolved.replace(/\/$/u, "")}${fragment}`;
 }
 
-export function renderMirroredDocument(specPath, source, context) {
+function rewriteMarkdownLinks(specPath, source, context) {
   // Code spans are masked before rewriting so an inline pattern such as
   // `[a-z](x)` is not mistaken for a link, then restored unchanged.
   const spans = [];
@@ -407,6 +459,11 @@ export function renderMirroredDocument(specPath, source, context) {
     },
   );
   const body = rewritten.replace(/\uE000(\d+)\uE000/gu, (_, index) => spans[Number(index)]);
+  return body;
+}
+
+export function renderMirroredDocument(specPath, source, context) {
+  const body = rewriteMarkdownLinks(specPath, source, context);
   return [
     "---",
     `# Generated from ${specPath} by scripts/site.mjs. Edit the specification, not this page.`,
@@ -416,6 +473,26 @@ export function renderMirroredDocument(specPath, source, context) {
     "---",
     "",
     '<div lang="en" class="specification-source">',
+    "",
+    body,
+    "",
+    "</div>",
+    "",
+  ].join("\n");
+}
+
+export function renderV2SpecDocument(document, source, context) {
+  const body = rewriteMarkdownLinks(document.path, source, context);
+  return [
+    "---",
+    `# Generated from ${document.path} by scripts/site.mjs. Edit the specification, not this page.`,
+    `normative: ${document.normative}`,
+    `canonicalSource: ${document.path}`,
+    `sourceLanguage: ${document.sourceLanguage}`,
+    `releaseState: ${document.releaseState}`,
+    "---",
+    "",
+    `<div lang=\"${document.sourceLanguage}\" class=\"specification-source\">`,
     "",
     body,
     "",
@@ -521,14 +598,29 @@ export function buildSiteFiles(root) {
     ),
   };
   for (const prefix of ["", "/en"]) {
-    context.mirrored = new Map(MIRRORED_SPEC_DOCUMENTS.map((specPath) => [
-      specPath, `${prefix}${siteRouteForSpecDocument(specPath)}`,
-    ]));
+    context.mirrored = new Map([
+      ...MIRRORED_SPEC_DOCUMENTS.map((specPath) => [
+        specPath, `${prefix}${siteRouteForSpecDocument(specPath)}`,
+      ]),
+      ...V2_SPEC_DOCUMENTS.map((document) => [
+        document.path, siteRouteForV2SpecDocument(document.path, prefix ? "en" : "ja"),
+      ]),
+    ]);
     for (const specPath of MIRRORED_SPEC_DOCUMENTS) {
-    files.set(
-      sitePathForSpecDocument(specPath).replace(`${SITE_ROOT}/`, `${SITE_ROOT}${prefix}/`),
-      Buffer.from(renderMirroredDocument(specPath, readText(root, specPath), context), "utf8"),
-    );
+      files.set(
+        sitePathForSpecDocument(specPath).replace(`${SITE_ROOT}/`, `${SITE_ROOT}${prefix}/`),
+        Buffer.from(renderMirroredDocument(specPath, readText(root, specPath), context), "utf8"),
+      );
+    }
+    const locale = prefix === "/en" ? "en" : "ja";
+    for (const document of V2_SPEC_DOCUMENTS) {
+      files.set(
+        sitePathForV2SpecDocument(document.path, locale),
+        Buffer.from(
+          renderV2SpecDocument(document, readText(root, document.path), context),
+          "utf8",
+        ),
+      );
     }
   }
 
@@ -591,6 +683,13 @@ export function inspectSite(root) {
     const bytes = files.get(path);
     if (bytes !== undefined) publicDocuments.set(path, bytes.toString("utf8"));
   }
+  for (const locale of ["ja", "en"]) {
+    for (const document of V2_SPEC_DOCUMENTS) {
+      const path = sitePathForV2SpecDocument(document.path, locale);
+      const bytes = files.get(path);
+      if (bytes !== undefined) publicDocuments.set(path, bytes.toString("utf8"));
+    }
+  }
   problems.push(
     ...inspectPublicDocumentAuthority(
       publicDocuments,
@@ -599,6 +698,18 @@ export function inspectSite(root) {
         classificationRequiredPaths: new Set([
           ...MIRRORED_SPEC_DOCUMENTS,
           ...GENERATED_INDEX_PAGES,
+          ...["ja", "en"].flatMap((locale) =>
+            V2_SPEC_DOCUMENTS.filter((document) => !document.normative).map((document) =>
+              sitePathForV2SpecDocument(document.path, locale),
+            )
+          ),
+        ]),
+        normativePaths: new Set([
+          ...["ja", "en"].flatMap((locale) =>
+            V2_SPEC_DOCUMENTS.filter((document) => document.normative).map((document) =>
+              sitePathForV2SpecDocument(document.path, locale),
+            )
+          ),
         ]),
       },
     ),
@@ -725,6 +836,16 @@ export function inspectRenderedSitePages(pages, servedPaths = new Set()) {
       } else if (attribute(notice, "data-document-authority") !== page.authority) {
         problems.push(`${page.path} source notice disagrees with ${page.authority}`);
       }
+    }
+    if (page.releaseState === "unpublished") {
+      const notice = page.html.match(/<aside\b[^>]*class="[^"]*\bmirror-notice\b[^"]*"[^>]*>([\s\S]*?)<\/aside>/u);
+      if (notice === null || !/(?:unpublished|未公開|公開準備中|publication is being prepared)/iu.test(readableText(notice[1]))) {
+        problems.push(`${page.path} does not render its unpublished release state`);
+      }
+    }
+    if (page.sourceLanguage !== undefined &&
+      !new RegExp(`<div\\b[^>]*lang=\"${page.sourceLanguage}\"[^>]*class=\"[^\"]*\\bspecification-source\\b`, "u").test(page.html)) {
+      problems.push(`${page.path} must label its source language ${page.sourceLanguage}`);
     }
 
     for (const match of page.html.matchAll(/<a\b([^>]*)\bhref="([^"]+)"([^>]*)>([\s\S]*?)<\/a>/gu)) {
@@ -854,16 +975,29 @@ export function inspectDist(root, distRoot = SITE_DIST) {
   }
   for (const prefix of ["", "/en"]) {
     for (const specPath of MIRRORED_SPEC_DOCUMENTS) {
-    const route = `${prefix}${siteRouteForSpecDocument(specPath)}`;
-    const page = route.endsWith("/") ? `${route}index.html` : `${route}.html`;
-    expectedPageMetadata.set(`${distRoot}${page}`, {
-      route,
-      lang: prefix ? "en" : "ja-JP",
-      authority: FROZEN_HOST_API_SPEC_DOCUMENTS.includes(specPath)
-        ? "normative"
-        : "non-normative",
-      mirror: true,
-    });
+      const route = `${prefix}${siteRouteForSpecDocument(specPath)}`;
+      const page = route.endsWith("/") ? `${route}index.html` : `${route}.html`;
+      expectedPageMetadata.set(`${distRoot}${page}`, {
+        route,
+        lang: prefix ? "en" : "ja-JP",
+        authority: FROZEN_HOST_API_SPEC_DOCUMENTS.includes(specPath)
+          ? "normative"
+          : "non-normative",
+        mirror: true,
+      });
+    }
+    const locale = prefix === "/en" ? "en" : "ja";
+    for (const document of V2_SPEC_DOCUMENTS) {
+      const route = siteRouteForV2SpecDocument(document.path, locale);
+      const page = route.endsWith("/") ? `${route}index.html` : `${route}.html`;
+      expectedPageMetadata.set(`${distRoot}${page}`, {
+        route,
+        lang: prefix ? "en" : "ja-JP",
+        authority: document.normative ? "normative" : "non-normative",
+        mirror: true,
+        releaseState: document.releaseState,
+        sourceLanguage: document.sourceLanguage,
+      });
     }
   }
   const actualPages = new Set(walk(root, distRoot).filter((path) => path.endsWith(".html")));

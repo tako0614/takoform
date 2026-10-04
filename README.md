@@ -1,18 +1,32 @@
 # Takoform
 
-Takoform は、portable な resource contract を定義・検証する project です。
-publisher が data-only の desired state を一度定義し、Core、client、Host が
-同じ exact な bytes と identity を扱います。ここでいう Core は、Form Package
-の検証、immutable Snapshot の compile、Host API client、offline trust 検証、
-generic conformance を含む Go module です。
+Takoformは、データベースやストレージなどの仕様を作者が公開し、それを実装するHostを
+共通のAPIで操作するためのプロトコルです。
 
-最初に押さえる事実は三つです。
+現在の設計の中心は[v2仕様](spec/host-api/v2/README.md)です。
+仕様URLによるFormの識別、直接のリソース操作、再試行と復旧を扱います。
+必須のpackage配布・署名・特定SDKから切り離した仕様です。
+v2の規範本文をここで管理します。正式公開と各Hostの実装状況は、それぞれの記録で確認します。
+
+- [v2のHTTP API](spec/host-api/v2/http.md)
+- [Form仕様の書き方](spec/host-api/v2/forms.md)
+- [作成から削除までの具体例](spec/host-api/v2/examples.md)
+
+以下は、凍結して保持するv1と既存Goライブラリの利用案内です。
+v2だけを実装するHostやクライアントに、これらの導入を要求しません。
+
+## v1と既存ライブラリ
+
+v1のCoreは、Form Packageの検証、immutable Snapshotのcompile、Host API client、
+offline trust検証、generic conformanceを含むGo moduleです。
+
+既存ソフトウェアの版は次のとおりです。
 
 - 現在の wire lane は `forms.takoform.com/v1` です。
 - 現在の Core module artifact は `github.com/tako0614/takoform@v1.1.0` です。
 - FormRef に `official` bit はなく、Takoform は中央の Form catalog を持ちません。
 
-## 最短 quickstart
+## v1ライブラリのquickstart
 
 repository root から、synthetic な conformance fixture を検証できます。clone 直後や
 Go module cache が空の場合は、最初に依存を取得します。
@@ -43,7 +57,7 @@ machine-readable report を返します。依存が取得済みなら、どち�
 を使わず、Resource を変更しません。入力と出力の読み方は [Start](website/start/index.md)
 にあります。
 
-## 読む順番
+## v1資料を読む順番
 
 1. [Start](website/start/index.md) — package verify から Snapshot、概念上の
    Host API request までを一続きで確認します。
@@ -58,7 +72,7 @@ machine-readable report を返します。依存が取得済みなら、どち�
 機械的な入口は [spec/README.md](spec/README.md)、語彙の揺れを避けるには
 [glossary](website/glossary.md) を使ってください。
 
-## 何がこの repository にあるか
+## 既存v1仕様と実装の配置
 
 normative な common model と Core の実装は、次の層に分かれています。
 
@@ -80,7 +94,7 @@ normative な common model と Core の実装は、次の層に分かれてい�
 [`hostclient/`](hostclient/)、[`trust/`](trust/) です。CLI はこれらと同じ検証経路を
 使い、invalid input では安全側に停止します。
 
-## version の読み方
+## v1と既存ソフトウェアのversion
 
 Takoform には名前付きの **4つの version stream** があります。ただし、domain の
 互換性を表す **version axis は2つだけ** です。
@@ -117,7 +131,9 @@ OpenTofu / Provider の利用者は、[terraform-provider-takoform](https://gith
 ## takoform.com の範囲
 
 この repository は API と common model の site source、build、deploy entrypoint を
-持ちます。site が配信するのは Host API v1、publisher 中立な common model、exact な公開
+持ちます。v2の規範本文と利用例も、原文から独立した閲覧経路へ投影します。
+ソースの整備と正式な規範の固定・公開は別です。
+既存の配信範囲は Host API v1、publisher 中立な common model、exact な公開
 schema bytes、conformance の語彙と案内、Core 自身のライブラリを使う実行例です。
 publisher が公開する Form definition、family 固有の example、publisher catalog、
 Host support/status、第三者の client adapter page、realized な DNS / CDN / account /

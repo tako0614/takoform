@@ -4,11 +4,18 @@ const { lang } = useData();
 // A mirrored page is a published copy, not the authority. Readers who arrive
 // from a search result have no other way to know which of the two bytes they
 // are quoting, so every mirrored page says so above its first heading. The
-// generator supplies the classification from the Host API freeze: a mutable
-// index must never inherit the normative wording used for a frozen contract.
+// The generator supplies authority and release state independently: a mutable
+// index must never inherit normative wording, nor an unpublished v2 source the
+// frozen-v1 publication claim.
 withDefaults(
-  defineProps<{ source: string; url?: string; normative: boolean }>(),
-  { normative: false },
+  defineProps<{
+    source: string;
+    url?: string;
+    normative: boolean;
+    sourceLanguage?: string;
+    releaseState?: string;
+  }>(),
+  { normative: false, sourceLanguage: "en", releaseState: "published" },
 );
 </script>
 
@@ -17,7 +24,16 @@ withDefaults(
     class="mirror-notice"
     :data-document-authority="normative ? 'normative' : 'non-normative'"
   >
-    <p v-if="lang === 'ja-JP'">
+    <p v-if="releaseState === 'unpublished' && lang === 'ja-JP'">
+      {{ normative ? 'v2仕様の原文' : 'v2の解説' }}（{{ sourceLanguage === 'ja-JP' ? '日本語' : '英語' }}）:
+      <code>{{ source }}</code>。公開準備中です。
+    </p>
+    <p v-else-if="releaseState === 'unpublished'">
+      {{ normative ? 'V2 specification source' : 'V2 explanatory source' }}
+      ({{ sourceLanguage === 'ja-JP' ? 'Japanese' : 'English' }}):
+      <code>{{ source }}</code>. Publication is being prepared.
+    </p>
+    <p v-else-if="lang === 'ja-JP'">
       {{ normative ? '仕様の原文（英語・固定済み）:' : '案内文の原文（英語）:' }}
       <a v-if="url" :href="url"><code>{{ source }}</code></a>
       <code v-else>{{ source }}</code>。

@@ -4,16 +4,16 @@ title: このサイトについて
 
 # このサイトについて {#この-site-について}
 
-Formに共通するデータモデルとHost API、Goライブラリ、検証ツールを説明するサイトです。
-日本語のページは解説です。実装の基準となる仕様は、各ページからリンクしている
-リポジトリ内の原文を参照してください。
+Takoformの概念とHTTP API、Form仕様の書き方を説明するサイトです。
+v2の規範本文は日本語、v1の規範本文は英語です。各仕様ページに正本のファイルを示します。
+案内・具体例と、実装の基準となる規範は区別しています。
 
 ## 掲載内容 {#この-repository-が扱う範囲}
 
-- Host API v1と、その要求・応答に使うデータ形式。
-- Formの定義、配布、検証に共通する仕組み。
-- 公開JSON Schemaと検証ツールの使い方。
-- 架空のFormを使ったパッケージ作成と、ローカルHTTPテスト環境でのGoクライアントの実行例。
+- [Host API v2](/v2/)の設計、要求・応答、再試行と復旧。
+- Formの識別と公開、入力・出力・挙動の記述方法。
+- 内容を固定して保存するv1の仕様、公開JSON Schema、既存Goライブラリの利用案内。
+- 架空のFormを使ったAPIの具体例。v1の資料にはGoクライアントのローカル実行例もあります。
 
 公開する個別Formの設定項目や利用例は、そのFormの公開元が提供します。
 Hostやクライアントの対応状況、認証情報、料金等は、利用する製品や運用環境で確認してください。
@@ -23,7 +23,8 @@ OpenTofuやTerraformでHostを使う場合は、Providerの
 
 ## 仕様とスキーマ {#identity-と配信}
 
-固定された仕様の範囲は
+v2の規範本文と解説を原文から生成しています。v2の正式公開状況は[概要](/v2/)に記載します。
+v1の固定された仕様の範囲は
 [`v1.freeze.json`](https://github.com/tako0614/takoform/blob/main/spec/host-api/v1.freeze.json)、
 公開スキーマの識別子とダイジェストは
 [`public-schema-identities.json`](https://github.com/tako0614/takoform/blob/main/release/public-schema-identities.json)
@@ -39,7 +40,8 @@ OpenTofuやTerraformでHostを使う場合は、Providerの
 
 ## 関連ページ {#source-を読む}
 
-- [はじめる](/start/)
+- [v2を読む](/v2/)
+- [v1ライブラリを使う](/start/)
 - [仕様一覧](/reference/)
 - [スキーマ一覧](/schemas/)
 - [ソースコード](https://github.com/tako0614/takoform)

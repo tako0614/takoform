@@ -1,14 +1,14 @@
 {
-  "scannedAt": "2026-09-04",
+  "scannedAt": "2026-10-04",
   "framework": "VitePress 1.6.4 on Vite 6.4.3",
-  "fonts": "VitePress bundled Inter before this redesign; no project font package",
-  "palette": "warm paper with one vermilion accent in website/.vitepress/theme/custom.css",
+  "fonts": "VitePress sans and monospace theme tokens; no project font package or external font request",
+  "palette": "VitePress light/dark color tokens; website/.vitepress/theme/custom.css adds focus and prose rules, not a palette",
   "motion": "motion-cut; no motion library",
-  "spacing": "no project-wide named spacing scale before this redesign",
+  "spacing": "home-specific named spacing tokens in website/.vitepress/theme/home.css; no project-wide spacing scale",
   "preserve": [
-    "warm paper",
-    "vermilion accent",
+    "VitePress light and dark color tokens",
+    "VitePress sans and monospace font pairing",
     "VitePress documentation behavior",
-    "light and dark color schemes"
+    "existing navigation, search and footer"
   ]
 }

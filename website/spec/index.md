@@ -16,6 +16,13 @@ or reinterpret those contracts.
 
 ## Current Host API
 
+The [Host API v2 specification](/spec/host-api/v2/) treats publisher-owned
+HTTP specifications as Form identities and allows v2-only implementations.
+Its normative source is being prepared for publication; this index does not
+claim a public release or an implemented Host. Published v1
+remains frozen reference material; retaining it does not require new v2 Hosts
+or clients to implement v1. The following map describes the published v1 lane.
+
 The current Host API is the unchanged literal v1 lane:
 
 - discovery: `GET /.well-known/takoform/v1`;

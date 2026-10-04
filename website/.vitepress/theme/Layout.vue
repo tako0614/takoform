@@ -35,6 +35,8 @@ onBeforeUnmount(() => window.removeEventListener("keydown", closeMobileNavigatio
         :source="frontmatter.canonicalSource"
         :url="frontmatter.canonicalUrl"
         :normative="frontmatter.normative === true"
+        :source-language="frontmatter.sourceLanguage"
+        :release-state="frontmatter.releaseState"
       />
     </template>
   </Layout>

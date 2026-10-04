@@ -4,16 +4,16 @@ title: About this site
 
 # About this site {#この-site-について}
 
-This site explains the data model shared by Forms, the Host API, Go libraries and verification tools.
-This guide is non-normative. Japanese and English guides explain the contracts;
-the repository originals linked from each specification remain authoritative.
+This site explains Takoform, its HTTP API and how to write a Form specification.
+This guide is non-normative. The v2 specification is written in Japanese; the
+retained v1 specification is in English. Each specification identifies its source file.
 
 ## Scope {#この-repository-が扱う範囲}
 
-- Host API v1 and its request/response data formats.
-- Shared mechanisms for Form definition, distribution and verification.
-- Public JSON Schemas and instructions for verification tools.
-- Executable Core examples using a fictional Form for packaging and a local HTTP fixture for the Go client.
+- [Host API v2](/en/v2/): design, requests, responses, retries and recovery.
+- Form identity, publication, inputs, outputs and behavior.
+- The unchanged v1 specification, public schemas and existing Go library guides.
+- Illustrative API examples. The v1 guides also include executable local Go examples.
 
 Published individual Form settings and examples belong to their publishers. Check Host and
 client support, credentials, pricing and operating requirements with the product
@@ -24,14 +24,15 @@ Each Form publisher maintains its own site for definitions and examples.
 
 ## Specifications and schemas {#identity-と配信}
 
-The frozen specification scope is recorded in
+V2 pages are generated from their specification sources. The [overview](/en/v2/)
+records publication status separately. The frozen v1 specification scope is recorded in
 [`v1.freeze.json`](https://github.com/tako0614/takoform/blob/main/spec/host-api/v1.freeze.json).
 Public schema identities and digests are recorded in
 [`public-schema-identities.json`](https://github.com/tako0614/takoform/blob/main/release/public-schema-identities.json).
 
 Schemas are served unchanged at the paths named by their `$id`. Presentation,
 navigation and translation changes do not change specification or schema bytes.
-Specification bodies are the same English originals in either site language.
+Each specification retains its original language in both site locales.
 
 ## Checking support {#この-site-が主張しないこと}
 
@@ -41,7 +42,8 @@ with the publisher and the Host separately.
 
 ## Related pages {#source-を読む}
 
-- [Getting started](/en/start/)
+- [Read v2](/en/v2/)
+- [Use the v1 library](/en/start/)
 - [Reference](/en/reference/)
 - [Schema index](/en/schemas/)
 - [Source code](https://github.com/tako0614/takoform)

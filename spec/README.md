@@ -7,9 +7,10 @@ or reinterpret those contracts.
 
 ## Current Host API
 
-Active specification work is the [Host API v2 proposal](proposals/host-api-v2.md).
-It treats publisher-owned HTTP specifications as Form identities and allows
-v2-only implementations. It is not yet a published contract. Published v1
+The [Host API v2 specification](host-api/v2/README.md) treats publisher-owned
+HTTP specifications as Form identities and allows v2-only implementations.
+Its normative source is being prepared for publication; this index does not
+claim a public release or an implemented Host. Published v1
 remains frozen reference material; retaining it does not require new v2 Hosts
 or clients to implement v1. The following map describes the published v1 lane.
 

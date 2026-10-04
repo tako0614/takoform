@@ -11,6 +11,25 @@ function baseEntries() {
 }
 
 describe("current documentation boundary", () => {
+  test("allows the v2 identity only in the explicitly owned v2 specification pages", () => {
+    const entries = baseEntries();
+    for (const path of ["spec/host-api/v2/README.md", "spec/host-api/v2/http.md", "spec/host-api/v2/forms.md", "spec/host-api/v2/examples.md", "website/spec/host-api/v2/http.md", "website/en/spec/host-api/v2/http.md"]) {
+      entries.set(path, "API identity: forms.takoform.com/v2.\n");
+    }
+    expect(inspectDocs(entries)).toEqual([]);
+    entries.set("spec/host-api/v2/unowned.md", "API identity: forms.takoform.com/v2.\n");
+    expect(inspectDocs(entries)).not.toEqual([]);
+  });
+
+  test.each([
+    "Specification 2.1 is the current release.",
+    "Core owns the Provider projection.",
+  ])("v2 ownership still rejects %s", (claim) => {
+    const entries = baseEntries();
+    entries.set("spec/host-api/v2/http.md", `${claim}\n`);
+    expect(inspectDocs(entries)).not.toEqual([]);
+  });
+
   test("accepts neutral docs and existing local links", () => {
     expect(inspectDocs(baseEntries())).toEqual([]);
   });

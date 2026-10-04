@@ -66,6 +66,16 @@ const providerAuthorityTokens = Object.freeze([
 
 const hostApiV2Token = /\bforms\.takoform\.com\/v2(?:[^A-Za-z0-9_]|$)/iu;
 
+// V2 has its own normative source and generated pages. A positive v2 identity
+// here does not rewrite v1 or promote an unrelated guide into a new contract.
+const v2DocumentPaths = new Set([
+  ...["README", "http", "forms", "examples"].map((name) => `spec/host-api/v2/${name}.md`),
+  ...["", "en/"].flatMap((locale) => [
+    `website/${locale}v2/index.md`,
+    ...["index", "http", "forms", "examples"].map((name) => `website/${locale}spec/host-api/v2/${name}.md`),
+  ]),
+]);
+
 const hostApi11Token =
   /(?:\bHost API\s+(?:v)?1\.1\b|\bforms\.takoform\.com\/v1\.1\b)/iu;
 
@@ -89,7 +99,7 @@ const unreleasedCurrentHostAPITokens = Object.freeze([
 // as predecessor history stays allowed: the frozen Host API v1 contract denies
 // that lane, and the sealed receipts are described as history.
 const retiredNumberedDocumentSetTokens = Object.freeze([
-  /\bSpecification\s+(?:v)?1\.[0-9]+\b/iu,
+  /\bSpecification\s+(?:v)?[0-9]+\.[0-9]+\b/iu,
   /\bSpecification\s+1\.x\b/iu,
   /\bnumbered\s+Specification\b/iu,
   /\bspecification\/1\.[0-9]+\b/iu,
@@ -102,7 +112,7 @@ const retiredNumberedDocumentSetTokens = Object.freeze([
 // retirement is absolute there: naming the numbered lane at all is a defect,
 // even inside a denial. Overlays name the two axes instead.
 const retiredNumberedDocumentSetOverlayTokens = Object.freeze([
-  /\bSpecification\s+(?:v)?1\.[0-9]+\b/iu,
+  /\bSpecification\s+(?:v)?[0-9]+\.[0-9]+\b/iu,
   /\bSpecification\s+1\.x\b/iu,
   /\bnumbered\s+Specification\b/iu,
   /\bspecification\/1\.[0-9]+\b/iu,
@@ -248,7 +258,7 @@ function checkVocabulary(path, content, problems) {
     }
     for (const v2 of matchesInLine(line, hostApiV2Token)) {
       const absoluteV2 = { ...v2, index: absoluteOffset + (v2.index ?? 0) };
-      if (!hasExceptionContext(normalizedContent, absoluteV2) && !isNegated(normalizedContent, absoluteV2)) {
+      if (!v2DocumentPaths.has(path) && !hasExceptionContext(normalizedContent, absoluteV2) && !isNegated(normalizedContent, absoluteV2)) {
         problems.push(`${path}:${index + 1} claims a positive Host API v2 identity: ${v2[0]}`);
       }
     }

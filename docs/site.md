@@ -5,15 +5,18 @@
 用途と操作を直接説明し、宣伝的なコピーや不要な内部用語を増やしません。正確なAPI名や
 フィールド名、固定済みの仕様本文は変更せず、解説と区別します。
 
-左の目次はトップページ・ガイド・仕様で共通です。公開中の全ページと関連サイトへの
-リンクを載せ、閲覧中のページによって別の目次へ切り替えません。
+トップは短い用途説明、要求例、読む目的別の入口に絞り、sidebarを表示しません。
+v2仕様は専用の目次、既存v1ガイド・仕様はv1の目次を使います。
+新しい設計を読むために、v1のpackageやSnapshotの項目を先に読ませません。
 
 日本語は既存のルート、英語は`/en/`で公開します。VitePressの言語メニューは同じページの
-対応言語へ移動し、ページ内の位置も維持します。目次は選択した言語の全ページを含みます。
-ガイドは翻訳しますが、仕様本文は両言語とも英語の原文です。文書全体は選択言語を宣言し、
-仕様本文の範囲だけ`lang="en"`を指定します。公開JSONのパスとバイト列は複製・変更しません。
+対応言語へ移動し、ページ内の位置も維持します。目次は選択した言語とAPI版に合わせます。
+ガイドは翻訳します。v1仕様は英語、v2仕様は日本語の原文を両言語のページに表示し、
+その範囲に原文のlangを指定します。翻訳済みとは表示しません。
+公開JSONのパスとバイト列は複製・変更しません。
 
-`takoform.com` は Host API v1 と publisher 中立な共通モデルだけを配信する site です。
+`takoform.com` はTakoformの概念とAPIを扱うsiteです。
+v1の公開済み規範と、公開準備中のv2規範本文を区別します。
 この repository がその source、build、deploy entrypoint を所有します。realized な CDN、
 DNS、account / zone / route、credential、operator の状態は所有しません。それらは公開を
 行う operator の authority です。
@@ -36,6 +39,8 @@ website/
 ├── host-api/  model/  conformance/  site.md
 │                          読み方の案内（手書き）
 ├── spec/                  freeze に含まれる source の mirror（生成）
+├── v2/                    v2仕様の入口（手書き）
+├── spec/host-api/v2/       v2の規範本文・解説のmirror（生成）
 ├── schemas/               schema 索引 page（生成・non-normative）
 ├── en/                    英語ガイド（手書き）とspec/schema索引（生成）
 └── public/
@@ -48,6 +53,11 @@ website/
 
 - [`scripts/site.mjs`](../scripts/site.mjs) — mirror page、索引 page、公開 schema bytes、
   build 出力の検査
+
+v2仕様は `spec/host-api/v2/` のうち `V2_SPEC_DOCUMENTS` で明示した文書だけを生成します。
+README、HTTP、Form仕様は規範、examplesは非規範です。任意のproposalを自動公開せず、
+v1の凍結対象にも加えません。本文は原文から生成し、web側に別の仕様を手書きしません。
+規範本文を執筆することと、本文を固定して正式にreleaseすることは区別します。
 
 ```console
 bun scripts/site.mjs --write        # 生成物を書き直す
@@ -82,10 +92,10 @@ Chrome / Chromium を headless で動かします。browser が見つからな�
 標準 path にない場合は `TAKOFORM_BROWSER=/absolute/path/to/chrome` を設定してください。
 browser の自動 download や、既存 browser profile の利用はしません。
 
-- `/`、`/start/`、`/guides/`、`/authoring/`、`/client/`、`/reference/`、`/glossary`、`/host-api/` の日英を
+- `/`、v2入口・仕様4ページ、`/start/`、`/guides/`、`/authoring/`、`/client/`、`/reference/`、`/glossary`、`/host-api/` の日英を
   320 / 375 / 414 / 768 px で開き、横 overflow と切れた操作要素がないことを確認します。
-- 上記のページと `/spec/host-api/v1` で、左の目次が公開ページの一覧と一致し、
-  全グループが最初から開いていることを確認します。
+- トップにはsidebarがなく、v2には専用の目次、v1には既存ガイドと仕様の目次があることを確認します。
+  目次の全グループは最初から開きます。
 - mobile navigation と sidebar を keyboard で開き、Escape で閉じたあと trigger へ focus が
   戻ることを確認します。
 - 1280 px の light / dark 両方で first viewport の主要 CTA と keyboard focus indicator を確認します。
@@ -107,8 +117,9 @@ portable な `bun run check` へ browser binary を暗黙に要求しません�
 | --- | --- |
 | `/`、`/start/`、`/guides/`、`/authoring/`、`/client/`、`/reference/`、`/host-api/`、`/model/`、`/conformance/`、`/glossary`、`/site` | 手書きの案内 |
 | `/spec/**` | freeze-listed source は normative mirror。それ以外の overview/index mirror は non-normative。正本は `spec/**` |
+| `/v2/`、`/spec/host-api/v2/**` | v2仕様の入口と原文mirror。規範か解説か、公開済みかを別々に表示する |
 | `/schemas/` | identity の non-normative 索引 page |
-| `/en/`と上記ページの`/en/**`版 | 英語の案内・索引と同じ英語の仕様原文 |
+| `/en/`と上記ページの`/en/**`版 | 英語の案内・索引と、v1の英語原文・v2の日本語原文 |
 | `/schemas/<$id と同じ path>` | 公開 schema の exact な bytes |
 | `/sitemap.xml`、`/robots.txt`、`/404.html` | site の付随物 |
 

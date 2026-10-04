@@ -1,15 +1,35 @@
-# Takoform Host API v2 草案
+---
+# Generated from spec/host-api/v2/README.md by scripts/site.mjs. Edit the specification, not this page.
+normative: true
+canonicalSource: spec/host-api/v2/README.md
+sourceLanguage: ja-JP
+releaseState: unpublished
+---
+
+<div lang="ja-JP" class="specification-source">
+
+# Takoform Host API v2
 
 Takoformは、作者がHTTPで公開した資源の仕様を、異なるHostで同じ方法で操作するための
 共通APIです。Formは資源の意味を定義し、Hostはその仕様を実装して資源を提供します。
 
-この文書は策定中の草案です。実装・公開済みのAPIや、確定した互換性保証を示しません。
-v2の策定を今後の設計の本線とし、公開前の確認事項を末尾にまとめます。
+この文書はTakoform v2の設計と責任分担を定めます。
+HTTPの要求・応答は[HTTP API](/en/spec/host-api/v2/http)、Formの定義は[Form仕様](/en/spec/host-api/v2/forms)が定めます。
+v2の規範本文として整備しているもので、公開・releaseの実施やHostの実装完了を示す記録ではありません。
+
+| 読みたいこと | 文書 |
+| --- | --- |
+| なぜこの構成か、何を共通化するか | この概要 |
+| 正確な要求・応答、状態、競合と復旧 | [HTTP API](/en/spec/host-api/v2/http) |
+| Formの仕様をどう書くか | [Form仕様](/en/spec/host-api/v2/forms) |
+| 作成から削除までの要求と失敗ケース | [具体例](/en/spec/host-api/v2/examples) |
+
+共通の通信形式はHTTP APIに集約します。この概要の説明だけで別の応答形式を定義しません。
 
 ## 1. v1の保存とv2の独立性
 
 v1の公開済み仕様、schema、参照URL、tag、releaseは、そのidentityと内容を保持します。
-保存対象は[v1の凍結記録](../host-api/v1.freeze.json)が定めます。v1の記述をv2の説明へ
+保存対象は[v1の凍結記録](https://github.com/tako0614/takoform/blob/main/spec/host-api/v1.freeze.json)が定めます。v1の記述をv2の説明へ
 上書きせず、v1のURLをv2へ転送しません。
 
 Takoform自身の新しい仕様設計・案内・新規採用はv2を中心にします。v1は旧仕様を参照する
@@ -87,12 +107,12 @@ Hostは明示的に実装したFormだけを実行します。未対応URLの要
 コードを実行したりしません。実操作はpublisherサイトの可用性に依存せず、既存資源の取得・更新・
 削除・復旧を行える必要があります。
 
-## 5. HTTP操作の候補
+## 5. HTTP操作
 
-候補のAPI識別子は `forms.takoform.com/v2`、API rootは
-`/apis/forms.takoform.com/v2` です。この文書の候補識別子は未公開です。
+API識別子は `forms.takoform.com/v2`、標準API rootは
+`/apis/forms.takoform.com/v2` です。
 
-| 操作 | 候補の経路 |
+| 操作 | 経路 |
 | --- | --- |
 | 接続情報 | `GET /.well-known/takoform/v2` |
 | Formへの対応確認 | `GET {root}/support?form=...` |
@@ -104,31 +124,31 @@ Hostは明示的に実装したFormだけを実行します。未対応URLの要
 | 操作結果 | `GET {root}/operations/{id}` |
 | 任意の事前確認 | `POST {root}/previews` |
 
-作成入力の候補は次のとおりです。TypeScript表記はJSONの形を説明するものであり、
-TypeScriptの実装を要求しません。Offeringの必須性と秘密入力の具体的な表現は策定中です。
-下記の省略可能性やunknownを、確定した受理条件として実装しません。
+作成入力は次の形を採用します。TypeScript表記は説明用です。
+Offeringを使わない最小Hostはofferingを省き、使うHostでは明示的に選択します。
+秘密入力は対応するHostとFormでだけ利用します。厳密な必須性・文法はHTTP APIに定めます。
 
 ```typescript
 type CreateResource = {
   form: string;
   space: string;
   name: string;
-  offering?: string;                   // 必須性は策定中
+  offering?: { id: string; revision: string };
   spec: Record<string, unknown>;
-  privateInputs?: unknown;             // 秘密入力のwire形式は策定中
+  privateInputs?: Record<string, string>;
 };
 ```
 
-Resourceの共通部分の候補は、UID、仕様URL、Space、名前、選択したOffering、generation、revision、
-公開spec、observed、output、関連Operationです。Offeringを含める条件は上記と同じく策定中です。
-observedとoutputの内容はForm仕様が定めます。
+Resourceは、UID、仕様URL、Space、名前、選択したOffering、generation、observedGeneration、
+管理上のphase、公開spec、observed、output、関連Operationを持ちます。
+observedとoutputの内容はForm仕様が定めます。別のResource revision軸は追加しません。
 
 直接の作成・更新・削除を標準経路にします。previewは任意で、副作用を起こしません。
 previewの結果や実行履歴を、実操作の必須引換券にしません。実操作ではその時点の入力・認可・
 依存関係・供給条件・競合を検査します。
 
-作成・更新・削除にはIdempotency-Keyを要求します。更新・削除にはgenerationの一致を要求し、
-revisionのETagも利用できます。Resource UIDは一つの存在期間を識別し、削除・再作成で変わります。
+作成・更新・削除にはIdempotency-Keyを要求します。更新・削除にはgenerationの一致を要求します。
+Resource UIDは一つの存在期間を識別し、削除・再作成で変わります。
 古いUID向けの操作を、同名で作り直した資源へ適用しません。
 
 通常更新ではForm URLとOfferingを変更しません。Formの版変更や実行先の移動は、その入力変更から
@@ -144,7 +164,8 @@ capabilityとし、全Hostに一律のupload機能を要求しません。
 
 受理した操作のidentityと対象資源を、再試行・再起動で変更しません。定められた保持契約の範囲では、
 同じキーと同じ要求に同じ操作の結果または進行状態を返し、内容を変えた要求は副作用前に拒否します。
-保持期間とその終了後の要求の扱いは策定中で、無期限の再送保証を確定したものではありません。
+Hostは最低保持windowを宣言し、個々のOperationで保持期限を返します。
+未完了・副作用不明の操作は期限だけで捨てません。window後の無条件再送を安全と約束しません。
 
 Hostは、送信前、結果確定済み、送信した可能性があり結果不明、を区別できるようにします。
 具体的なDB、記録形式、実行キュー、leaseの実装は指定しません。
@@ -172,7 +193,8 @@ Hostの認証用credentialとも別です。
 Takoserver向けに検討した60分等の値は、Takoform共通APIの必須値へ持ち込みません。
 
 入力待ちと、すでに送信された可能性がある操作を区別します。秘密の再送によって新しい操作や
-二重作成を起こしません。再送・期限切れ・操作結果の具体的なwire形式は、公開前に閉じます。
+二重作成を起こしません。秘密の補給は元Operation専用のPUTで行い、元の値と一致した場合だけ
+同じ操作を継続します。照合不能や送信結果不明を、再入力だけで成功に変えません。
 
 ## 8. 適合と公開
 
@@ -183,7 +205,7 @@ Formの機械定義が任意でも、入力・出力・関係・操作の意味�
 非公開性を、実装に依存しない要求と期待結果で定義します。Formごとの意味は、その作者の規範仕様と
 例・適合ケースで確かめます。publisherサイトを取得しないHostも適合できます。
 
-v2を正式公開する前に、下記の判断を閉じ、HTTP要求・応答の一式と例を揃えて独立レビューします。
+v2を正式公開する前に、HTTP要求・応答の一式と例を揃えて独立レビューします。
 HostやProviderの完成を仕様公開の必須条件にはしません。ただし仕様を一意に実装できるかは、
 要求・応答の往復例と失敗時のケースで確認します。
 
@@ -191,16 +213,22 @@ HostやProviderの完成を仕様公開の必須条件にはしません。た�
 画面構成、案内文、非規範の解説、SDK・Providerの更新とは分けます。
 Form仕様は各作者のサイトに置き、Takoformのサイトは共通概念とAPI仕様を扱います。
 
-## 9. 公開前に閉じる判断
+## 9. 仕様の正本と公開
 
-上記の責任分担・v1保存方針・v2の設計方向は採用方針です。以下はwire確定までに詰める事項です。
+URLの完全一致、最小Host、Offeringの選択、Resource/Operationの形式、期限付き再送、
+秘密補給、Form作者の記述項目を、このディレクトリの規範文書で定義します。
+正本はこのREADME、`http.md`、`forms.md`の三つです。`examples.md`は非規範の解説であり、
+例だけで新しい必須条件を追加しません。
 
-1. **URLの文法と寿命:** 許可するURL形、正確な比較、redirect・閉鎖・ドメイン移転の扱い。
-2. **最小Hostの要件:** Offeringの必須性、単一実行先の場合、必須・任意capabilityの境界。
-3. **ResourceとOperation:** 要求・応答の完全な形、pagination、条件付き要求、状態、HTTP status、error。
-4. **再試行の範囲:** キーの利用範囲と保持期間、保持終了後、異なるAPI版からの操作、結果不明の表現。
-5. **秘密の再送:** 入力待ち、同一入力の確認、期限切れ、復旧不能、retentionの通知方法。
-6. **Form作者向け契約:** 版の書き方、参照・Bindingの記述、未知field、補助schemaとの矛盾の扱い。
+署名を必須にしない代わりに、仕様の作者確認と手元で実装する内容の確認はHost運用者が行います。
+URLだけでは過去のbytesや供給元の暗号的証明を得られません。必要な実装者は、版ごとの保存、
+差分確認、任意の署名などを使えますが、Takoform全体への参加条件にはしません。
 
-公開までの作業順は、この責任分担の確定、共通wireと具体例、失敗・復旧ケース、独立レビュー、
-正式な規範の固定とHTTP公開です。現在の作業範囲は仕様策定です。
+正式公開時に規範本文を固定します。以後、意味が変わる修正は別のAPI majorです。
+解説やサイトの表示は規範本文とは分離して更新します。
+release、HTTP公開、Host/Provider実装の適合宣言は、それぞれ実施した証拠で判断します。
+公開後も独立した文書セットの版系列は作らず、API majorとForm URLの版を意味の変更単位にします。
+SDKとProviderは独立したソフトウェアのversionで更新できます。
+
+
+</div>

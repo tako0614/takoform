@@ -83,6 +83,15 @@ const retiredWriterFiles = Object.freeze([
 
 const proposalClassificationHeader =
   /^---\nclassification: non-normative-proposal\n---\n/u;
+const proposalIndexPath = "spec/proposals/README.md";
+const normativeV2MarkdownSources = new Set([
+  "spec/host-api/v2/README.md",
+  "spec/host-api/v2/http.md",
+  "spec/host-api/v2/forms.md",
+]);
+const nonNormativeV2ExampleSources = new Set([
+  "spec/host-api/v2/examples.md",
+]);
 const mintedV2Patterns = Object.freeze([
   /(?:https:\/\/)?forms\.takoform\.com\/(?:[A-Za-z0-9._~-]+\/)*v2(?:[/\."'`\s]|$)/iu,
   /\bspecification\/(?:v)?2(?:\.[0-9]+)?(?:[\s"'`/]|$)/iu,
@@ -116,27 +125,34 @@ function problem(problems, message) {
 
 export function classifySpecificationPublicationSource(path, raw) {
   const text = Buffer.from(raw).toString("utf8");
-  const proposalPath = typeof path === "string" &&
+  const proposalPath = typeof path === "string" && path !== proposalIndexPath &&
     /^spec\/proposals\/(?:[A-Za-z0-9._-]+\/)*[A-Za-z0-9._-]+\.md$/u.test(path);
   const classifiedProposal = proposalClassificationHeader.test(text);
-  if (proposalPath !== classifiedProposal) {
+  const proposalIndex = path === proposalIndexPath;
+  if (proposalPath !== classifiedProposal && !proposalIndex) {
     throw new Error(
       `${path}: v2 proposal material requires both spec/proposals/**.md and classification: non-normative-proposal`,
     );
   }
   if (!proposalPath) {
+    const normativeV2Source = normativeV2MarkdownSources.has(path);
+    const nonNormativeV2Example = nonNormativeV2ExampleSources.has(path);
     if (
       typeof path !== "string" ||
       (/^spec\/(?:schemas|host-api)\//u.test(path) &&
-        /(?:^|\/)v2(?:[._/-]|$)/iu.test(path))
+        /(?:^|[./_-])v2(?:[._/-]|$)/iu.test(path) &&
+        !normativeV2Source && !nonNormativeV2Example)
     ) {
       throw new Error(`${path}: normative v2 schema/Host path is forbidden`);
     }
-    if (mintedV2Patterns.some((pattern) => pattern.test(text))) {
+    if (!normativeV2Source && !nonNormativeV2Example &&
+      mintedV2Patterns.some((pattern) => pattern.test(text))) {
       throw new Error(
         `${path}: normative snapshot mints a forbidden v2 schema, Host lane, route, tag, receipt, or release identity`,
       );
     }
+    if (nonNormativeV2Example) return "non-normative-v2-example";
+    if (proposalIndex) return "non-normative-index";
   }
   return proposalPath ? "non-normative-proposal" : "normative";
 }
