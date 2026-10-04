@@ -7,6 +7,12 @@ or reinterpret those contracts.
 
 ## Current Host API
 
+Active specification work is the [Host API v2 proposal](proposals/host-api-v2.md).
+It treats publisher-owned HTTP specifications as Form identities and allows
+v2-only implementations. It is not yet a published contract. Published v1
+remains frozen reference material; retaining it does not require new v2 Hosts
+or clients to implement v1. The following map describes the published v1 lane.
+
 The current Host API is the unchanged literal v1 lane:
 
 - discovery: `GET /.well-known/takoform/v1`;
