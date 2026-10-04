@@ -1,16 +1,23 @@
 # Host API v2 Specification
 
-A Form author publishes a version-fixed URL describing a resource and its operations. A Host implements the Forms it supports. Clients use the shared API to create, list, read, update, and delete resources. Each Form defines its inputs, observations, outputs, and operation semantics; a Host does not fetch specifications or code from request URLs.
+Takoform provides a shared HTTP API to create, read, update, and delete resources.
+Authors publish Forms that define what each resource means. Hosts implement the
+Forms they support, and clients operate resources according to those specifications.
 
-These are the v2 specification sources. They have not yet been formally published, released, or frozen.
+These pages contain the v2 specification text, ahead of its formal publication.
+The v2 specification pages linked below are currently written in Japanese; the English routes preserve the source and label its language.
 
 ## Specification
 
-- [Architecture and responsibility boundaries](/en/spec/host-api/v2/)
+- [Overview and basic concepts](/en/spec/host-api/v2/)
 - [HTTP API requests and responses](/en/spec/host-api/v2/http)
-- [Form specification requirements](/en/spec/host-api/v2/forms)
+- [Defining a Form, with a complete example](/en/spec/host-api/v2/forms)
 - [End-to-end examples](/en/spec/host-api/v2/examples)
+- [Migration from v1](/en/spec/host-api/v2/migration)
 
-## Host API v1
+## Suggested reading order
 
-The [frozen v1 specification](/en/spec/host-api/v1) remains available as the reference for the existing contract. Work on v2 does not change v1.
+- Form authors: start with [Form requirements](/en/spec/host-api/v2/forms), then consult the [examples](/en/spec/host-api/v2/examples).
+- Host implementers: read the [overview](/en/spec/host-api/v2/), then the [HTTP API](/en/spec/host-api/v2/http) and [Form requirements](/en/spec/host-api/v2/forms).
+- Client implementers: follow the [examples](/en/spec/host-api/v2/examples), then use the [HTTP API](/en/spec/host-api/v2/http) to look up request and response details.
+- Existing v1 users: read [Migration](/en/spec/host-api/v2/migration) for the changes and questions to resolve when carrying resources forward.

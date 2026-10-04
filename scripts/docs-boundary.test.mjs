@@ -13,7 +13,7 @@ function baseEntries() {
 describe("current documentation boundary", () => {
   test("allows the v2 identity only in the explicitly owned v2 specification pages", () => {
     const entries = baseEntries();
-    for (const path of ["spec/host-api/v2/README.md", "spec/host-api/v2/http.md", "spec/host-api/v2/forms.md", "spec/host-api/v2/examples.md", "website/spec/host-api/v2/http.md", "website/en/spec/host-api/v2/http.md"]) {
+    for (const path of ["spec/host-api/v2/README.md", "spec/host-api/v2/http.md", "spec/host-api/v2/forms.md", "spec/host-api/v2/examples.md", "spec/host-api/v2/migration.md", "website/spec/host-api/v2/http.md", "website/en/spec/host-api/v2/http.md", "website/spec/host-api/v2/migration.md", "website/en/spec/host-api/v2/migration.md"]) {
       entries.set(path, "API identity: forms.takoform.com/v2.\n");
     }
     expect(inspectDocs(entries)).toEqual([]);

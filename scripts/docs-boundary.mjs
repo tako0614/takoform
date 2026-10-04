@@ -69,10 +69,10 @@ const hostApiV2Token = /\bforms\.takoform\.com\/v2(?:[^A-Za-z0-9_]|$)/iu;
 // V2 has its own normative source and generated pages. A positive v2 identity
 // here does not rewrite v1 or promote an unrelated guide into a new contract.
 const v2DocumentPaths = new Set([
-  ...["README", "http", "forms", "examples"].map((name) => `spec/host-api/v2/${name}.md`),
+  ...["README", "http", "forms", "examples", "migration"].map((name) => `spec/host-api/v2/${name}.md`),
   ...["", "en/"].flatMap((locale) => [
     `website/${locale}v2/index.md`,
-    ...["index", "http", "forms", "examples"].map((name) => `website/${locale}spec/host-api/v2/${name}.md`),
+    ...["index", "http", "forms", "examples", "migration"].map((name) => `website/${locale}spec/host-api/v2/${name}.md`),
   ]),
 ]);
 

@@ -138,6 +138,7 @@ const v2Sidebar = [
       { text: "HTTP API", link: "/spec/host-api/v2/http" },
       { text: "Form 仕様", link: "/spec/host-api/v2/forms" },
       { text: "具体例", link: "/spec/host-api/v2/examples" },
+      { text: "v1からの移行", link: "/spec/host-api/v2/migration" },
     ],
   },
   {
@@ -156,7 +157,7 @@ const englishLabels: Record<string, string> = {
   サイト情報: "Site information", このサイトについて: "About this site",
   "Host API v2 仕様": "Host API v2 specification",
   "HTTP wire format": "HTTP API", 概要: "Overview", "Form 仕様": "Form requirements",
-  具体例: "Examples", "公開済みの参考仕様": "Published reference",
+  具体例: "Examples", "v1からの移行": "Migration from v1", "公開済みの参考仕様": "Published reference",
   "Host API v1（凍結）": "Host API v1 (frozen)",
 };
 
@@ -192,8 +193,8 @@ export default defineConfig({
       themeConfig: {
         nav: [
           { text: "Docs", link: "/en/v2/" },
-          { text: "HTTP API", link: "/en/spec/host-api/v2/http" },
-          { text: "Forms", link: "/en/spec/host-api/v2/forms" },
+          { text: "HTTP API v2", link: "/en/spec/host-api/v2/http" },
+          { text: "Form v2", link: "/en/spec/host-api/v2/forms" },
           { text: "v1 reference", link: "/en/spec/host-api/v1" },
         ],
         sidebar: {
@@ -320,8 +321,8 @@ export default defineConfig({
     } } } } },
     nav: [
       { text: "ドキュメント", link: "/v2/" },
-      { text: "HTTP API", link: "/spec/host-api/v2/http" },
-      { text: "Form", link: "/spec/host-api/v2/forms" },
+      { text: "HTTP API v2", link: "/spec/host-api/v2/http" },
+      { text: "Form v2", link: "/spec/host-api/v2/forms" },
       { text: "v1参照", link: "/spec/host-api/v1" },
     ],
     sidebar: {

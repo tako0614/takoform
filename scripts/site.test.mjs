@@ -181,8 +181,22 @@ describe("takoform.com site derivation", () => {
     }
     expect(readFileSync("website/en/v2/index.md", "utf8"))
       .toContain("Host API v2 Specification");
+    expect(readFileSync("spec/host-api/v2/migration.md", "utf8"))
+      .toContain("[v1仕様](../v1.md)");
     expect(readFileSync("website/en/v2/index.md", "utf8"))
-      .toContain("remains available as the reference for the existing contract");
+      .toContain("currently written in Japanese");
+    expect(readFileSync("website/v2/index.md", "utf8"))
+      .toContain("Host 実装者:");
+    expect(readFileSync("website/v2/index.md", "utf8"))
+      .toContain("クライアント実装者:");
+    expect(readFileSync("website/en/v2/index.md", "utf8"))
+      .toContain("Host implementers:");
+    expect(readFileSync("website/en/v2/index.md", "utf8"))
+      .toContain("Client implementers:");
+    expect(readFileSync("website/v2/index.md", "utf8"))
+      .toContain("/spec/host-api/v2/migration");
+    expect(readFileSync("website/en/v2/index.md", "utf8"))
+      .toContain("/en/spec/host-api/v2/migration");
     expect(links("[guide](https://publisher.example/en/forms/?lang=en#start)", true))
       .toEqual(links("[guide](https://publisher.example/forms/?lang=en#start)", true));
     expect(links("[guide](https://publisher.example/en/forms/)", true))
@@ -387,7 +401,7 @@ describe("takoform.com site derivation", () => {
     }
   });
 
-  test("projects only the four v2 sources with normative and release state kept separate", () => {
+  test("projects only the explicit v2 specification and migration sources with authority and release state separate", () => {
     expect(V2_SPEC_DOCUMENTS.map(({ path, normative, sourceLanguage, releaseState }) => ({
       path, normative, sourceLanguage, releaseState,
     }))).toEqual([
@@ -395,6 +409,7 @@ describe("takoform.com site derivation", () => {
       { path: "spec/host-api/v2/http.md", normative: true, sourceLanguage: "ja-JP", releaseState: "unpublished" },
       { path: "spec/host-api/v2/forms.md", normative: true, sourceLanguage: "ja-JP", releaseState: "unpublished" },
       { path: "spec/host-api/v2/examples.md", normative: false, sourceLanguage: "ja-JP", releaseState: "unpublished" },
+      { path: "spec/host-api/v2/migration.md", normative: false, sourceLanguage: "ja-JP", releaseState: "unpublished" },
     ]);
     for (const document of V2_SPEC_DOCUMENTS) {
       expect(MIRRORED_SPEC_DOCUMENTS).not.toContain(document.path);
@@ -408,6 +423,10 @@ describe("takoform.com site derivation", () => {
       .toBe("website/en/spec/host-api/v2/forms.md");
     expect(siteRouteForV2SpecDocument("spec/host-api/v2/forms.md", "en"))
       .toBe("/en/spec/host-api/v2/forms");
+    expect(sitePathForV2SpecDocument("spec/host-api/v2/migration.md"))
+      .toBe("website/spec/host-api/v2/migration.md");
+    expect(siteRouteForV2SpecDocument("spec/host-api/v2/migration.md", "en"))
+      .toBe("/en/spec/host-api/v2/migration");
 
     const files = buildSiteFiles(".");
     for (const document of V2_SPEC_DOCUMENTS) {
@@ -442,12 +461,13 @@ describe("takoform.com site derivation", () => {
     };
     const page = renderV2SpecDocument(
       V2_SPEC_DOCUMENTS[0],
-      "[HTTP](http.md) [Form](forms.md) [examples](examples.md) [v1](../v1.md)",
+      "[HTTP](http.md) [Form](forms.md) [examples](examples.md) [migration](migration.md) [v1](../v1.md)",
       v2Context,
     );
     expect(page).toContain("[HTTP](/spec/host-api/v2/http)");
     expect(page).toContain("[Form](/spec/host-api/v2/forms)");
     expect(page).toContain("[examples](/spec/host-api/v2/examples)");
+    expect(page).toContain("[migration](/spec/host-api/v2/migration)");
     expect(page).toContain("[v1](/spec/host-api/v1)");
     expect(page).toContain("normative: true");
     expect(page).toContain("releaseState: unpublished");
@@ -682,13 +702,13 @@ describe("takoform.com site derivation", () => {
     }
     expect(config.themeConfig?.nav?.slice(0, 3)).toEqual([
       { text: "ドキュメント", link: "/v2/" },
-      { text: "HTTP API", link: "/spec/host-api/v2/http" },
-      { text: "Form", link: "/spec/host-api/v2/forms" },
+      { text: "HTTP API v2", link: "/spec/host-api/v2/http" },
+      { text: "Form v2", link: "/spec/host-api/v2/forms" },
     ]);
     expect(config.locales.en.themeConfig.nav).toEqual([
       { text: "Docs", link: "/en/v2/" },
-      { text: "HTTP API", link: "/en/spec/host-api/v2/http" },
-      { text: "Forms", link: "/en/spec/host-api/v2/forms" },
+      { text: "HTTP API v2", link: "/en/spec/host-api/v2/http" },
+      { text: "Form v2", link: "/en/spec/host-api/v2/forms" },
       { text: "v1 reference", link: "/en/spec/host-api/v1" },
     ]);
     const links = [];

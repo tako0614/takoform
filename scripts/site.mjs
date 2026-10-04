@@ -103,6 +103,12 @@ export const V2_SPEC_DOCUMENTS = Object.freeze([
     sourceLanguage: "ja-JP",
     releaseState: "unpublished",
   }),
+  Object.freeze({
+    path: "spec/host-api/v2/migration.md",
+    normative: false,
+    sourceLanguage: "ja-JP",
+    releaseState: "unpublished",
+  }),
 ]);
 
 export const GENERATED_INDEX_PAGES = Object.freeze([

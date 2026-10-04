@@ -144,7 +144,7 @@ describe("sealed W09 history and platform-neutral schema records", () => {
     ).toContain("retired Specification writer history manifest changed");
   });
 
-  test("only the three normative v2 Markdown sources and one explicit example may describe v2", () => {
+  test("only the three normative v2 sources, example, and migration page may describe v2", () => {
     for (const path of [
       "spec/host-api/v2/README.md",
       "spec/host-api/v2/http.md",
@@ -165,6 +165,12 @@ describe("sealed W09 history and platform-neutral schema records", () => {
     ).toBe("non-normative-v2-example");
     expect(
       classifySpecificationPublicationSource(
+        "spec/host-api/v2/migration.md",
+        Buffer.from("# v1からの移行\n\n移行先は `forms.takoform.com/v2` です。\n"),
+      ),
+    ).toBe("non-normative-v2-migration");
+    expect(
+      classifySpecificationPublicationSource(
         "spec/proposals/README.md",
         readFileSync(new URL("../spec/proposals/README.md", import.meta.url)),
       ),
@@ -176,6 +182,7 @@ describe("sealed W09 history and platform-neutral schema records", () => {
       ["spec/schemas/v2/schema.json", "{}\n"],
       ["spec/versioning.md", "The new forms.takoform.com/v2 route is normative.\n"],
       ["spec/host-api/v2/unlisted.json", "forms.takoform.com/v2\n"],
+      ["spec/host-api/v2/retired.md", "# v1からの移行\nforms.takoform.com/v2\n"],
       ["spec/host-api/v2-release.json", "{}\n"],
     ]) {
       expect(() => classifySpecificationPublicationSource(path, Buffer.from(content))).toThrow();

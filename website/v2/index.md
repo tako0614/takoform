@@ -1,16 +1,22 @@
 # Host API v2 仕様
 
-Form 作者は、資源の意味と操作を記した仕様を版固定 URL で公開します。Host は対応する Form を実装し、クライアントは共通 API を使って資源を作成・一覧・取得・更新・削除します。Form は入力、観測状態、出力、各操作の意味を定め、Host はその契約を実行します。Host が要求 URL から仕様やコードを自動取得する方式ではありません。
+資源を作成・取得・更新・削除するための共通HTTP APIです。
+資源固有の意味は、作者が公開するFormの仕様で定義します。
+Hostは対応するFormを実装し、クライアントはその仕様に従って操作します。
 
-以下は v2 の仕様本文です。正式な公開・release・freeze はまだ行われていません。
+以下にv2の仕様本文を掲載します。正式公開前の内容です。
 
 ## 仕様
 
-- [責任分担と設計概要](/spec/host-api/v2/)
+- [概要と基本概念](/spec/host-api/v2/)
 - [HTTP API の要求・応答](/spec/host-api/v2/http)
-- [Form 仕様の要件](/spec/host-api/v2/forms)
+- [Formの定義と完成例](/spec/host-api/v2/forms)
 - [作成から削除までの具体例](/spec/host-api/v2/examples)
+- [v1 からの移行案内](/spec/host-api/v2/migration)
 
-## Host API v1
+## 読む順序
 
-[凍結済みの v1 仕様](/spec/host-api/v1)は既存契約を参照するために引き続き掲載しています。v2 の作業は v1 を変更しません。
+- Form 作者: [Form 仕様](/spec/host-api/v2/forms)から、必要に応じて[具体例](/spec/host-api/v2/examples)へ進みます。
+- Host 実装者: [概要](/spec/host-api/v2/)で責任範囲を確認し、[HTTP API](/spec/host-api/v2/http)と[Form 仕様](/spec/host-api/v2/forms)を読みます。
+- クライアント実装者: [具体例](/spec/host-api/v2/examples)で操作の流れを確認し、[HTTP API](/spec/host-api/v2/http)で要求・応答の詳細を調べます。
+- 既存のv1利用者: [Migration](/spec/host-api/v2/migration)で変更点と引継ぎ時の確認事項を読みます。

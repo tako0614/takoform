@@ -11,6 +11,7 @@ v2の規範本文をここで管理します。正式公開と各Hostの実装�
 - [v2のHTTP API](spec/host-api/v2/http.md)
 - [Form仕様の書き方](spec/host-api/v2/forms.md)
 - [作成から削除までの具体例](spec/host-api/v2/examples.md)
+- [v1からの移行](spec/host-api/v2/migration.md)
 
 以下は、凍結して保持するv1と既存Goライブラリの利用案内です。
 v2だけを実装するHostやクライアントに、これらの導入を要求しません。

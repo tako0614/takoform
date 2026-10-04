@@ -92,6 +92,9 @@ const normativeV2MarkdownSources = new Set([
 const nonNormativeV2ExampleSources = new Set([
   "spec/host-api/v2/examples.md",
 ]);
+const nonNormativeV2MigrationSources = new Set([
+  "spec/host-api/v2/migration.md",
+]);
 const mintedV2Patterns = Object.freeze([
   /(?:https:\/\/)?forms\.takoform\.com\/(?:[A-Za-z0-9._~-]+\/)*v2(?:[/\."'`\s]|$)/iu,
   /\bspecification\/(?:v)?2(?:\.[0-9]+)?(?:[\s"'`/]|$)/iu,
@@ -137,21 +140,23 @@ export function classifySpecificationPublicationSource(path, raw) {
   if (!proposalPath) {
     const normativeV2Source = normativeV2MarkdownSources.has(path);
     const nonNormativeV2Example = nonNormativeV2ExampleSources.has(path);
+    const nonNormativeV2Migration = nonNormativeV2MigrationSources.has(path);
     if (
       typeof path !== "string" ||
       (/^spec\/(?:schemas|host-api)\//u.test(path) &&
         /(?:^|[./_-])v2(?:[._/-]|$)/iu.test(path) &&
-        !normativeV2Source && !nonNormativeV2Example)
+        !normativeV2Source && !nonNormativeV2Example && !nonNormativeV2Migration)
     ) {
       throw new Error(`${path}: normative v2 schema/Host path is forbidden`);
     }
-    if (!normativeV2Source && !nonNormativeV2Example &&
+    if (!normativeV2Source && !nonNormativeV2Example && !nonNormativeV2Migration &&
       mintedV2Patterns.some((pattern) => pattern.test(text))) {
       throw new Error(
         `${path}: normative snapshot mints a forbidden v2 schema, Host lane, route, tag, receipt, or release identity`,
       );
     }
     if (nonNormativeV2Example) return "non-normative-v2-example";
+    if (nonNormativeV2Migration) return "non-normative-v2-migration";
     if (proposalIndex) return "non-normative-index";
   }
   return proposalPath ? "non-normative-proposal" : "normative";
