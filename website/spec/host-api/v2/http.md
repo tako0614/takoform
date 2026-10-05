@@ -91,9 +91,25 @@ type Discovery = {
 };
 ```
 
-`baseUrl` は末尾スラッシュのない同一オリジンの絶対HTTPS URLです。
-パスは標準のAPIルートを推奨しますが、Hostは別のパスへ配置できます。
+`baseUrl` はASCIIで直列化した、接続情報と同一オリジンの絶対HTTPS URLです。
+ユーザー情報、クエリ、フラグメント、末尾のスラッシュを含めません。
+パスは標準のAPIルートを推奨しますが、Hostは別のパスやオリジン直下へ配置できます。
+オリジン直下の場合は `https://host.example` のようにパスを省きます。
+各経路はこの文字列に、経路表の先頭 `/` を含む接尾辞をそのまま連結して作ります。
+先頭 `/` をオリジン相対パスとして解決したり、baseUrlの最終パス区間を置き換えたりしません。
+クエリを使う操作では、この連結後にクエリ名と符号化した値を追加します。
 クライアントはこの値を使い、Formの仕様URLをAPIの接続先にしません。
+
+| `baseUrl` | Resource作成先 |
+| --- | --- |
+| `https://host.example/apis/forms.takoform.com/v2` | `https://host.example/apis/forms.takoform.com/v2/resources` |
+| `https://host.example/custom/api` | `https://host.example/custom/api/resources` |
+| `https://host.example` | `https://host.example/resources` |
+
+`https://host.example/api?tenant=x`、`https://host.example/api#v2`、
+`https://user@host.example/api`、`https://host.example/api/` はbaseUrlとして不正です。
+不正な接続情報を受け取ったクライアントは、値を補正して認証情報付きの要求を送らず停止します。
+
 両 `documentation` は絶対HTTPS URLです。`schemes` は空でない文字列配列で、HTTP認証方式
 （例 `Bearer`）を宣言します。ローカル管理境界で認証を置かないHostだけは `None` を宣言できます。
 `None` をインターネット公開の書込許可と取り違えず、Host運用者が到達範囲を制限します。

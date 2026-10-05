@@ -1,20 +1,26 @@
 # Takoform API and common model
 
-This non-normative page maps the family-neutral contracts for portable
-identities, data-only Form Packages, immutable Snapshot compilation, Host
-lifecycle messages, trust inputs, and conformance language. It does not add to
-or reinterpret those contracts.
+This non-normative index separates the v2 specification text from the
+published, frozen v1 reference. It does not add to or reinterpret either contract.
 
-## Current Host API
+## Host API v2 specification — not yet published
 
 The [Host API v2 specification](host-api/v2/README.md) treats publisher-owned
 HTTP specifications as Form identities and allows v2-only implementations.
 Its normative source is being prepared for publication; this index does not
 claim a public release or an implemented Host. Published v1
 remains frozen reference material; retaining it does not require new v2 Hosts
-or clients to implement v1. The following map describes the published v1 lane.
+or clients to implement v1.
 
-The current Host API is the unchanged literal v1 lane:
+Read the v2 [overview](host-api/v2/README.md), [HTTP API](host-api/v2/http.md),
+[Form authoring rules](host-api/v2/forms.md), and [examples](host-api/v2/examples.md).
+The [migration guide](host-api/v2/migration.md) explains the differences from v1.
+
+## Published Host API v1 reference
+
+The currently published Host API is the unchanged literal v1 lane. The rest
+of this index maps v1 only; its package, Snapshot, and trust requirements do
+not apply to v2:
 
 - discovery: `GET /.well-known/takoform/v1`;
 - API root: `/apis/forms.takoform.com/v1`;
@@ -23,13 +29,14 @@ The current Host API is the unchanged literal v1 lane:
 
 API v1 normative bytes are frozen by
 [`host-api/v1.freeze.json`](host-api/v1.freeze.json). Errata are non-normative
-and cannot reinterpret v1; every behavior change requires a future v2 proposal.
+and cannot reinterpret v1. Behavioral changes belong to a different API major;
+the v2 specification text is linked above and does not modify published v1.
 There is no Host API minor lane such as `/v1.1`. Form compatibility is
 versioned independently by each Form's `definitionVersion`, and that and the
 literal v1 lane are the only two compatibility axes
 ([decision 0060](decisions/0060-two-version-axes-and-no-numbered-specification-stream.md)).
 
-## Authority and contract map
+## v1 authority and contract map
 
 The current Host API v1/common-model normative closure is exactly the prose,
 machine roots, and recursive schema identities named by
