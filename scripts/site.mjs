@@ -75,9 +75,9 @@ export const MIRRORED_SPEC_DOCUMENTS = Object.freeze([...new Set([
   "spec/trust/README.md",
 ])]);
 
-// V2 sources are an explicit, unfrozen specification set. Normative authority
-// and release state are separate: normative documents are not yet published or
-// frozen, and examples remain non-normative.
+// V2 normative sources have a separate freeze record. Source immutability and
+// public release are different facts: a local freeze does not publish the site,
+// and examples remain non-normative.
 export const V2_SPEC_DOCUMENTS = Object.freeze([
   Object.freeze({
     path: "spec/host-api/v2/README.md",

@@ -144,7 +144,13 @@ describe("sealed W09 history and platform-neutral schema records", () => {
     ).toContain("retired Specification writer history manifest changed");
   });
 
-  test("only the three normative v2 sources, example, and migration page may describe v2", () => {
+  test("only named v2 prose and its separate freeze record may describe v2", () => {
+    expect(
+      classifySpecificationPublicationSource(
+        "spec/host-api/v2.freeze.json",
+        Buffer.from('{"api":"forms.takoform.com/v2"}\n'),
+      ),
+    ).toBe("host-api-freeze-record");
     for (const path of [
       "spec/host-api/v2/README.md",
       "spec/host-api/v2/http.md",
@@ -184,6 +190,8 @@ describe("sealed W09 history and platform-neutral schema records", () => {
       ["spec/host-api/v2/unlisted.json", "forms.takoform.com/v2\n"],
       ["spec/host-api/v2/retired.md", "# v1からの移行\nforms.takoform.com/v2\n"],
       ["spec/host-api/v2-release.json", "{}\n"],
+      ["spec/host-api/v2/freeze.json", "{}\n"],
+      ["spec/host-api/v2.freeze-copy.json", "{}\n"],
     ]) {
       expect(() => classifySpecificationPublicationSource(path, Buffer.from(content))).toThrow();
     }

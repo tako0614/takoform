@@ -25,6 +25,12 @@ Read the v2 [overview](/en/spec/host-api/v2/), [HTTP API](/en/spec/host-api/v2/h
 [Form authoring rules](/en/spec/host-api/v2/forms), and [examples](/en/spec/host-api/v2/examples).
 The [migration guide](/en/spec/host-api/v2/migration) explains the differences from v1.
 
+The three normative source files are fixed by the repository's
+[`host-api/v2.freeze.json`](https://github.com/tako0614/takoform/blob/main/spec/host-api/v2.freeze.json). This record does not add
+a specification-version stream, require a package or signature, or prove public
+publication. The site layout, examples, and migration guide remain separate from
+the fixed contract and cannot redefine it.
+
 ## Published Host API v1 reference
 
 The currently published Host API is the unchanged literal v1 lane. The rest

@@ -128,6 +128,9 @@ function problem(problems, message) {
 
 export function classifySpecificationPublicationSource(path, raw) {
   const text = Buffer.from(raw).toString("utf8");
+  // This repository-local digest record is checked by host-api-v2-freeze.mjs.
+  // It is neither a new public schema nor an independently versioned contract.
+  if (path === "spec/host-api/v2.freeze.json") return "host-api-freeze-record";
   const proposalPath = typeof path === "string" && path !== proposalIndexPath &&
     /^spec\/proposals\/(?:[A-Za-z0-9._-]+\/)*[A-Za-z0-9._-]+\.md$/u.test(path);
   const classifiedProposal = proposalClassificationHeader.test(text);

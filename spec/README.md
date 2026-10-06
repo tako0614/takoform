@@ -16,6 +16,12 @@ Read the v2 [overview](host-api/v2/README.md), [HTTP API](host-api/v2/http.md),
 [Form authoring rules](host-api/v2/forms.md), and [examples](host-api/v2/examples.md).
 The [migration guide](host-api/v2/migration.md) explains the differences from v1.
 
+The three normative source files are fixed by the repository's
+[`host-api/v2.freeze.json`](host-api/v2.freeze.json). This record does not add
+a specification-version stream, require a package or signature, or prove public
+publication. The site layout, examples, and migration guide remain separate from
+the fixed contract and cannot redefine it.
+
 ## Published Host API v1 reference
 
 The currently published Host API is the unchanged literal v1 lane. The rest
