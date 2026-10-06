@@ -1,22 +1,12 @@
----
-# Generated from spec/host-api/v2/http.md by scripts/site.mjs. Edit the specification, not this page.
-normative: true
-canonicalSource: spec/host-api/v2/http.md
-sourceLanguage: ja-JP
-releaseState: published
----
-
-<div lang="ja-JP" class="specification-source">
-
 # Host API v2 — HTTP API
 
 この文書はTakoform Host API v2の要求・応答、状態、競合と再試行を定める規範です。
-基本概念は[概要](/en/spec/host-api/v2/)、Formの記述は[Formの定義](/en/spec/host-api/v2/forms)、
-要求の往復は[具体例](/en/spec/host-api/v2/examples)を参照してください。
+基本概念は[概要](README.md)、Formの記述は[Formの定義](forms.md)、
+要求の往復は[具体例](examples.md)を参照してください。
 「必須」「禁止」を適合条件、「できる」を実装上の選択として使います。
 
 クライアントは接続情報とFormへの対応を確認し、資源の変更を要求して、返されたOperationを
-取得します。具体的な値を使った操作の流れから読む場合は[具体例](/en/spec/host-api/v2/examples)へ進んでください。
+取得します。具体的な値を使った操作の流れから読む場合は[具体例](examples.md)へ進んでください。
 
 ### 経路一覧 {#endpoints}
 
@@ -509,6 +499,3 @@ Hostの内部例外、認証情報、秘密値、別利用者の資源情報を�
 
 共通API適合は特定のForm、実行先、SDK、Providerの完成を意味しません。
 Form適合はその作者の仕様にも従って確認します。
-
-
-</div>

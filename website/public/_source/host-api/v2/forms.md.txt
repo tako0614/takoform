@@ -1,16 +1,6 @@
----
-# Generated from spec/host-api/v2/forms.md by scripts/site.mjs. Edit the specification, not this page.
-normative: true
-canonicalSource: spec/host-api/v2/forms.md
-sourceLanguage: ja-JP
-releaseState: published
----
-
-<div lang="ja-JP" class="specification-source">
-
 # Formの意味を定義する
 
-この文書はTakoform v2のForm識別子、版、仕様に記す内容を定めます。Form作者は資源の意味を定義し、Hostはその仕様を実装します。要求と応答の共通形式は[HTTP API](/spec/host-api/v2/http)が定めます。
+この文書はTakoform v2のForm識別子、版、仕様に記す内容を定めます。Form作者は資源の意味を定義し、Hostはその仕様を実装します。要求と応答の共通形式は[HTTP API](http.md)が定めます。
 
 ## 記述例: KeyValueEntry
 
@@ -85,6 +75,3 @@ Form URLはASCII文字だけで直列化した絶対HTTPS URLとし、ホスト�
 8. **未知のフィールドと拡張。** 入力オブジェクトに未知のフィールドがある場合の扱い（拒否、無視、保持、その他の規則）をFormごとに明記します。未知のフィールドに暗黙の共通方針はありません。対象オブジェクトの各境界で一貫した規則を定め、既存入力の意味を保ちながら将来拡張する方法も説明します。
 
 Formが特定の実装や環境に依存するなら、その依存条件や制限をFormの契約として明示し、他の環境にも適用できるという含意を避けます。外部標準に挙動を委ねる場合は、対象標準の正確な識別子と、委ねる範囲を記します。
-
-
-</div>

@@ -16,16 +16,16 @@ v2仕様は専用の目次、既存v1ガイド・仕様はv1の目次を使い�
 公開JSONのパスとバイト列は複製・変更しません。
 
 `takoform.com` はTakoformの概念とAPIを扱うsiteです。
-v1の公開済み規範と、公開準備中のv2規範本文を区別します。
+v1の公開済み規範と、repositoryで固定したv2規範本文を区別します。v2の固定、公開候補の
+生成、public aliasでの配信確認、Host実装の適合確認は別の事実です。
 この repository がその source、build、deploy entrypoint を所有します。realized な CDN、
 DNS、account / zone / route、credential、operator の状態は所有しません。それらは公開を
 行う operator の authority です。
 
-site の見た目や案内文は Host API v1 とは独立して配信できます。この deploy は固定された
-Host API v1 を変更せず、新しい API version や、それとは別の文書セットのバージョン軸も
-作りません。
-一方、schema の exact bytes（および将来 freeze される normative API bytes）は consumer が
-参照する identity なので、presentation と同じ rollback 条件では扱いません。
+site の見た目や案内文は固定されたHost API v1/v2本文とは独立して配信できます。v2の
+一度限りの正式公開は通常のpresentation更新と別surfaceで扱い、文書セットの追加version軸を
+作りません。schemaのexact bytesと固定済みnormative API sourceはconsumerが参照する
+identityなので、presentationと同じrollback条件では扱いません。
 
 ## 現在の repository 配置と local 開発
 
@@ -57,7 +57,8 @@ website/
 v2仕様は `spec/host-api/v2/` のうち `V2_SPEC_DOCUMENTS` で明示した文書だけを生成します。
 README、HTTP、Form仕様は規範、examplesは非規範です。任意のproposalを自動公開せず、
 v1の凍結対象にも加えません。本文は原文から生成し、web側に別の仕様を手書きしません。
-規範本文を執筆することと、本文を固定して正式にreleaseすることは区別します。
+規範本文は`spec/host-api/v2.freeze.json`のfirst-add Git commitから固定します。これを
+`--require-frozen`で検証しても、site公開やHost実装の適合は証明されません。
 
 ```console
 bun scripts/site.mjs --write        # 生成物を書き直す
@@ -166,12 +167,18 @@ credential を持ちません。
    から landing page、sitemap、ledger にある current 33件と retired 15件の schema を
    byte 単位で読み戻し、撤去した catalog/status/release/decision route も不在であることを
    確認します。schema の sample 2件だけで成功にはしません。
+
+   v2の公開済みprojectionを含むsourceでは、routine previewもpublic apexがすでにv2公開済み
+   と読める場合に限ります。初回v2公開候補を通常のpreview/deploy経路から正式公開したことには
+   しません。
 ## 一度限りの historical runbook（initial cutover の記録）
 
 以下の手順4〜6は、Host API v1 の identity/domain を最初に切り替えるための一度限りの
 historical runbook です。現在の routine production deploy と混同しないでください。手順、
 receipt、旧 owner の識別子は cutover evidence として保持しますが、通常の deploy path で
-再利用するものではありません。
+再利用するものではありません。現在のv2公開済みprojectionでは、この旧v1 cutoverの
+`--execute`はprovider変更前に拒否されます。以下のapply例は当時の記録であり、現在の
+公開手順ではありません。
 
 4. **最初の production deployment を作る。** domain を動かす前に、clean な public
    `main` で次を順に実行します。これは `takoform-api-v1-cutover` が一度だけ所有する
@@ -251,6 +258,27 @@ receipt、旧 owner の識別子は cutover evidence として保持しますが
    この確認と operator-retained receipt の保存が終わったら、一回限りの
    `--initial-cutover`、31/17 partition、旧 Worker 識別子は通常の deploy path から削除します。
    全48 schema の ledger-driven readback と forward-repair 制約は残します。
+## Host API v2の一度限りの公開
+
+v2の規範sourceは先に固定し、公開は同じPages projectの専用surfaceで一回だけ行います。
+`--execute`の無いplanはuploadしません。実行にはoperator自身の公開判断が必要です。
+
+```console
+bun run deploy -- takoform-api-v2-publication --apply --environment production
+bun run deploy -- takoform-api-v2-publication --apply --environment production --execute
+```
+
+このsurfaceはcleanなpublic `main`、`host-api-v2-freeze.mjs --check --require-frozen`、
+v1 freeze/site gate、公開済みv2がまだないことのpublic alias readbackをupload前に要求します。
+apexとwwwの規範page全件を照合し、upload直前にもproduction historyと公開状態を再確認します。
+Pagesにatomicな排他はないため、この一度限りの操作中はoperatorが同じprojectのwriterを
+直列化します。一回のPages upload後、immutable URLとapex/wwwからv2の規範3文書の日英mirror、
+保持するv1仕様の日英mirror、全schema、`/_source/host-api/v2/{README,http,forms}.md.txt`の
+原文3ファイルを候補buildのexact bytesで読み戻します。この`/_source/`はsiteが所有する
+検証用の派生配信pathで、Host APIやForm URLの契約ではありません。これは公開された
+文書の証拠であり、実Hostの適合や提供開始の証拠ではありません。旧Pages deploymentがv2を
+欠く場合はrollback候補として提示せず、provider historyを読みforward repairします。
+
 ## 現在の定常 production 更新
 
 7. **以後の production 更新。** initial cutover flag は再利用しません。
@@ -261,15 +289,20 @@ receipt、旧 owner の識別子は cutover evidence として保持しますが
    ```
 
    通常 production も clean な exact public `main`、一回のupload、immutable URLの全schema
-   readback、apex と www の page/negative readback、`forms.takoform.com` の全schema readbackを
-   要求します。通常の `takoform-site` surface は `--initial-cutover` と `--verify-cutover` を
-   受け付けず、Host API v1 の identity/domain 操作は上の cutover surface に分離されています。
+   とv1/v2仕様pageのreadback、apex と www のpage/negative readback、`forms.takoform.com` の
+   全schema readbackを要求します。公開済みv2と固定済みsourceを確認できなければ停止し、
+   upload前にapex/wwwのraw v2原文も候補の固定済みsourceとバイト一致させます。
+   初回v2公開を代行しません。`takoform-site`は`--initial-cutover`と`--verify-cutover`を
+   受け付けません。
 
-presentation だけの不具合は、全48 schemaが同じbytesであることを確認できる以前の Pages
-deployment へ戻せます。しかし initial domain cutover 後に旧 Worker へ戻すと、新しく公開した
-17件が消えます。schema、domain cutover、または readback が失敗した場合は provider history を
-読み、全48件を保持する Pages deployment へ forward repair します。自動 rollback や blind retry
-は行いません。
+Cloudflare Pages自体は以前の成功deploymentへ戻せますが、このrepositoryの安全条件を
+代わりに判定しません。presentationだけの不具合でも、全48 schemaと固定済みv2の
+raw原文3件を保持するとexact readbackで確認でき、v2規範文書の日英6 pageとv1入口の日英pageが
+HTTP 200で読めるdeploymentだけをrollback候補として提示します。v2 pageは公開済み表示も確認します。
+HTMLやCSSは固定しません。公開先の現在のHTMLは毎回その候補buildに対してexact readbackします。
+候補がなければv2を落とすrollbackは行わず、provider historyからforward repairします。
+旧Workerへ戻すと公開済みschema17件が消えるため候補ではありません。自動rollbackやblind retryは
+行いません。
 
 ## 以前の site を superseded にする
 

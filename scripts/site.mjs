@@ -83,33 +83,42 @@ export const V2_SPEC_DOCUMENTS = Object.freeze([
     path: "spec/host-api/v2/README.md",
     normative: true,
     sourceLanguage: "ja-JP",
-    releaseState: "unpublished",
+    releaseState: "published",
   }),
   Object.freeze({
     path: "spec/host-api/v2/http.md",
     normative: true,
     sourceLanguage: "ja-JP",
-    releaseState: "unpublished",
+    releaseState: "published",
   }),
   Object.freeze({
     path: "spec/host-api/v2/forms.md",
     normative: true,
     sourceLanguage: "ja-JP",
-    releaseState: "unpublished",
+    releaseState: "published",
   }),
   Object.freeze({
     path: "spec/host-api/v2/examples.md",
     normative: false,
     sourceLanguage: "ja-JP",
-    releaseState: "unpublished",
+    releaseState: "published",
   }),
   Object.freeze({
     path: "spec/host-api/v2/migration.md",
     normative: false,
     sourceLanguage: "ja-JP",
-    releaseState: "unpublished",
+    releaseState: "published",
   }),
 ]);
+export const V2_SOURCE_PREFIX = "/_source/host-api/v2";
+export function v2NormativeSourceRoute(specPath) {
+  if (!V2_SPEC_DOCUMENTS.some((document) => document.normative && document.path === specPath)) {
+    throw new Error(`unlisted v2 normative source: ${specPath}`);
+  }
+  // VitePress treats .md in public/ as a page and rewrites its links. A .txt
+  // transport path preserves the original Markdown bytes without a second page.
+  return `${V2_SOURCE_PREFIX}/${posix.basename(specPath)}.txt`;
+}
 
 export const GENERATED_INDEX_PAGES = Object.freeze([
   `${SITE_ROOT}/schemas/index.md`,
@@ -209,6 +218,7 @@ const GENERATED_TREES = Object.freeze([
   `${SITE_ROOT}/releases`,
   `${SITE_PUBLIC_ROOT}/.well-known`,
   `${SITE_PUBLIC_ROOT}/schemas`,
+  `${SITE_PUBLIC_ROOT}${V2_SOURCE_PREFIX}`,
 ]);
 
 function sha256(bytes) {
@@ -595,6 +605,9 @@ export function buildSiteFiles(root) {
   for (const identity of schemas.identities) {
     files.set(`${SITE_PUBLIC_ROOT}${identity.path}`, readBytes(root, identity.source));
   }
+  for (const document of V2_SPEC_DOCUMENTS.filter((entry) => entry.normative)) {
+    files.set(`${SITE_PUBLIC_ROOT}${v2NormativeSourceRoute(document.path)}`, readBytes(root, document.path));
+  }
 
   const context = {
     root,
@@ -841,6 +854,9 @@ export function inspectRenderedSitePages(pages, servedPaths = new Set()) {
         problems.push(`${page.path} does not render its source authority notice`);
       } else if (attribute(notice, "data-document-authority") !== page.authority) {
         problems.push(`${page.path} source notice disagrees with ${page.authority}`);
+      } else if (page.releaseState !== undefined &&
+        attribute(notice, "data-release-state") !== page.releaseState) {
+        problems.push(`${page.path} source notice disagrees with releaseState=${page.releaseState}`);
       }
     }
     if (page.releaseState === "unpublished") {
@@ -955,6 +971,22 @@ export function inspectDist(root, distRoot = SITE_DIST) {
   servedSchemas.delete(`${distRoot}/schemas/index.html`);
   for (const extra of servedSchemas) {
     problems.push(`${extra} is served under /schemas/ but names no ledger identity`);
+  }
+
+  const servedV2Sources = new Set(walk(root, `${distRoot}${V2_SOURCE_PREFIX}`));
+  for (const document of V2_SPEC_DOCUMENTS.filter((entry) => entry.normative)) {
+    const path = `${distRoot}${v2NormativeSourceRoute(document.path)}`;
+    servedV2Sources.delete(path);
+    try {
+      if (!readBytes(root, path).equals(readBytes(root, document.path))) {
+        problems.push(`${path} differs from frozen normative source ${document.path}`);
+      }
+    } catch {
+      problems.push(`${path} is missing`);
+    }
+  }
+  for (const extra of servedV2Sources) {
+    problems.push(`${extra} is served outside the three v2 normative source paths`);
   }
 
   const expectedPageMetadata = new Map([

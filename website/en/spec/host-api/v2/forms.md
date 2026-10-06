@@ -3,7 +3,7 @@
 normative: true
 canonicalSource: spec/host-api/v2/forms.md
 sourceLanguage: ja-JP
-releaseState: unpublished
+releaseState: published
 ---
 
 <div lang="ja-JP" class="specification-source">

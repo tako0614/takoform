@@ -6,15 +6,20 @@ import { dirname, join } from "node:path";
 import {
   ABSENT_ROUTES,
   API_CUTOVER_SURFACE,
+  API_V2_PUBLICATION_SURFACE,
   DOMAIN_STATE_RESIDUAL,
   INITIAL_CUTOVER_ABSENT_SCHEMA_ROUTES,
   INITIAL_CUTOVER_PREDECESSOR,
   PAGE_READBACK_ROUTES,
+  SITE_CONTRACT_READBACK_ROUTES,
+  V2_NORMATIVE_ROUTES,
+  V2_RAW_SOURCE_ROUTES,
   SCHEMA_PUBLIC_ORIGIN,
   SITE_PUBLIC_ORIGINS,
   SITE_PUBLIC_HOSTNAMES,
   SITE_PAGES_ORIGIN,
   SITE_PROJECT,
+  SITE_SURFACE,
   SITE_PUBLIC_ORIGIN,
   SITE_WWW_ORIGIN,
   assertProductionSource,
@@ -81,17 +86,24 @@ function fixtureRoot(pageBodies = {}) {
   const ledgerPath = join(root, SCHEMA_LEDGER_PATH);
   mkdirSync(dirname(ledgerPath), { recursive: true });
   writeFileSync(ledgerPath, `${JSON.stringify(SCHEMA_LEDGER, null, 2)}\n`);
-  for (const route of PAGE_READBACK_ROUTES) {
-    const fileRoute = route === "/" ? "/index.html" : route;
+  for (const route of SITE_CONTRACT_READBACK_ROUTES) {
+    const fileRoute = route === "/" ? "/index.html" : route === "/sitemap.xml" ? route :
+      route.endsWith("/") ? `${route}index.html` : `${route}.html`;
     const file = join(root, `${SITE_DIST}${fileRoute}`);
     mkdirSync(dirname(file), { recursive: true });
-    writeFileSync(file, pageBodies[route] ?? `bytes for ${route}`);
+    writeFileSync(file, pageBodies[route] ?? (V2_NORMATIVE_ROUTES.includes(route)
+      ? `<aside data-release-state="published">v2 source ${route}</aside>` : `bytes for ${route}`));
   }
   for (const entry of SCHEMA_ENTRIES) {
     const route = new URL(entry.id).pathname;
     const file = join(root, `${SITE_DIST}${route}`);
     mkdirSync(dirname(file), { recursive: true });
     writeFileSync(file, readFileSync(join(REPOSITORY_ROOT, entry.source)));
+  }
+  for (const route of V2_RAW_SOURCE_ROUTES) {
+    const file = join(root, `${SITE_DIST}${route}`);
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, readFileSync(join(REPOSITORY_ROOT, "spec/host-api/v2", route.split("/").at(-1).slice(0, -4))));
   }
   return root;
 }
@@ -135,6 +147,7 @@ function gitRunner({
   ],
   productionDeploymentsStatus = 0,
   uploadDeployment = DEPLOYMENT,
+  freezeFails = false,
   events = [],
 } = {}) {
   const calls = [];
@@ -161,7 +174,7 @@ function gitRunner({
         ? { status: 128, stdout: "", stderr: "could not read Username\n" }
         : { status: 0, stdout: `${publicMain}\trefs/heads/main\n` };
     }
-    if (command === "bun") return { status: 0, stdout: "" };
+    if (command === "bun") return { status: freezeFails && args.includes("--require-frozen") ? 1 : 0, stdout: "" };
     if (command === "wrangler" && args.includes("project") && args.includes("list")) {
       return { status: projectListStatus, stdout: projectList, stderr: projectListStderr };
     }
@@ -180,8 +193,21 @@ function gitRunner({
   return run;
 }
 
+function firstPublicationRunner(options = {}) {
+  const prior = JSON.stringify([{ Id: "existing-production", Environment: "Production", Branch: "main",
+    Deployment: ROLLBACK_CANDIDATE, Status: "1 hour ago" }]);
+  const after = JSON.stringify([
+    { Id: "new-production", Environment: "Production", Branch: "main", Deployment: DEPLOYMENT, Status: "just now" },
+    { Id: "existing-production", Environment: "Production", Branch: "main", Deployment: ROLLBACK_CANDIDATE, Status: "1 hour ago" },
+  ]);
+  return gitRunner({ productionDeployments: [prior, prior, after], ...options });
+}
+
 function localBody(root, route) {
-  const fileRoute = route === "/" ? "/index.html" : route;
+  const fileRoute = route === "/" ? "/index.html" :
+    SITE_CONTRACT_READBACK_ROUTES.includes(route) && route !== "/sitemap.xml"
+      ? route.endsWith("/") ? `${route}index.html` : `${route}.html`
+      : route;
   return readFileSync(join(root, `${SITE_DIST}${fileRoute}`));
 }
 
@@ -204,7 +230,7 @@ function servingFetch(root, {
     ) {
       return { ok: false, status: 404 };
     }
-    if (![...PAGE_READBACK_ROUTES, ...SCHEMA_ROUTES].includes(route)) {
+    if (![...SITE_CONTRACT_READBACK_ROUTES, ...V2_RAW_SOURCE_ROUTES, ...SCHEMA_ROUTES].includes(route)) {
       throw new Error(`unexpected readback ${url}`);
     }
     expect(init.redirect).toBe("manual");
@@ -213,6 +239,28 @@ function servingFetch(root, {
       status: 200,
       arrayBuffer: async () => localBody(root, route),
     };
+  };
+}
+
+function firstV2PublicationFetch(root, options = {}) {
+  const normal = servingFetch(root, options);
+  let priorChecks = 0;
+  let priorSourceChecks = 0;
+  return async (url, init = {}) => {
+    const parsed = new URL(url);
+    if ([SITE_PUBLIC_ORIGIN, SITE_WWW_ORIGIN].includes(parsed.origin) &&
+      V2_NORMATIVE_ROUTES.includes(parsed.pathname) && priorChecks < V2_NORMATIVE_ROUTES.length * 4) {
+      priorChecks++;
+      return { ok: true, status: 200,
+        arrayBuffer: async () => Buffer.from("<aside>公開準備中です。</aside>") };
+    }
+    if ([SITE_PUBLIC_ORIGIN, SITE_WWW_ORIGIN].includes(parsed.origin) &&
+      V2_RAW_SOURCE_ROUTES.includes(parsed.pathname) &&
+      priorSourceChecks < V2_RAW_SOURCE_ROUTES.length * 4) {
+      priorSourceChecks++;
+      return { status: 404 };
+    }
+    return normal(url, init);
   };
 }
 
@@ -227,7 +275,7 @@ function staleThenConvergingFetch(root, { staleAttempts, events = [] } = {}) {
         attempts.set(parsed.origin, (attempts.get(parsed.origin) ?? 0) + 1);
       }
       const attempt = attempts.get(parsed.origin) ?? 0;
-      if (attempt <= staleAttempts) {
+      if (attempt > 0 && attempt <= staleAttempts) {
         events.push(`fetch:${url}`);
         expect(init.headers["cache-control"]).toBe("no-cache");
         expect(init.headers.pragma).toBe("no-cache");
@@ -556,6 +604,189 @@ describe("takoform-site Pages domain ownership", () => {
 });
 
 describe("takoform-site runs", () => {
+  test("historical v1 cutover cannot upload the current published v2 projection", async () => {
+    const root = fixtureRoot();
+    const run = gitRunner({ productionDeployments: "[]" });
+    await expect(runSiteDeploy(
+      parseSiteDeployArgs(["--apply", "--environment", "production", "--initial-cutover", "--review", REVIEW, "--execute"]),
+      { root, run, env: {}, surface: API_CUTOVER_SURFACE, fetch: servingFetch(root) },
+    )).rejects.toThrow("historical v1 initial cutover cannot upload");
+    expect(run.calls.some(([command]) => command === "wrangler" || command === "bun")).toBe(false);
+  });
+  test("first v2 publication uses the existing upload only after frozen source and an unpublished predecessor", async () => {
+    const root = fixtureRoot();
+    const run = firstPublicationRunner();
+    const result = await runSiteDeploy(
+      parseSiteDeployArgs(["--apply", "--environment", "production", "--execute"]),
+      { root, run, env: {}, surface: API_V2_PUBLICATION_SURFACE,
+        fetch: firstV2PublicationFetch(root) },
+    );
+    expect(run.calls).toContainEqual(["bun", "scripts/host-api-v2-freeze.mjs", "--check", "--require-frozen"]);
+    expect(run.calls.filter(([command, ...args]) => command === "wrangler" && args.includes("deploy"))).toHaveLength(1);
+    expect(Object.keys(result.readback.immutable.pages)).toEqual(SITE_CONTRACT_READBACK_ROUTES);
+    expect(Object.keys(result.readback.immutable.sources)).toEqual(V2_RAW_SOURCE_ROUTES);
+    expect(Object.keys(result.readback.apex.pages)).toContain("/spec/host-api/v2/http");
+    expect(Object.keys(result.readback.www.pages)).toContain("/en/spec/host-api/v2/forms");
+    expect(Object.keys(result.readback.immutable.pages)).toContain("/spec/host-api/v1");
+  });
+
+  test("routine site cannot first-publish v2 through an unpublished public predecessor", async () => {
+    const root = fixtureRoot();
+    const run = gitRunner();
+    const normal = servingFetch(root);
+    const fetch = (url, init) => url === `${SITE_PUBLIC_ORIGIN}/spec/host-api/v2/http`
+      ? Promise.resolve({ status: 200, arrayBuffer: async () => Buffer.from("公開準備中です。") })
+      : normal(url, init);
+    await expect(runSiteDeploy(
+      parseSiteDeployArgs(["--apply", "--environment", "production", "--execute"]),
+      { root, run, env: {}, fetch },
+    )).rejects.toThrow("routine site cannot first-publish");
+    expect(run.calls.some(([command]) => command === "bun")).toBe(false);
+    expect(run.calls.some(([command, ...args]) => command === "wrangler" && args.includes("deploy"))).toBe(false);
+  });
+
+  test("routine site refuses a public raw v2 identity with different bytes", async () => {
+    const root = fixtureRoot();
+    const run = gitRunner();
+    const normal = servingFetch(root);
+    const fetch = (url, init) => url === `${SITE_PUBLIC_ORIGIN}${V2_RAW_SOURCE_ROUTES[0]}`
+      ? Promise.resolve({ status: 200, arrayBuffer: async () => Buffer.from("changed public source") })
+      : normal(url, init);
+    await expect(runSiteDeploy(
+      parseSiteDeployArgs(["--apply", "--environment", "production", "--execute"]),
+      { root, run, env: {}, fetch },
+    )).rejects.toThrow("routine site cannot first-publish or withdraw v2");
+    expect(run.calls.some(([command, ...args]) => command === "wrangler" && args.includes("deploy"))).toBe(false);
+  });
+
+  test("a frozen preview may exercise v2 before either public alias has published it", async () => {
+    const root = fixtureRoot();
+    const run = gitRunner({ dirty: true, branch: "feature/v2-preview" });
+    const normal = servingFetch(root);
+    const fetch = (url, init) => {
+      if ([SITE_PUBLIC_ORIGIN, SITE_WWW_ORIGIN].includes(new URL(url).origin)) {
+        throw new Error("preview must not sample a public alias");
+      }
+      return normal(url, init);
+    };
+    const result = await runSiteDeploy(
+      parseSiteDeployArgs(["--apply", "--environment", "integration", "--execute"]),
+      { root, run, env: {}, fetch },
+    );
+    expect(result.readback.immutable.pages).toHaveProperty("/spec/host-api/v2/http");
+    expect(run.calls).toContainEqual(["bun", "scripts/host-api-v2-freeze.mjs", "--check", "--require-frozen"]);
+  });
+
+  test("mixed apex and www v2 states cannot authorize first publication or routine production", async () => {
+    const root = fixtureRoot();
+    const normal = servingFetch(root);
+    const fetch = (url, init) => new URL(url).origin === SITE_WWW_ORIGIN &&
+      V2_NORMATIVE_ROUTES.includes(new URL(url).pathname)
+      ? Promise.resolve({ status: 200, arrayBuffer: async () => Buffer.from("公開準備中です。") })
+      : normal(url, init);
+    for (const surface of [SITE_SURFACE, API_V2_PUBLICATION_SURFACE]) {
+      const run = gitRunner();
+      await expect(runSiteDeploy(
+        parseSiteDeployArgs(["--apply", "--environment", "production", "--execute"]),
+        { root, run, env: {}, surface, fetch },
+      )).rejects.toThrow(surface === SITE_SURFACE ? "routine site cannot" : "state is ambiguous");
+      expect(run.calls.some(([command, ...args]) => command === "wrangler" && args.includes("deploy"))).toBe(false);
+    }
+  });
+
+  test("first v2 publication refuses an already-published page and a failed required freeze", async () => {
+    const root = fixtureRoot();
+    const parsed = parseSiteDeployArgs(["--apply", "--environment", "production", "--execute"]);
+    const alreadyRun = gitRunner();
+    await expect(runSiteDeploy(parsed, { root, run: alreadyRun, env: {},
+      surface: API_V2_PUBLICATION_SURFACE, fetch: servingFetch(root) }))
+      .rejects.toThrow("already published");
+    expect(alreadyRun.calls.some(([command, ...args]) => command === "wrangler" && args.includes("deploy"))).toBe(false);
+    const unfrozenRun = gitRunner({ freezeFails: true });
+    await expect(runSiteDeploy(parsed, { root, run: unfrozenRun, env: {},
+      surface: API_V2_PUBLICATION_SURFACE, fetch: firstV2PublicationFetch(root) }))
+      .rejects.toThrow("not frozen");
+    expect(unfrozenRun.calls.some(([command, ...args]) => command === "wrangler" && args.includes("deploy"))).toBe(false);
+  });
+
+  test("first publication rechecks production history immediately before upload", async () => {
+    const root = fixtureRoot();
+    const run = gitRunner(); // second history response reports a competing publication
+    await expect(runSiteDeploy(
+      parseSiteDeployArgs(["--apply", "--environment", "production", "--execute"]),
+      { root, run, env: {}, surface: API_V2_PUBLICATION_SURFACE,
+        fetch: firstV2PublicationFetch(root) },
+    )).rejects.toThrow("production deployment history changed during v2 publication proof");
+    expect(run.calls.some(([command, ...args]) => command === "wrangler" && args.includes("deploy"))).toBe(false);
+  });
+
+  test("first publication does not recommend an old Pages deployment that lacks v2", async () => {
+    const root = fixtureRoot();
+    const run = firstPublicationRunner();
+    const v2Route = V2_NORMATIVE_ROUTES[0];
+    const normal = firstV2PublicationFetch(root, {
+      override: new Map([[`${DEPLOYMENT}${v2Route}`,
+        { status: 200, arrayBuffer: async () => Buffer.from("wrong v2 page") }]]),
+    });
+    const fetch = (url, init) => url.startsWith(ROLLBACK_CANDIDATE) &&
+      V2_RAW_SOURCE_ROUTES.some((route) => url.endsWith(route))
+      ? Promise.resolve({ status: 404 }) : normal(url, init);
+    let failure;
+    try {
+      await runSiteDeploy(parseSiteDeployArgs(["--apply", "--environment", "production", "--execute"]),
+        { root, run, env: {}, surface: API_V2_PUBLICATION_SURFACE, fetch });
+    } catch (error) { failure = error; }
+    expect(failure.kind).toBe("takoform.site-post-upload-failure");
+    expect(failure.rollbackCandidate).toBeNull();
+    expect(failure.deploymentUrl).toBe(DEPLOYMENT);
+  });
+  test("first publication refuses a raw v2 source identity already served under either public alias", async () => {
+    const root = fixtureRoot();
+    const run = firstPublicationRunner();
+    const normal = firstV2PublicationFetch(root);
+    const fetch = (url, init) => url === `${SITE_WWW_ORIGIN}${V2_RAW_SOURCE_ROUTES[0]}`
+      ? Promise.resolve({ status: 200, arrayBuffer: async () => Buffer.from("prior identity") })
+      : normal(url, init);
+    await expect(runSiteDeploy(parseSiteDeployArgs(["--apply", "--environment", "production", "--execute"]),
+      { root, run, env: {}, surface: API_V2_PUBLICATION_SURFACE, fetch }))
+      .rejects.toThrow("current public state is ambiguous");
+    expect(run.calls.some(([command, ...args]) => command === "wrangler" && args.includes("deploy"))).toBe(false);
+  });
+  test("a rollback candidate with frozen v2 prose but changed schema bytes is not qualified", async () => {
+    const root = fixtureRoot();
+    const run = firstPublicationRunner();
+    const normal = firstV2PublicationFetch(root, {
+      override: new Map([[`${DEPLOYMENT}${V2_NORMATIVE_ROUTES[0]}`,
+        { status: 200, arrayBuffer: async () => Buffer.from("wrong v2 page") }]]),
+    });
+    const fetch = (url, init) => url === `${ROLLBACK_CANDIDATE}${SCHEMA_ROUTES[0]}`
+      ? Promise.resolve({ status: 200, arrayBuffer: async () => Buffer.from("changed schema") })
+      : normal(url, init);
+    let failure;
+    try {
+      await runSiteDeploy(parseSiteDeployArgs(["--apply", "--environment", "production", "--execute"]),
+        { root, run, env: {}, surface: API_V2_PUBLICATION_SURFACE, fetch });
+    } catch (error) { failure = error; }
+    expect(failure.kind).toBe("takoform.site-post-upload-failure");
+    expect(failure.rollbackCandidate).toBeNull();
+  });
+  test("a rollback candidate retaining raw v2 sources but not a readable v2 page is not qualified", async () => {
+    const root = fixtureRoot();
+    const run = firstPublicationRunner();
+    const normal = firstV2PublicationFetch(root, {
+      override: new Map([[`${DEPLOYMENT}${V2_NORMATIVE_ROUTES[0]}`,
+        { status: 200, arrayBuffer: async () => Buffer.from("wrong v2 page") }]]),
+    });
+    const fetch = (url, init) => url === `${ROLLBACK_CANDIDATE}${V2_NORMATIVE_ROUTES[0]}`
+      ? Promise.resolve({ status: 404 }) : normal(url, init);
+    let failure;
+    try {
+      await runSiteDeploy(parseSiteDeployArgs(["--apply", "--environment", "production", "--execute"]),
+        { root, run, env: {}, surface: API_V2_PUBLICATION_SURFACE, fetch });
+    } catch (error) { failure = error; }
+    expect(failure.kind).toBe("takoform.site-post-upload-failure");
+    expect(failure.rollbackCandidate).toBeNull();
+  });
   test("status reads local and the Wrangler project list without mutating anything", async () => {
     const run = gitRunner();
     const result = await runSiteDeploy(parseSiteDeployArgs(["--status"]), {
@@ -707,6 +938,7 @@ describe("takoform-site runs", () => {
     expect(ABSENT_ROUTES).toContain("/spec/project-lifecycle/");
     expect(run.calls.filter(([command]) => command === "bun")).toEqual([
       ["bun", "run", "check:host-api-freeze"],
+      ["bun", "scripts/host-api-v2-freeze.mjs", "--check", "--require-frozen"],
       ["bun", "run", "check:site"],
       ["bun", "run", "build:site"],
     ]);

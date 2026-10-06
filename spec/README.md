@@ -3,12 +3,12 @@
 This non-normative index separates the v2 specification text from the
 published, frozen v1 reference. It does not add to or reinterpret either contract.
 
-## Host API v2 specification — not yet published
+## Host API v2 specification
 
 The [Host API v2 specification](host-api/v2/README.md) treats publisher-owned
 HTTP specifications as Form identities and allows v2-only implementations.
-Its normative source is being prepared for publication; this index does not
-claim a public release or an implemented Host. Published v1
+Its normative source is fixed; source publication and deployed Host support
+are verified separately. This index is not evidence of either. Published v1
 remains frozen reference material; retaining it does not require new v2 Hosts
 or clients to implement v1.
 
@@ -24,7 +24,7 @@ the fixed contract and cannot redefine it.
 
 ## Published Host API v1 reference
 
-The currently published Host API is the unchanged literal v1 lane. The rest
+The retained Host API v1 is the unchanged literal v1 lane. The rest
 of this index maps v1 only; its package, Snapshot, and trust requirements do
 not apply to v2:
 

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { DEPLOY_CONTRACT, parseDeployArgs, runDeploy } from "./deploy.mjs";
-import { API_CUTOVER_SURFACE, SITE_SURFACE } from "./site-deploy.mjs";
+import { API_CUTOVER_SURFACE, API_V2_PUBLICATION_SURFACE, SITE_SURFACE } from "./site-deploy.mjs";
 
 describe("Takoform deploy entrypoint", () => {
   test("answers the v2 contract without invoking the release implementation", async () => {
@@ -15,10 +15,11 @@ describe("Takoform deploy entrypoint", () => {
 
     expect(result).toBe(DEPLOY_CONTRACT);
     expect(invoked).toBe(false);
-    expect(DEPLOY_CONTRACT.surfaces).toHaveLength(3);
+    expect(DEPLOY_CONTRACT.surfaces).toHaveLength(4);
     expect(DEPLOY_CONTRACT.surfaces.map((surface) => surface.surface)).toEqual([
       "core",
       SITE_SURFACE,
+      API_V2_PUBLICATION_SURFACE,
       API_CUTOVER_SURFACE,
     ]);
     expect(DEPLOY_CONTRACT.surfaces[0]).toMatchObject({
@@ -99,7 +100,7 @@ describe("Takoform deploy entrypoint", () => {
       target:
       "cloudflare-pages:takoform-site; operator-routed aliases takoform.com,www.takoform.com,forms.takoform.com",
       covers: ["website"],
-      requiresScripts: ["check:host-api-freeze", "check:site", "build:site"],
+      requiresScripts: ["check:host-api-freeze", "check:host-api-v2-freeze", "check:site", "build:site"],
       triggers: [],
     });
     expect(site.requiresTools).toContain("wrangler");
@@ -124,7 +125,7 @@ describe("Takoform deploy entrypoint", () => {
     expect(site.obligations.provenance).toContain("check:site");
     expect(site.obligations.provenance).toContain("check:host-api-freeze");
     expect(site.obligations.provenance).toContain("credential-free read of the public refs/heads/main");
-    expect(site.obligations.provenance).toContain("does not change the fixed Host API v1");
+    expect(site.obligations.provenance).toContain("without changing frozen Host API v1/v2 source");
     expect(site.obligations["post-conditions"]).toContain("immutable per-deployment URL");
     expect(site.obligations["post-conditions"]).toContain("https://takoform.com");
     expect(site.obligations["post-conditions"]).toContain("https://www.takoform.com");
@@ -132,7 +133,7 @@ describe("Takoform deploy entrypoint", () => {
     expect(site.obligations["post-conditions"]).toContain("production deployment history");
     expect(site.obligations.reversal).toContain("forward repair");
     expect(site.obligations["failure-handling"]).toContain("never retries");
-    expect(site.obligations["no-overwrite"]).toContain("names no ledger identity");
+    expect(site.obligations["no-overwrite"]).toContain("raw v2 source path");
     const cutover = DEPLOY_CONTRACT.surfaces.find((surface) => surface.surface === API_CUTOVER_SURFACE);
     expect(cutover).toMatchObject({
       surface: API_CUTOVER_SURFACE,
@@ -161,6 +162,22 @@ describe("Takoform deploy entrypoint", () => {
     });
     expect(calls).toEqual([{ mode: "status" }]);
     expect(result).toEqual({ delegated: "site" });
+  });
+
+  test("separates first v2 publication from routine presentation", async () => {
+    const publication = DEPLOY_CONTRACT.surfaces.find((entry) => entry.surface === API_V2_PUBLICATION_SURFACE);
+    expect(publication.triggers).toEqual(["published-identity"]);
+    expect(publication.obligations).toHaveProperty("no-overwrite");
+    expect(publication.obligations.provenance).toContain("--require-frozen");
+    expect(DEPLOY_CONTRACT.surfaces.find((entry) => entry.surface === SITE_SURFACE).triggers).toEqual([]);
+    const parsed = parseDeployArgs([API_V2_PUBLICATION_SURFACE, "--apply", "--environment", "production"]);
+    expect(parsed).toMatchObject({ mode: "site", surface: API_V2_PUBLICATION_SURFACE,
+      site: { mode: "apply", environment: "production", execute: false } });
+    expect(() => parseDeployArgs([API_V2_PUBLICATION_SURFACE, "--apply", "--environment", "integration"]))
+      .toThrow("production-only");
+    const calls = [];
+    await runDeploy(parsed, { runSiteDeploy: async (site, options) => { calls.push([site, options.surface]); } });
+    expect(calls[0][1]).toBe(API_V2_PUBLICATION_SURFACE);
   });
 
   test("delegates the upload-free API cutover verifier", async () => {

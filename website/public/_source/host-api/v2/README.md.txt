@@ -1,13 +1,3 @@
----
-# Generated from spec/host-api/v2/README.md by scripts/site.mjs. Edit the specification, not this page.
-normative: true
-canonicalSource: spec/host-api/v2/README.md
-sourceLanguage: ja-JP
-releaseState: published
----
-
-<div lang="ja-JP" class="specification-source">
-
 # Takoform Host API v2
 
 Takoformは、サーバーやストレージなどの資源を、提供するHostが違っても共通のHTTP APIで
@@ -20,13 +10,13 @@ Takoformは、サーバーやストレージなどの資源を、提供するHos
 
 | 目的 | 読む順序 |
 | --- | --- |
-| APIを使って資源を操作する | [具体例](/en/spec/host-api/v2/examples) → [HTTP API](/en/spec/host-api/v2/http)の必要な操作 |
-| 自分の資源の仕様を公開する | [Formの定義](/en/spec/host-api/v2/forms)の完成例 → 記述要件 |
-| Hostやクライアントを実装する | この概要 → [HTTP API](/en/spec/host-api/v2/http) → 対応するFormの仕様 |
-| v1の実装・資源を引き継ぐ | [Migration](/en/spec/host-api/v2/migration) → v2の各仕様 |
+| APIを使って資源を操作する | [具体例](examples.md) → [HTTP API](http.md)の必要な操作 |
+| 自分の資源の仕様を公開する | [Formの定義](forms.md)の完成例 → 記述要件 |
+| Hostやクライアントを実装する | この概要 → [HTTP API](http.md) → 対応するFormの仕様 |
+| v1の実装・資源を引き継ぐ | [Migration](migration.md) → v2の各仕様 |
 
-この概要、[HTTP API](/en/spec/host-api/v2/http)、[Formの定義](/en/spec/host-api/v2/forms)がv2の規範文書です。
-規範文書は、実装が満たす条件を定めます。[具体例](/en/spec/host-api/v2/examples)と[Migration](/en/spec/host-api/v2/migration)は
+この概要、[HTTP API](http.md)、[Formの定義](forms.md)がv2の規範文書です。
+規範文書は、実装が満たす条件を定めます。[具体例](examples.md)と[Migration](migration.md)は
 理解を助ける非規範の解説であり、新しい適合条件を加えません。
 
 ## 1. 基本概念
@@ -43,7 +33,7 @@ Host APIは共通の通信方法を、Formは資源固有の意味を担当し�
 
 同じURLは常に同じ仕様を表します。資源の意味を変えるときは、新しい版のURLを公開します。
 HostとクライアントはURLの完全な文字列一致でFormを識別し、名前の類似や転送先から同一性を推定しません。
-URLの文法は[HTTP APIの共通形式](/en/spec/host-api/v2/http#common-format)に定めます。
+URLの文法は[HTTP APIの共通形式](http.md#common-format)に定めます。
 
 ### Host：仕様を実装して資源を提供するサーバー
 
@@ -111,7 +101,7 @@ Offeringを使うかどうかはHostが接続情報で宣言します。使う�
 
 API識別子は`forms.takoform.com/v2`です。接続情報の経路は
 `/.well-known/takoform/v2`、標準のAPIルートは`/apis/forms.takoform.com/v2`です。
-すべての経路と要求・応答は[HTTP API](/en/spec/host-api/v2/http#endpoints)にまとめています。
+すべての経路と要求・応答は[HTTP API](http.md#endpoints)にまとめています。
 
 直接の作成・更新・削除が標準の操作方法です。Hostは任意で副作用のない事前確認
 （preview）を提供できますが、その結果を実操作の必須条件にはしません。
@@ -125,7 +115,7 @@ API識別子は`forms.takoform.com/v2`です。接続情報の経路は
 作成・更新・削除には、操作ごとに選んだ`Idempotency-Key`を付けます。
 応答を受け取れず再送するときは、元のキーと元の要求内容をそのまま使います。
 Hostは定められた保持期間内なら元のOperationを返し、別の資源や操作を作りません。
-保持期間を過ぎた要求の扱いは[再試行と保持](/en/spec/host-api/v2/http#retry)に定めます。
+保持期間を過ぎた要求の扱いは[再試行と保持](http.md#retry)に定めます。
 
 Hostは再起動しても、受理した操作と実行先の資源の対応を維持します。
 送信前、結果確定済み、送信した可能性があり結果不明、を区別し、
@@ -153,7 +143,7 @@ Hostは再試行用の記録へ平文を保存せず、照合用の単純なハ�
 一時値を失った場合、未送信と確認できる工程は同じOperationで再入力を待てます。
 元と同じ値を補給して継続し、値を変える要求は新しい更新として扱います。
 照合できない値や実行結果の不確実性を、再入力だけで解消したことにはしません。
-正確な条件は[秘密入力](/en/spec/host-api/v2/http#private-inputs)に定めます。
+正確な条件は[秘密入力](http.md#private-inputs)に定めます。
 
 ## 5. 仕様と実装の分担
 
@@ -186,7 +176,7 @@ Hostが使うDB、記録形式、実行キューの選択も実装側が行い�
 
 共通APIへの適合と、個々のFormへの適合は分けて確認します。
 機械可読な定義を使わない場合も、入力・出力・依存関係・操作の意味の検証は必要です。
-共通APIの確認項目は[HTTP APIの適合確認](/en/spec/host-api/v2/http#conformance)に定めます。
+共通APIの確認項目は[HTTP APIの適合確認](http.md#conformance)に定めます。
 
 ## 6. 版と互換性
 
@@ -199,6 +189,3 @@ Formは各作者の版固定URLを単位に更新します。同じResourceの�
 
 SDKとProviderは、それぞれ独立したソフトウェアの版で更新できます。
 ソフトウェアの更新だけで、利用するAPIやFormの意味が変わることはありません。
-
-
-</div>

@@ -23,6 +23,7 @@ withDefaults(
   <aside
     class="mirror-notice"
     :data-document-authority="normative ? 'normative' : 'non-normative'"
+    :data-release-state="releaseState"
   >
     <p v-if="releaseState === 'unpublished' && lang === 'ja-JP'">
       {{ normative ? 'v2仕様の原文' : 'v2の解説' }}（{{ sourceLanguage === 'ja-JP' ? '日本語' : '英語' }}）:
@@ -34,7 +35,7 @@ withDefaults(
       <code>{{ source }}</code>. Publication is being prepared.
     </p>
     <p v-else-if="lang === 'ja-JP'">
-      {{ normative ? '仕様の原文（英語・固定済み）:' : '案内文の原文（英語）:' }}
+      {{ normative ? `仕様の原文（${sourceLanguage === 'ja-JP' ? '日本語' : '英語'}・固定済み）:` : `案内文の原文（${sourceLanguage === 'ja-JP' ? '日本語' : '英語'}）:` }}
       <a v-if="url" :href="url"><code>{{ source }}</code></a>
       <code v-else>{{ source }}</code>。
       {{ normative ? '本文は英語の原文を掲載しています。リンク先だけを置き換えており、正とする情報はリポジトリ内のファイルです。' : '本文は英語の案内文です。仕様そのものではありません。' }}
@@ -43,13 +44,13 @@ withDefaults(
       Specification source:
       <a v-if="url" :href="url"><code>{{ source }}</code></a>
       <code v-else>{{ source }}</code>
-      (frozen). This copy changes link addresses only; the repository file is authoritative.
+      ({{ sourceLanguage === 'ja-JP' ? 'Japanese' : 'English' }}, frozen). This copy changes link addresses only; the repository file is authoritative.
     </p>
     <p v-else>
       Index source:
       <a v-if="url" :href="url"><code>{{ source }}</code></a>
       <code v-else>{{ source }}</code>
-      . This is a navigation guide, not a specification.
+      ({{ sourceLanguage === 'ja-JP' ? 'Japanese' : 'English' }}). This is a navigation guide, not a specification.
     </p>
   </aside>
 </template>

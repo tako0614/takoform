@@ -3,7 +3,7 @@
 normative: false
 canonicalSource: spec/host-api/v2/migration.md
 sourceLanguage: ja-JP
-releaseState: unpublished
+releaseState: published
 ---
 
 <div lang="ja-JP" class="specification-source">

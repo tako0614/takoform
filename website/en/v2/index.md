@@ -4,7 +4,9 @@ Takoform provides a shared HTTP API to create, read, update, and delete resource
 Authors publish Forms that define what each resource means. Hosts implement the
 Forms they support, and clients operate resources according to those specifications.
 
-These pages contain the v2 specification text, ahead of its formal publication.
+The overview, HTTP API, and Form requirements are the fixed normative contract.
+Examples and migration guidance explain that contract without changing it.
+Check each Host and client implementation separately for its support status.
 The v2 specification pages linked below are currently written in Japanese; the English routes preserve the source and label its language.
 
 ## Specification

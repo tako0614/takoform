@@ -24,6 +24,8 @@ import {
   inspectDesignRecords,
   renderMirroredDocument,
   V2_SPEC_DOCUMENTS,
+  V2_SOURCE_PREFIX,
+  v2NormativeSourceRoute,
   renderV2SpecDocument,
   rewriteLinkTarget,
   servedPathForIdentity,
@@ -405,11 +407,11 @@ describe("takoform.com site derivation", () => {
     expect(V2_SPEC_DOCUMENTS.map(({ path, normative, sourceLanguage, releaseState }) => ({
       path, normative, sourceLanguage, releaseState,
     }))).toEqual([
-      { path: "spec/host-api/v2/README.md", normative: true, sourceLanguage: "ja-JP", releaseState: "unpublished" },
-      { path: "spec/host-api/v2/http.md", normative: true, sourceLanguage: "ja-JP", releaseState: "unpublished" },
-      { path: "spec/host-api/v2/forms.md", normative: true, sourceLanguage: "ja-JP", releaseState: "unpublished" },
-      { path: "spec/host-api/v2/examples.md", normative: false, sourceLanguage: "ja-JP", releaseState: "unpublished" },
-      { path: "spec/host-api/v2/migration.md", normative: false, sourceLanguage: "ja-JP", releaseState: "unpublished" },
+      { path: "spec/host-api/v2/README.md", normative: true, sourceLanguage: "ja-JP", releaseState: "published" },
+      { path: "spec/host-api/v2/http.md", normative: true, sourceLanguage: "ja-JP", releaseState: "published" },
+      { path: "spec/host-api/v2/forms.md", normative: true, sourceLanguage: "ja-JP", releaseState: "published" },
+      { path: "spec/host-api/v2/examples.md", normative: false, sourceLanguage: "ja-JP", releaseState: "published" },
+      { path: "spec/host-api/v2/migration.md", normative: false, sourceLanguage: "ja-JP", releaseState: "published" },
     ]);
     for (const document of V2_SPEC_DOCUMENTS) {
       expect(MIRRORED_SPEC_DOCUMENTS).not.toContain(document.path);
@@ -429,6 +431,13 @@ describe("takoform.com site derivation", () => {
       .toBe("/en/spec/host-api/v2/migration");
 
     const files = buildSiteFiles(".");
+    expect(V2_SOURCE_PREFIX).toBe("/_source/host-api/v2");
+    for (const document of V2_SPEC_DOCUMENTS.filter((entry) => entry.normative)) {
+      const raw = `website/public${v2NormativeSourceRoute(document.path)}`;
+      expect(files.get(raw)).toEqual(readFileSync(document.path));
+    }
+    expect(() => v2NormativeSourceRoute("spec/host-api/v2/examples.md"))
+      .toThrow("unlisted v2 normative source");
     for (const document of V2_SPEC_DOCUMENTS) {
       for (const locale of ["ja", "en"]) {
         const page = files.get(sitePathForV2SpecDocument(document.path, locale))?.toString("utf8");
@@ -470,7 +479,7 @@ describe("takoform.com site derivation", () => {
     expect(page).toContain("[migration](/spec/host-api/v2/migration)");
     expect(page).toContain("[v1](/spec/host-api/v1)");
     expect(page).toContain("normative: true");
-    expect(page).toContain("releaseState: unpublished");
+    expect(page).toContain("releaseState: published");
     expect(page).not.toContain("draft:");
     expect(page).not.toContain("design/takoform-v2-spec-20261004");
 
