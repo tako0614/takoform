@@ -5,9 +5,10 @@
 用途と操作を直接説明し、宣伝的なコピーや不要な内部用語を増やしません。正確なAPI名や
 フィールド名、固定済みの仕様本文は変更せず、解説と区別します。
 
-トップはTakoform全体の短い説明とv1・v2の入口に絞り、sidebarを表示しません。
-`/v1/`は固定済みのAPI・共通モデル・スキーマ、`/v2/`は固定済みのAPIと解説を案内します。
-版の選択と言語の選択を分け、残す文書URLの目次と前後リンクを版ごとに閉じます。
+トップはForm・Host・Clientの役割、HTTP操作例とその進行、実装者別の読み先を説明し、
+sidebarや版の一覧は表示しません。title・subtitle・節見出しは英語とし、本文は日英で案内します。
+`/v1/`はAPI・共通モデル・スキーマ、`/v2/`はAPIと解説を案内します。
+版はヘッダーのAPI selectorで選びます。言語の選択を分け、残す文書URLの目次と前後リンクを版ごとに閉じます。
 サイト案内には版専用sidebarを付けません。表示上の所属は
 `.vitepress/versions.mjs`で判定し、検索も同じ判定を使います。検索は現在の版と共通文書を
 初期範囲にし、結果に版を表示します。「すべての版」は明示して選べます。
@@ -61,8 +62,10 @@ README、HTTP、Form仕様は規範、examplesとmigrationは非規範です。�
 v1の凍結対象にも加えません。本文は原文から生成し、web側に別の仕様を手書きしません。
 
 v2の規範原文は英語で、`spec/host-api/v2.freeze.json`がREADME・HTTP・Formsの3件を
-exact digestで固定します。`check:host-api-freeze`はv1の既存固定検査に加え、v2のmanifestと
-原文をそのmanifestのGit first-add時点のbytesとも照合します。examplesとmigrationは解説であり、
+exact digestで固定します。`check:host-api-freeze`はv1の既存固定検査に加え、v2の初回登録と
+承認済みの一度の文言整理をGit全履歴で検査します。文言整理では規範3文書とmanifestを
+同じcommitへ含め、それ以後の変更、削除・再登録、履歴不足を拒否します。
+APIの意味を変える許可や、任意の改訂を続ける仕組みではありません。examplesとmigrationは解説であり、
 この規範固定の対象ではありません。48件のschema ledgerも維持します。生成・build・previewと
 production公開は別の操作です。
 
@@ -107,7 +110,7 @@ browser の自動 download や、既存 browser profile の利用はしません
   目次の全グループは最初から開きます。
 - mobile navigation と sidebar を keyboard で開き、Escape で閉じたあと trigger へ focus が
   戻ることを確認します。
-- 1280 px の light / dark 両方で first viewport の主要 CTA と keyboard focus indicator を確認します。
+- 1280 px の light / dark 両方でヘッダーのAPI selectorとkeyboard focus indicatorを確認します。
 - asset の HTTP error、JavaScript error、予期しない外部通信も失敗として扱います。
 - 英語版にも同じレスポンシブ検査を行います。375 / 1024 / 1280 pxで言語メニューから
   同一ページへ往復し、見出しの位置とhydration後の言語を確認します。
@@ -128,8 +131,8 @@ portable な `bun run check` へ browser binary を暗黙に要求しません�
 | --- | --- |
 | `/`、`/start/`、`/guides/`、`/authoring/`、`/client/`、`/host-api/`、`/model/`、`/conformance/`、`/glossary`、`/site` | 手書きの案内 |
 | `/spec/**` | freeze-listed source は normative mirror。各文書の入口・解説はnon-normative。総合`/spec/`と`/spec/host-api/`索引は置かない。正本は `spec/**` |
-| `/v2/`、`/spec/host-api/v2/**` | v2仕様の入口と原文mirror。規範か解説か、公開済みかを別々に表示する |
-| `/v1/` | 固定済みv1仕様・モデル・スキーマと既存ツールの入口 |
+| `/v2/`、`/spec/host-api/v2/**` | v2仕様の入口と原文mirror。規範か解説か、原文の言語を表示する |
+| `/v1/` | v1仕様・モデル・スキーマと既存ツールの入口 |
 | `/schemas/` | identity の non-normative 索引 page |
 | `/en/`と上記ページの`/en/**`版 | 英語の案内・索引と、v1・v2の英語原文 |
 | `/schemas/<$id と同じ path>` | 公開 schema の exact な bytes |
@@ -282,7 +285,8 @@ receipt、旧 owner の識別子は cutover evidence として保持しますが
    readback、`forms.takoform.com` の全schema readbackを要求します。公開前には現在の
    public alias二つと現行のimmutable Pages deploymentが示す**旧版それ自身**のv2原文・
    描画pageのbytesを照合し、v1 pageと48 schemaを維持していることを確認します。さらに
-   旧版の規範原文3件は新候補の固定済み原文と同じbytesでなければupload前に停止します。
+   旧版の規範原文3件は新候補と同じbytes、または承認済み文言整理の前に公開していた
+   初回版3件のexact bytesでなければupload前に停止します。旧版を混ぜた集合は認めません。
    解説・表示の変更による描画pageの差は許容します。build後も旧版のbytesとproduction
    historyが変わっていないことを再確認します。Pages uploadはatomicな排他ではないため、
    operatorは同じprojectのwriterを直列化してください。`takoform-site`は旧v1 cutoverの
@@ -293,7 +297,7 @@ Cloudflare Pages自体は以前の成功deploymentへ戻せますが、このrep
 保持するv1 pageを旧public aliasとのexact readbackで確認できるimmutable deploymentだけを
 rollback候補として提示します。旧版のv2 pageは`published`または`revision-open`を示す必要が
 あります。旧pageの表示が新候補と異なることだけでは候補から除外しませんが、旧原文3件は
-新候補と一致しなければなりません。新候補の
+新候補または上記の初回版の集合と一致しなければなりません。新候補の
 HTML・原文・schemaはupload後にそのbuildのbytesに対してexact readbackします。
 `website/public/_headers` は日英の仕様path (`/spec/*`、`/en/spec/*`) に `no-transform` を付け、
 CDNが仕様例の本文を書き換えないようにします。Cloudflareのメールアドレス難読化も抑止されます。

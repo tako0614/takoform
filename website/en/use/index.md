@@ -15,7 +15,7 @@ A client reads the Host's Discovery response for its `baseUrl` and authenticatio
 
 An IaC provider must keep its state consistent with v2's generation conditions, Operations, reconciliation after lost responses, and deletion outcomes—not just compare declared and remote values. Before using Terraform or OpenTofu, verify that the provider explicitly supports Host API v2 and the selected Host and Form URL.
 
-The existing Takoform Provider linked from this site targets v1. Do not treat it as a v2 Provider. For the earlier provider path, see the [frozen v1 specification](/en/spec/host-api/v1) and the [Provider's v1 guide](https://github.com/tako0614/terraform-provider-takoform).
+The existing Takoform Provider linked from this site targets v1. Do not treat it as a v2 Provider. For the earlier provider path, see the [v1 specification](/en/spec/host-api/v1) and the [Provider's v1 guide](https://github.com/tako0614/terraform-provider-takoform).
 
 ## Examples and implementation status {#examples-status}
 

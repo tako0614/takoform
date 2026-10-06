@@ -2,7 +2,7 @@
 layout: page
 title: Takoform
 titleTemplate: false
-description: Resource specifications and a common HTTP API. Read the specifications and guides for Host API v1 and v2 separately.
+description: Takoform is an HTTP API specification for resource management. Learn how Forms, Hosts and clients work together, from a create request to its observed result.
 sidebar: false
 ---
 

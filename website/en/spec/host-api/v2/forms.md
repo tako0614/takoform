@@ -11,21 +11,19 @@ releaseState: published
 
 # Defining a Form
 
-This specification defines how a Form describes one kind of resource for Takoform Host API v2. A Form author owns the resource-specific contract. A Host implements that contract; a client uses it. The common HTTP requests, Resource envelope, Operation lifecycle, status codes, and retry rules are defined by the [HTTP API](/en/spec/host-api/v2/http), not redefined here.
+This specification defines the resource-specific contract for a Takoform Host API v2 Resource. The [HTTP API](/en/spec/host-api/v2/http) defines shared requests, responses, Resource and Operation envelopes, status codes, and retry rules.
 
 The terms **MUST**, **MUST NOT**, **SHOULD**, and **MAY** describe requirements on a Form specification. A Form may use another clear style, but its requirements and choices must be unambiguous.
 
 ## 1. A Form is a published contract {#publication}
 
-A Form is a human-readable specification for one resource kind. It defines the resource's purpose, accepted desired input, observable state, output, lifecycle behavior, dependencies, and any runtime interface. It is not executable code and is not an instruction for a Host to fetch or run code from the Form URL.
+A Form is a human-readable specification for one resource kind. It defines the resource's purpose, accepted desired input, observable state, output, lifecycle behavior, dependencies, and any runtime interface. A Host implements this contract explicitly.
 
 A Form is identified by its **exact serialized Form URL**. The URL MUST be an ASCII-serialized absolute HTTPS URL with a non-empty host. It MUST NOT contain user information, a query, or a fragment. A path is optional; the origin root can identify a Form contract. Encode non-ASCII characters in the URL as needed. Comparison is exact string comparison: Hosts and clients MUST NOT change case, normalize a path, add a slash, follow a redirect, or substitute an alias to decide that two URLs identify the same Form. See [HTTP API §1](/en/spec/host-api/v2/http#common-format) for the shared URL rules.
 
-The URL MUST continue to identify the same contract. A publisher may use a version-shaped path such as `/forms/Example/1.0.0/`, but Takoform does not infer compatibility from that text or prescribe a Form versioning scheme. A publisher MUST NOT silently change the meaning at an existing URL. A semantic change requires a new exact URL; a change to explanatory material that does not alter the contract does not.
+The URL MUST continue to identify the same contract. Authors may use a version-shaped path such as `/forms/Example/1.0.0/`; compatibility remains the author's responsibility. Publish a new exact URL for a semantic change, and retain the URL for explanatory edits that do not change the contract. Never silently change the meaning at an existing URL.
 
-The specification is published for people to read, normally over HTTPS. A URL does not authenticate its publisher, prove provenance, grant trust, or make a Host support the Form. A Host MUST implement a Form explicitly and MUST NOT discover or execute Forms by fetching URLs supplied in API requests. Form publication and Host support are separate facts. The Host's exact-URL support response is defined in [HTTP API §3](/en/spec/host-api/v2/http#support).
-
-Takoform v2 does not require a package, signature, publisher catalog, transparency log, trust registration, or `official` publisher status. A publisher or user may choose additional distribution or provenance practices, but they are not implicit API requirements.
+The Form URL identifies the contract; it does not authenticate its publisher, prove provenance, grant trust, or establish Host support. A Host MUST NOT discover or execute Forms by fetching URLs supplied in API requests. Publication and Host support are separate facts. The Host's exact-URL support response is defined in [HTTP API §3](/en/spec/host-api/v2/http#support).
 
 ## 2. What a Form specification must define {#what-a-form-specification-must-define}
 

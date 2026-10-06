@@ -1,4 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
+import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -30,7 +31,8 @@ import {
   requireProjectDomainOwnership,
   runSiteDeploy,
 } from "./site-deploy.mjs";
-import { SCHEMA_LEDGER_PATH, SITE_DIST } from "./site.mjs";
+import { EXPECTED_V2_NORMATIVE_PROSE, INITIAL_V2_NORMATIVE_SHA256, V2_FREEZE_PATH } from "./host-api-freeze.mjs";
+import { SCHEMA_LEDGER_PATH, SITE_DIST, v2NormativeSourceRoute } from "./site.mjs";
 
 const HEAD = "a".repeat(40);
 const DEPLOYMENT = "https://1a2b3c4d.takoform-site.pages.dev";
@@ -239,9 +241,16 @@ function servingFetch(root, {
   };
 }
 
-function priorRevisionRoot({ changeSource = true, state = "revision-open" } = {}) {
+function priorRevisionRoot({ changeSource = true, initialSource = false, state = "revision-open" } = {}) {
   const root = fixtureRoot();
-  if (changeSource) {
+  if (initialSource) {
+    const firstAdd = execFileSync("git", ["log", "--reverse", "--format=%H", "--diff-filter=A",
+      "HEAD", "--", V2_FREEZE_PATH], { cwd: REPOSITORY_ROOT, encoding: "utf8" }).trim().split(/\s+/u)[0];
+    for (const path of EXPECTED_V2_NORMATIVE_PROSE) {
+      const original = execFileSync("git", ["show", `${firstAdd}:${path}`], { cwd: REPOSITORY_ROOT });
+      writeFileSync(join(root, `${SITE_DIST}${v2NormativeSourceRoute(path)}`), original);
+    }
+  } else if (changeSource) {
     for (const route of V2_RAW_SOURCE_ROUTES) {
       writeFileSync(join(root, `${SITE_DIST}${route}`), `previous source for ${route}\n`);
     }
@@ -857,8 +866,59 @@ describe("takoform-site runs", () => {
     await expect(runSiteDeploy(
       parseSiteDeployArgs(["--apply", "--environment", "production", "--execute"]),
       { root, run, env: {}, fetch: changedRevisionFetch(root, priorRoot, run) },
-    )).rejects.toThrow("prior public Host API v2 source differs from the fixed normative bytes");
+    )).rejects.toThrow("prior public Host API v2 source differs from both the fixed current bytes");
     expect(run.calls.some(([command, ...args]) => command === "wrangler" && args.includes("deploy"))).toBe(false);
+  });
+
+  test("routine production admits only the original public v2 bytes as the editorial predecessor", async () => {
+    const root = fixtureRoot();
+    const priorRoot = priorRevisionRoot({ initialSource: true });
+    const changedRoute = V2_RAW_SOURCE_ROUTES[1];
+    writeFileSync(join(root, `${SITE_DIST}${changedRoute}`), "# approved editorial candidate\n");
+    const run = gitRunner();
+    const result = await runSiteDeploy(
+      parseSiteDeployArgs(["--apply", "--environment", "production", "--execute"]),
+      { root, run, env: {}, fetch: changedRevisionFetch(root, priorRoot, run) },
+    );
+    expect(result.executed).toBe(true);
+    expect(result.readback.immutable.sources[changedRoute])
+      .not.toBe(INITIAL_V2_NORMATIVE_SHA256[EXPECTED_V2_NORMATIVE_PROSE[1]]);
+    expect(run.calls.filter(([command, ...args]) => command === "wrangler" && args.includes("deploy"))).toHaveLength(1);
+  });
+
+  test("routine production refuses a mixture of original and current v2 source bytes", async () => {
+    const root = fixtureRoot();
+    const priorRoot = priorRevisionRoot({ initialSource: true });
+    const changedRoute = V2_RAW_SOURCE_ROUTES[1];
+    writeFileSync(join(root, `${SITE_DIST}${changedRoute}`), "# approved editorial candidate\n");
+    writeFileSync(join(priorRoot, `${SITE_DIST}${changedRoute}`), localBody(root, changedRoute));
+    const run = gitRunner();
+    await expect(runSiteDeploy(
+      parseSiteDeployArgs(["--apply", "--environment", "production", "--execute"]),
+      { root, run, env: {}, fetch: changedRevisionFetch(root, priorRoot, run) },
+    )).rejects.toThrow("prior public Host API v2 source differs from both the fixed current bytes");
+    expect(run.calls.some(([command, ...args]) => command === "wrangler" && args.includes("deploy"))).toBe(false);
+  });
+
+  test("post-upload failure retains only the exact original public edition as transition rollback", async () => {
+    const root = fixtureRoot();
+    const priorRoot = priorRevisionRoot({ initialSource: true });
+    writeFileSync(join(root, `${SITE_DIST}${V2_RAW_SOURCE_ROUTES[1]}`), "# approved editorial candidate\n");
+    const run = gitRunner();
+    const fetch = changedRevisionFetch(root, priorRoot, run, {
+      override: new Map([[`${DEPLOYMENT}${SCHEMA_ROUTES[0]}`,
+        { status: 200, arrayBuffer: async () => Buffer.from("wrong new schema") }]]),
+    });
+    let failure;
+    try {
+      await runSiteDeploy(parseSiteDeployArgs(["--apply", "--environment", "production", "--execute"]),
+        { root, run, env: {}, fetch });
+    } catch (error) { failure = error; }
+    expect(failure).toMatchObject({
+      kind: "takoform.site-post-upload-failure",
+      reason: "immutable deployment readback failed",
+      rollbackCandidate: { url: ROLLBACK_CANDIDATE },
+    });
   });
 
   test("a removed index on the prior deployment does not block an absent new deployment", async () => {

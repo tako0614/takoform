@@ -15,7 +15,7 @@ Host API v2はHTTP契約です。CLI、SDK、Infrastructure as Code providerな�
 
 IaCのproviderは、Resourceを宣言状態と実状態の差分として扱うだけでなく、APIの世代条件、Operation、応答喪失後の照合、削除結果もstateと一貫させる必要があります。Terraform/OpenTofuで利用するには、対象providerがHost API v2を明示的にサポートし、使うHostとForm URLにも対応しているかを確認してください。
 
-このサイトに案内されている既存Takoform Providerはv1向けです。v2対応Providerとして扱わないでください。従来のprovider経路を調べる場合は[凍結されたv1仕様](/spec/host-api/v1)と[Providerのv1案内](https://github.com/tako0614/terraform-provider-takoform)を参照してください。
+このサイトに案内されている既存Takoform Providerはv1向けです。v2対応Providerとして扱わないでください。従来のprovider経路を調べる場合は[v1仕様](/spec/host-api/v1)と[Providerのv1案内](https://github.com/tako0614/terraform-provider-takoform)を参照してください。
 
 ## 例と実装状況 {#examples-status}
 
