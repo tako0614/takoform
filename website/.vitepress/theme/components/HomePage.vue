@@ -12,80 +12,59 @@ const localePrefix = computed(() => (isEnglish.value ? "/en" : ""));
     <div class="home-page__inner">
       <section class="home-overview" aria-labelledby="home-title">
         <header class="home-overview__copy">
-          <p class="home-status">Takoform · Host API v2</p>
-          <h1 id="home-title">
-            <template v-if="isEnglish">Form specifications and Host API v2</template>
-            <template v-else><span class="home-title__phrase">Form仕様と</span><span class="home-title__phrase">Host API v2</span></template>
-          </h1>
+          <h1 id="home-title">Takoform</h1>
           <p v-if="isEnglish" class="home-overview__lead">
-            Form authors publish versioned resource specifications. Hosts implement the Forms they
-            support; clients manage Resources through a shared HTTP contract.
+            Resource specifications and a common HTTP API for managing them.
           </p>
           <p v-else class="home-overview__lead">
-            Form作者は版固定URLで資源の仕様を公開します。Hostは対応するFormを実装し、クライアントは共通のHTTP APIでResourceを管理します。
+            リソースの仕様と、操作のための共通HTTP API。
           </p>
         </header>
 
-        <section class="home-request" aria-labelledby="home-request-title">
-          <div class="home-request__heading">
-            <h2 id="home-request-title">{{ isEnglish ? "Illustrative v2 create request" : "v2の作成要求例" }}</h2>
-            <span>API v2</span>
-          </div>
-          <p class="home-request__path">
-            <code>POST</code>
-            <code>/apis/forms.takoform.com/v2/resources</code>
+        <div class="home-introduction">
+          <p v-if="isEnglish">
+            A Form describes a resource. A Host implements it. A client uses the Host API to
+            create, inspect, update and delete resources. Read the documentation for the API
+            version your implementation uses.
           </p>
-          <pre class="home-request__body"><code>{
-  "form": "https://forms.publisher.example/key-value-entry/1.0.0",
-  "space": "default",
-  "name": "greeting",
-  "spec": {
-    "key": "greeting",
-    "value": "hello"
-  }
-}</code></pre>
-          <p class="home-request__note">
-            {{
-              isEnglish
-                ? "Fictional request body; see the examples for headers and Operation responses. No live Host is implied."
-                : "架空の要求本文です。ヘッダーとOperation応答は具体例を参照してください。実在Hostを示しません。"
-            }}
+          <p v-else>
+            Formがリソースの仕様を定め、Hostがそれを実装します。クライアントはHost APIを使って作成・取得・更新・削除を行います。利用するAPIの版を選んで読み進めてください。
           </p>
-        </section>
+        </div>
       </section>
 
       <nav class="home-index" aria-labelledby="home-index-title">
-        <h2 id="home-index-title">{{ isEnglish ? "Documentation" : "ドキュメント" }}</h2>
+        <h2 id="home-index-title">{{ isEnglish ? "Choose an API version" : "APIの版を選ぶ" }}</h2>
         <ul>
           <li>
-            <a :href="`${localePrefix}/v2/`">{{ isEnglish ? "Host API v2 overview" : "Host API v2 概要" }}</a>
-            <p>{{ isEnglish ? "Purpose, terms and specification map." : "目的、用語、仕様の構成。" }}</p>
+            <div class="home-version">
+              <a :href="`${localePrefix}/v2/`">Host API v2</a>
+              <span>{{ isEnglish ? "Open to revision" : "改訂可能" }}</span>
+            </div>
+            <p>{{ isEnglish ? "Read the HTTP contract, Form requirements and implementation guides. The specification may still change." : "HTTP契約、Formの定義要件、実装ガイド。仕様は今後も変更されることがあります。" }}</p>
           </li>
           <li>
-            <a :href="`${localePrefix}/spec/host-api/v2/http`">HTTP API</a>
-            <p>{{ isEnglish ? "Requests, responses, errors and retries." : "要求と応答、エラー、再試行の規則。" }}</p>
-          </li>
-          <li>
-            <a :href="`${localePrefix}/spec/host-api/v2/forms`">{{ isEnglish ? "Write a Form" : "Formの仕様を書く" }}</a>
-            <p>{{ isEnglish ? "Define inputs, behavior and the meaning of a resource." : "入力と挙動を定め、リソースの仕様を公開する。" }}</p>
-          </li>
-          <li>
-            <a :href="`${localePrefix}/spec/host-api/v2/examples`">{{ isEnglish ? "Request examples" : "リクエスト例" }}</a>
-            <p>{{ isEnglish ? "Follow a resource from creation through updates to deletion." : "一つ作って、更新して、削除するまで。" }}</p>
+            <div class="home-version">
+              <a :href="`${localePrefix}/v1/`">Host API v1</a>
+              <span>{{ isEnglish ? "Frozen specification" : "固定済み" }}</span>
+            </div>
+            <p>{{ isEnglish ? "Read the preserved API, common model and schemas for existing v1 implementations." : "既存のv1実装向けのAPI、共通モデル、スキーマ。固定された仕様をそのまま参照できます。" }}</p>
           </li>
         </ul>
       </nav>
 
-      <aside class="home-archive" :aria-label="isEnglish ? 'Existing v1 documentation' : '既存のv1資料'">
+      <aside class="home-archive" :aria-label="isEnglish ? 'Reading the documentation' : 'ドキュメントの読み方'">
         <p v-if="isEnglish">
-          v1 reference — the earlier contract is retained in the
-          <a :href="`${localePrefix}/spec/host-api/v1`">frozen Host API v1 specification</a>.
-          V2 source authority and publication status are identified on its specification pages.
+          Specifications are written in English; guides are available in English and Japanese.
+          For differences between versions, read <a :href="`${localePrefix}/spec/host-api/v2/migration`">Migration from v1</a>.
         </p>
         <p v-else>
-          v1資料 — 以前の契約は
-          <a :href="`${localePrefix}/spec/host-api/v1`">凍結されたHost API v1仕様</a>
-          に保存しています。v2仕様ページには原文の言語と公開状況を表示しています。
+          仕様の原文は英語、ガイドは日本語と英語で読めます。版の違いは
+          <a :href="`${localePrefix}/spec/host-api/v2/migration`">v1からの移行案内</a>を参照してください。
+        </p>
+        <p class="home-related">
+          <a :href="`${localePrefix}/reference/`">{{ isEnglish ? "Specification index" : "仕様一覧" }}</a>
+          <a :href="`${localePrefix}/site`">{{ isEnglish ? "About this site" : "このサイトについて" }}</a>
         </p>
       </aside>
     </div>

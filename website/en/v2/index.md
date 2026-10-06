@@ -25,6 +25,8 @@ The overview, HTTP API, and Form requirements are the normative v2 chapters. Exa
 
 ## Suggested reading order {#reading}
 
+Refer to the [v2 glossary](/en/glossary) for terminology.
+
 - **Users:** Follow the fictional HTTP walkthrough in [Getting started](/en/start/), then read the fuller [request/response examples](/en/spec/host-api/v2/examples).
 - **Form authors:** Use [Form requirements](/en/spec/host-api/v2/forms) to define `spec`, `observed`, `output`, and failure behavior.
 - **Client implementers:** Read the [client design guide](/en/client/) for intent records, replay deadlines, Operations, and generation conflicts; then consult the [HTTP retry contract](/en/spec/host-api/v2/http#retry).

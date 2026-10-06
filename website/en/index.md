@@ -1,7 +1,8 @@
 ---
 layout: page
-title: Takoform — Form specifications and Host API v2
-description: Form authors publish versioned specifications; Hosts implement the Forms they support. Explore the contract for creating, observing, updating, and deleting Resources through Host API v2.
+title: Takoform
+titleTemplate: false
+description: Resource specifications and a common HTTP API. Read the specifications and guides for Host API v1 and v2 separately.
 sidebar: false
 ---
 

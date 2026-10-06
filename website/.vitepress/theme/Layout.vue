@@ -5,6 +5,7 @@ import { onBeforeUnmount, onMounted } from "vue";
 
 import MirrorNotice from "./components/MirrorNotice.vue";
 import AdringWidget from "./components/AdringWidget.vue";
+import VersionContext from "./components/VersionContext.vue";
 
 const { Layout } = DefaultTheme;
 const { frontmatter } = useData();
@@ -26,10 +27,14 @@ onBeforeUnmount(() => window.removeEventListener("keydown", closeMobileNavigatio
 
 <template>
   <Layout>
+    <template #nav-bar-content-after>
+      <VersionContext />
+    </template>
     <template #layout-bottom>
       <AdringWidget />
     </template>
     <template #doc-before>
+      <VersionContext variant="status" />
       <MirrorNotice
         v-if="frontmatter.canonicalSource"
         :source="frontmatter.canonicalSource"

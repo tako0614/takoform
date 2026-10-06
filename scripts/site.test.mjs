@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { renderForSearch, tokenize } from "../website/.vitepress/search.mjs";
+import { documentVersion } from "../website/.vitepress/versions.mjs";
 
 import {
   GENERATED_INDEX_PAGES,
@@ -93,26 +94,30 @@ describe("takoform.com site derivation", () => {
     expect(output).toContain("パッケージ を 検証");
     expect(renderForSearch("", { frontmatter: { search: false } }, { render: () => html })).toBe("");
   });
-  test("exposes v2 specification destinations and retains a v1 reference", () => {
+  test("presents a version-neutral homepage with two documentation entries", () => {
     const source = readFileSync("website/index.md", "utf8");
-    expect(source).toContain("Host API v2");
+    expect(source).toContain("title: Takoform\n");
+    expect(source).toContain("titleTemplate: false");
     const component = readFileSync("website/.vitepress/theme/components/HomePage.vue", "utf8");
     for (const target of [
+      "/v1/",
       "/v2/",
-      "/spec/host-api/v2/http",
-      "/spec/host-api/v2/forms",
-      "/spec/host-api/v2/examples",
+      "/reference/",
+      "/site",
     ]) expect(component).toContain(target);
-    expect(component).toContain("Host API v1");
+    expect(component).toContain('<h1 id="home-title">Takoform</h1>');
+    expect(component).toContain("Frozen specification");
+    expect(component).toContain("Open to revision");
+    expect(component).not.toContain("home-request");
   });
-  test("exposes every locale page and top-level destination in a complete sidebar", async () => {
+  test("separates version sidebars and keeps shared pages out of their sequences", async () => {
     const config = (await import("../website/.vitepress/config.mts")).default;
     expect(config.locales.root.label).toBe("日本語");
     expect(config.locales.en.label).toBe("English");
     for (const localePrefix of ["", "/en"]) {
       const theme = localePrefix ? config.locales.en.themeConfig : config.themeConfig;
       expect(theme.nav.map((item) => item.link)).toEqual(
-        ["start", "guides", "v2", "reference"].map((page) => `${localePrefix}/${page}/`),
+        ["/", "/reference/", "/site"].map((page) => `${localePrefix}${page}`),
       );
       const sidebars = theme.sidebar;
       expect(Array.isArray(sidebars)).toBe(false);
@@ -128,37 +133,39 @@ describe("takoform.com site derivation", () => {
         visit(items);
         return links;
       };
-      const generalLinks = collect(sidebars["/"]);
-      const readerJourney = ["start", "model", "client", "authoring", "use", "host-api", "v2", "guides", "reference"]
-        .map((page) => `${localePrefix}/${page}/`);
-      expect(readerJourney.map((link) => generalLinks.indexOf(link)))
-        .toEqual([...readerJourney.keys()].map((index) => generalLinks.indexOf(readerJourney[index])).sort((a, b) => a - b));
+      expect(sidebars["/"]).toEqual([]);
+      for (const page of ["/reference/", "/site"]) expect(sidebars[`${localePrefix}${page}`]).toEqual([]);
+      const v1Links = collect(sidebars[`${localePrefix}/v1/`]);
+      const v2Links = collect(sidebars[`${localePrefix}/v2/`]);
       const publishedRoutes = [
         ...HAND_AUTHORED_PAGE_SOURCES.map(siteRouteForPageSource),
         ...GENERATED_INDEX_PAGES.map(siteRouteForPageSource),
+        ...V2_SPEC_DOCUMENTS.map((document) => siteRouteForV2SpecDocument(document.path, localePrefix ? "en" : "ja")),
         ...MIRRORED_SPEC_DOCUMENTS.map((source) =>
           `${localePrefix}${siteRouteForSpecDocument(source)}`
         ),
       ].filter((route) => route.startsWith("/en/") === !!localePrefix);
-      expect(generalLinks.filter((link) => link.startsWith("/")).sort()).toEqual(
-        [...new Set(publishedRoutes)].sort(),
-      );
-
-      const v2Links = collect(sidebars[localePrefix ? "/en/v2/" : "/v2/"]);
+      for (const [version, links] of [["v1", v1Links], ["v2", v2Links]]) {
+        expect(links.every((link) => documentVersion(link) === version)).toBe(true);
+        expect([...links].sort()).toEqual([...new Set(publishedRoutes.filter((route) => documentVersion(route) === version))].sort());
+      }
+      expect(v1Links).toContain(`${localePrefix}/schemas/`);
+      expect(v1Links).toContain(`${localePrefix}/conformance/`);
+      expect(v1Links).not.toContain(`${localePrefix}/glossary`);
       const expectedV2Routes = [
         `${localePrefix}/v2/`,
         ...V2_SPEC_DOCUMENTS.map((document) =>
           siteRouteForV2SpecDocument(document.path, localePrefix ? "en" : "ja")
         ),
-        ...["start", "model", "client", "authoring", "use", "host-api", "guides", "reference"]
+        ...["start", "model", "client", "authoring", "use", "host-api", "guides"]
           .map((page) => `${localePrefix}/${page}/`),
-        `${localePrefix}/spec/host-api/v1`,
+        `${localePrefix}/glossary`,
       ];
       expect(v2Links.filter((link) => link.startsWith("/")).sort()).toEqual(
         [...new Set(expectedV2Routes)].sort(),
       );
       for (const item of theme.nav) {
-        expect([...generalLinks, ...v2Links]).toContain(item.link);
+        expect(documentVersion(item.link)).toBe(null);
       }
     }
   });
@@ -706,6 +713,7 @@ describe("takoform.com site derivation", () => {
       "website/client/index.md",
       "website/use/index.md",
       "website/reference/index.md",
+      "website/v1/index.md",
       "website/v2/index.md",
       "website/glossary.md",
     ]);
@@ -756,16 +764,14 @@ describe("takoform.com site derivation", () => {
       expect(head).toContainEqual(["meta", { property: "og:title", content: "Page | Takoform" }]);
     }
     expect(config.themeConfig?.nav).toEqual([
-      { text: "はじめる", link: "/start/" },
-      { text: "ガイド", link: "/guides/" },
-      { text: "Host API v2", link: "/v2/" },
+      { text: "トップ", link: "/" },
       { text: "仕様一覧", link: "/reference/" },
+      { text: "このサイトについて", link: "/site" },
     ]);
     expect(config.locales.en.themeConfig.nav).toEqual([
-      { text: "Start", link: "/en/start/" },
-      { text: "Guides", link: "/en/guides/" },
-      { text: "Host API v2", link: "/en/v2/" },
+      { text: "Home", link: "/en/" },
       { text: "Reference", link: "/en/reference/" },
+      { text: "About", link: "/en/site" },
     ]);
     const links = [];
     const collectLinks = (value) => {

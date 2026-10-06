@@ -5,10 +5,12 @@
 用途と操作を直接説明し、宣伝的なコピーや不要な内部用語を増やしません。正確なAPI名や
 フィールド名、固定済みの仕様本文は変更せず、解説と区別します。
 
-トップは短い用途説明、要求例、読む目的別の入口に絞り、sidebarを表示しません。
-v2仕様は専用の目次を使い、一般ガイドの目次もv2の読み始め方を先頭に置きます。
-保持するv1仕様・共通モデルは旧版の資料として分けます。
-新しい設計を読むために、v1のpackageやSnapshotの項目を先に読ませません。
+トップはTakoform全体の短い説明とv1・v2の入口に絞り、sidebarを表示しません。
+`/v1/`は固定済みのAPI・共通モデル・スキーマ、`/v2/`は改訂可能なAPIとガイドを案内します。
+版の選択と言語の選択を分け、既存URLを維持したまま目次と前後リンクを版ごとに閉じます。
+共通の仕様一覧とサイト案内には版専用sidebarを付けません。表示上の所属は
+`.vitepress/versions.mjs`で判定し、検索も同じ判定を使います。検索は現在の版と共通文書を
+初期範囲にし、結果に版を表示します。「すべての版」は明示して選べます。
 
 日本語は既存のルート、英語は`/en/`で公開します。VitePressの言語メニューは同じページの
 対応言語へ移動し、ページ内の位置も維持します。目次は選択した言語とAPI版に合わせます。
@@ -39,7 +41,7 @@ website/
 ├── host-api/  model/  conformance/  site.md
 │                          読み方の案内（手書き）
 ├── spec/                  v1 freeze に含まれる source の mirror（生成）
-├── v2/                    v2仕様の入口（手書き）
+├── v1/  v2/               API版別の入口（手書き）
 ├── spec/host-api/v2/       v2の規範本文・解説のmirror（生成）
 ├── schemas/               schema 索引 page（生成・non-normative）
 ├── en/                    英語ガイド（手書き）とspec/schema索引（生成）
@@ -97,9 +99,9 @@ Chrome / Chromium を headless で動かします。browser が見つからな�
 標準 path にない場合は `TAKOFORM_BROWSER=/absolute/path/to/chrome` を設定してください。
 browser の自動 download や、既存 browser profile の利用はしません。
 
-- `/`、v2入口・仕様4ページ、`/start/`、`/guides/`、`/authoring/`、`/client/`、`/reference/`、`/glossary`、`/host-api/` の日英を
+- `/`、v1/v2入口、両版のAPI本文、共通仕様索引、schema索引、各ガイドとサイト案内の日英を
   320 / 375 / 414 / 768 px で開き、横 overflow と切れた操作要素がないことを確認します。
-- トップにはsidebarがなく、v2仕様には専用の目次、一般ページにはv2を先頭にした目次と旧版資料への経路があることを確認します。
+- トップと共通ページにはsidebarがなく、v1・v2のページはその版の目次・前後リンクだけを表示することを確認します。
   目次の全グループは最初から開きます。
 - mobile navigation と sidebar を keyboard で開き、Escape で閉じたあと trigger へ focus が
   戻ることを確認します。
@@ -107,6 +109,8 @@ browser の自動 download や、既存 browser profile の利用はしません
 - asset の HTTP error、JavaScript error、予期しない外部通信も失敗として扱います。
 - 英語版にも同じレスポンシブ検査を行います。375 / 1024 / 1280 pxで言語メニューから
   同一ページへ往復し、見出しの位置とhydration後の言語を確認します。
+- 版切替は同じ言語の入口へ移動し、前の版のfragmentを持ち越さないこと、検索は現在の版を
+  初期範囲にし、全版検索は明示選択した場合だけ使うことを確認します。
 
 本文、link、button、code highlighting の contrast と見た目の最終判断は、light / dark の
 実画面で別途確認します。この browser lane は live service や production mutation を必要とせず、
@@ -123,6 +127,7 @@ portable な `bun run check` へ browser binary を暗黙に要求しません�
 | `/`、`/start/`、`/guides/`、`/authoring/`、`/client/`、`/reference/`、`/host-api/`、`/model/`、`/conformance/`、`/glossary`、`/site` | 手書きの案内 |
 | `/spec/**` | freeze-listed source は normative mirror。それ以外の overview/index mirror は non-normative。正本は `spec/**` |
 | `/v2/`、`/spec/host-api/v2/**` | v2仕様の入口と原文mirror。規範か解説か、公開済みかを別々に表示する |
+| `/v1/` | 固定済みv1仕様・モデル・スキーマと既存ツールの入口 |
 | `/schemas/` | identity の non-normative 索引 page |
 | `/en/`と上記ページの`/en/**`版 | 英語の案内・索引と、v1・v2の英語原文 |
 | `/schemas/<$id と同じ path>` | 公開 schema の exact な bytes |

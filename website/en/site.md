@@ -5,9 +5,9 @@ title: About this site
 # About this site {#この-site-について}
 
 This site explains Takoform, its HTTP API and how to write a Form specification.
-The v2 normative source is English; Japanese guides provide translated guidance. Each specification page displays the English source and identifies its authority and publication status.
-The v2 source remains open to revision. See [takoform.com](https://takoform.com/en/v2/) for the published version; local copies and previews may differ. Guides and examples are
-distinct from normative requirements.
+The [v1](/en/v1/) and [v2](/en/v2/) documentation have separate entry points. Switch versions at the top of the page; the sidebar and search follow the version you are reading.
+Language is a separate choice. Specifications retain their English source; guides are available in English and Japanese.
+Guides and examples are distinct from normative requirements. The v1 specification is frozen; v2 remains open to revision.
 
 ## Scope {#この-repository-が扱う範囲}
 
@@ -45,7 +45,7 @@ with the publisher and the Host separately.
 ## Related pages {#source-を読む}
 
 - [Read v2](/en/v2/)
-- [Frozen Host API v1 specification](/en/spec/host-api/v1)
+- [Read v1](/en/v1/)
 - [Reference](/en/reference/)
 - [Schema index](/en/schemas/)
 - [Source code](https://github.com/tako0614/takoform)

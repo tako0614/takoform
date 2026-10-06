@@ -1,4 +1,9 @@
 /* Keep VitePress's default palette, typography and layout. */
+html,
+body {
+  overflow-x: clip;
+}
+
 :where(a, button, input, summary):focus-visible {
   outline: 2px solid var(--vp-c-brand-1);
   outline-offset: 3px;

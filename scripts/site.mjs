@@ -138,6 +138,7 @@ export const HAND_AUTHORED_ROUTE_SOURCES = Object.freeze([
   `${SITE_ROOT}/client/index.md`,
   `${SITE_ROOT}/use/index.md`,
   `${SITE_ROOT}/reference/index.md`,
+  `${SITE_ROOT}/v1/index.md`,
   `${SITE_ROOT}/v2/index.md`,
   `${SITE_ROOT}/glossary.md`,
 ]);

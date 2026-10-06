@@ -5,6 +5,7 @@
     "": {
       "name": "takoform-core-workspace",
       "devDependencies": {
+        "minisearch": "7.2.0",
         "playwright-core": "1.55.1",
         "vitepress": "1.6.4",
       },

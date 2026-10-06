@@ -1,5 +1,14 @@
 [
   {
+    "date": "2026-10-06",
+    "macrostructure": "Version catalogue with version-scoped long-document navigation",
+    "theme": "Existing VitePress light/dark and sans/mono tokens",
+    "enrichment": "none; API version entries are the primary content",
+    "brief": "Neutral Takoform home, separate v1/v2 reading journeys, version selector independent of language, version-scoped local search",
+    "slopTest": "Parent inspected JP mobile and light/dark desktop screenshots. Responsive geometry passed on 176 locale/route/width combinations; targeted version switching and JA/EN search focus probes passed. Full browser and owner gate outcomes are recorded separately in TASK-0096. No synthetic full-checklist score or Host conformance claimed.",
+    "viewports": [320, 375, 414, 768, 1280]
+  },
+  {
     "date": "2026-09-04",
     "macrostructure": "Map / Diagram",
     "theme": "Coral",
