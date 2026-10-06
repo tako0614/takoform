@@ -1,139 +1,128 @@
-/* Hallmark · genre: modern-minimal · macrostructure: product overview + direct version entries · theme: VitePress default tokens · enrichment: none · nav: VitePress native · footer: retained VitePress */
+/* Hallmark · genre: modern-minimal · macrostructure: Long Document · design-system: design.md · theme: retained VitePress · enrichment: none · motion: none */
 
 .home-page {
-  --home-space-1: 0.5rem;
-  --home-space-2: 0.875rem;
-  --home-space-3: 1.25rem;
-  --home-space-4: 2rem;
-  --home-space-5: 3.5rem;
+  --home-space-xs: 0.5rem;
+  --home-space-sm: 1rem;
+  --home-space-md: 1.5rem;
+  --home-space-lg: 2rem;
+  --home-space-xl: 3rem;
+  --home-space-2xl: 4rem;
   --home-rule: var(--vp-c-divider);
   --home-muted: var(--vp-c-text-2);
-
-  padding-block: clamp(var(--home-space-4), 6vw, 4.75rem) var(--home-space-5);
+  padding-block: var(--home-space-xl) var(--home-space-2xl);
   color: var(--vp-c-text-1);
   font-family: var(--vp-font-family-base);
-}
-
-.home-page__inner {
-  width: min(100%, 70rem);
-  margin-inline: auto;
-  padding-inline: clamp(1rem, 4vw, 2rem);
-}
-
-.home-overview {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  align-items: start;
-  gap: clamp(var(--home-space-4), 6vw, 5rem);
-}
-
-.home-overview__copy {
-  min-width: 0;
-}
-
-.home-overview h1 {
-  max-width: 20ch;
-  margin: 0;
-  font-size: clamp(2rem, 3.4vw, 3.15rem);
-  font-weight: 620;
-  letter-spacing: -0.035em;
-  line-height: 1.28;
-  overflow-wrap: anywhere;
-  min-width: 0;
-}
-
-.home-overview__lead {
-  max-width: 38rem;
-  margin: var(--home-space-3) 0 0;
-  color: var(--home-muted);
-  font-size: 1.02rem;
+  font-size: 1rem;
   line-height: 1.8;
 }
 
-.home-introduction {
-  max-width: 38rem;
-  color: var(--home-muted);
-  line-height: 1.85;
+.home-page__inner {
+  width: min(100%, 66rem);
+  margin-inline: auto;
+  padding-inline: var(--home-space-sm);
 }
 
-.home-introduction p {
+.home-page p { margin: 0; max-width: 46rem; }
+.home-page p + p { margin-block-start: var(--home-space-sm); }
+.home-page h1, .home-page h2, .home-page h3 {
   margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-style: normal;
 }
-
-.home-introduction p + p {
-  margin-block-start: var(--home-space-3);
+.home-overview h1 {
+  font-size: clamp(2rem, 3.4vw, 3.15rem);
+  font-weight: 650;
+  letter-spacing: -0.035em;
+  line-height: 1.2;
 }
-
-.home-index {
-  margin-block-start: clamp(var(--home-space-5), 8vw, 6rem);
+.home-page .home-overview__lead {
+  margin-block-start: var(--home-space-sm);
+  font-size: 1.25rem;
+  line-height: 1.6;
 }
-
-.home-index h2 {
-  margin: 0;
-  padding-block-end: var(--home-space-2);
-  border-block-end: 1px solid var(--home-rule);
-  font-size: 1.1rem;
-  font-weight: 600;
-  line-height: 1.4;
+.home-page .home-introduction { margin-block-start: var(--home-space-md); }
+.home-section { margin-block-start: var(--home-space-xl); }
+.home-section h2 {
+  margin-block-end: var(--home-space-sm);
+  font-size: 1.4rem;
+  font-weight: 650;
+  line-height: 1.5;
 }
-
-.home-index ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.home-roles {
+  margin: var(--home-space-md) 0;
+  max-width: 46rem;
 }
-
-.home-index li {
+.home-roles > div {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  align-items: baseline;
-  gap: var(--home-space-1) var(--home-space-4);
-  padding-block: var(--home-space-3);
-  border-block-end: 1px solid var(--home-rule);
+  gap: var(--home-space-xs) var(--home-space-md);
+  padding-block: var(--home-space-sm);
+  border-block-start: 1px solid var(--home-rule);
 }
-
-.home-index a {
-  color: var(--vp-c-text-1);
-  text-decoration-color: var(--home-rule);
-  text-underline-offset: 0.2em;
+.home-roles dt { font-weight: 650; }
+.home-roles dd { margin: 0; }
+.home-example {
+  display: grid;
+  gap: var(--home-space-lg);
+  margin-block-start: var(--home-space-md);
 }
-
-.home-index a {
+.home-example figure { margin: 0; min-width: 0; }
+.home-example pre {
+  margin: 0;
+  padding: var(--home-space-sm);
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--home-rule);
+  border-radius: 6px;
+  background: var(--vp-code-block-bg);
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.875rem;
+  line-height: 1.75;
+  tab-size: 2;
+}
+.home-example code { font-family: inherit; }
+.home-example figcaption {
+  margin-block-start: var(--home-space-xs);
+  color: var(--home-muted);
+  font-size: 0.875rem;
+  line-height: 1.7;
+}
+.home-steps {
+  margin: 0;
+  padding-inline-start: var(--home-space-md);
+}
+.home-steps li + li { margin-block-start: var(--home-space-md); }
+.home-steps h3 { font-size: 1rem; font-weight: 650; }
+.home-steps p { color: var(--home-muted); }
+.home-reading-link {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
-  width: fit-content;
-  font-weight: 550;
+  max-width: 100%;
+  color: var(--vp-c-brand-1);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
   white-space: nowrap;
 }
-
-.home-index a:hover {
-  text-decoration-color: currentColor;
+.home-reading-link:hover { text-decoration-thickness: 2px; }
+.home-reading-link:focus-visible, .home-example pre:focus-visible {
+  outline: 2px solid var(--vp-c-brand-1);
+  outline-offset: 3px;
 }
-
-.home-index li p {
-  margin: 0;
-  color: var(--home-muted);
-  font-size: 0.9rem;
-  line-height: 1.55;
+.home-example + .home-reading-link { margin-block-start: var(--home-space-sm); }
+.home-reading-list {
+  max-width: 46rem;
+  list-style: none;
+  margin: var(--home-space-sm) 0 var(--home-space-lg);
+  padding: 0;
 }
-
-@media (min-width: 56rem) {
-  .home-overview {
-    grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr);
-  }
-
-  .home-index li {
-    grid-template-columns: minmax(12rem, 0.85fr) minmax(0, 1.15fr);
-  }
+.home-reading-list li { padding-block: var(--home-space-xs); }
+.home-reading-list p, .home-page .home-scope { color: var(--home-muted); }
+@media (min-width: 40rem) {
+  .home-page__inner { padding-inline: var(--home-space-lg); }
+  .home-roles > div { grid-template-columns: minmax(6rem, 1fr) minmax(0, 5fr); }
 }
-
-@media (max-width: 24rem) {
-  .home-page__inner {
-    padding-inline: 1rem;
-  }
-
-  .home-overview h1 {
-    font-size: 1.9rem;
-  }
+@media (min-width: 64rem) {
+  .home-example { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); }
 }

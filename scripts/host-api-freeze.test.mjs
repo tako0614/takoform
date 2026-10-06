@@ -7,9 +7,10 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
 import {
   EXACT_HOST_API_LANE,
@@ -20,11 +21,13 @@ import {
   EXPECTED_SCHEMA_ROOTS,
   FREEZE_KIND,
   FREEZE_PATH,
+  INITIAL_V2_NORMATIVE_SHA256,
   V2_FREEZE_PATH,
   inspectHostAPIFreeze,
 } from "./host-api-freeze.mjs";
 
 const temporaryRoots = [];
+const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 afterEach(() => {
   for (const root of temporaryRoots.splice(0)) rmSync(root, { recursive: true, force: true });
@@ -44,6 +47,14 @@ function git(root, ...args) {
   const result = spawnSync("git", args, { cwd: root, encoding: "utf8" });
   if (result.status !== 0) throw new Error(result.stderr || result.stdout);
   return result.stdout.trim();
+}
+
+function originalV2Bytes(path) {
+  const firstAdd = git(repositoryRoot, "log", "--reverse", "--format=%H", "--diff-filter=A", "HEAD", "--", V2_FREEZE_PATH)
+    .split(/\s+/u)[0];
+  const result = spawnSync("git", ["show", `${firstAdd}:${path}`], { cwd: repositoryRoot });
+  if (result.status !== 0) throw new Error(result.stderr.toString("utf8"));
+  return result.stdout;
 }
 
 const schemaSources = new Map([
@@ -223,9 +234,9 @@ function createFixture() {
     kind: FREEZE_KIND,
     lane: "forms.takoform.com/v2",
     normativeProse: EXPECTED_V2_NORMATIVE_PROSE.map((path) => {
-      const bytes = `# ${path}\n`;
+      const bytes = originalV2Bytes(path);
       write(root, path, bytes);
-      return { path, sha256: digest(bytes) };
+      return { path, sha256: INITIAL_V2_NORMATIVE_SHA256[path] };
     }),
   };
   write(root, V2_FREEZE_PATH, `${JSON.stringify(v2Manifest, null, 2)}\n`);
@@ -271,6 +282,71 @@ describe("Host API v1 immutable freeze", () => {
     const problems = inspectHostAPIFreeze(root, { mode: "check" }).join("\n");
     expect(problems).toContain(`${V2_FREEZE_PATH} differs from its first-add commit`);
     expect(problems).toContain(`${path} differs from its first-add commit`);
+  });
+
+  test("one committed v2 editorial edition becomes fixed without changing v1", () => {
+    const { root, v2Manifest } = createFixture();
+    git(root, "add", ".");
+    git(root, "commit", "--quiet", "-m", "first fixed Host API edition");
+    const path = EXPECTED_V2_NORMATIVE_PROSE[1];
+    const editorialBytes = Buffer.from("# Clearer HTTP prose, same example contract\n");
+    write(root, path, editorialBytes);
+    v2Manifest.normativeProse[1].sha256 = digest(editorialBytes);
+    write(root, V2_FREEZE_PATH, `${JSON.stringify(v2Manifest, null, 2)}\n`);
+    git(root, "add", path, V2_FREEZE_PATH);
+    git(root, "commit", "--quiet", "-m", "one editorial edition");
+    expect(inspectHostAPIFreeze(root, { mode: "check" })).toEqual([]);
+
+    write(root, path, "# a later uncommitted rewrite\n");
+    expect(inspectHostAPIFreeze(root, { mode: "check" }).join("\n"))
+      .toContain(`${path} differs from its editorial commit`);
+    write(root, path, editorialBytes);
+    const nextBytes = Buffer.from("# third editorial edition\n");
+    write(root, path, nextBytes);
+    v2Manifest.normativeProse[1].sha256 = digest(nextBytes);
+    write(root, V2_FREEZE_PATH, `${JSON.stringify(v2Manifest, null, 2)}\n`);
+    git(root, "add", path, V2_FREEZE_PATH);
+    git(root, "commit", "--quiet", "-m", "forbidden third edition");
+    expect(inspectHostAPIFreeze(root, { mode: "check" }).join("\n"))
+      .toContain("must have only its first-add and one editorial modification");
+  });
+
+  test("v2 source and manifest must change together in the one editorial commit", () => {
+    const { root, v2Manifest } = createFixture();
+    git(root, "add", ".");
+    git(root, "commit", "--quiet", "-m", "first fixed Host API edition");
+    const path = EXPECTED_V2_NORMATIVE_PROSE[2];
+    const editorialBytes = Buffer.from("# clearer Forms prose\n");
+    write(root, path, editorialBytes);
+    git(root, "add", path);
+    git(root, "commit", "--quiet", "-m", "premature source change");
+    v2Manifest.normativeProse[2].sha256 = digest(editorialBytes);
+    write(root, V2_FREEZE_PATH, `${JSON.stringify(v2Manifest, null, 2)}\n`);
+    git(root, "add", V2_FREEZE_PATH);
+    git(root, "commit", "--quiet", "-m", "late manifest change");
+    expect(inspectHostAPIFreeze(root, { mode: "check" }).join("\n"))
+      .toContain("v2 normative sources may change only in the one");
+  });
+
+  test("the same editorial commit remains valid after a non-fast-forward merge", () => {
+    const { root, v2Manifest } = createFixture();
+    git(root, "add", ".");
+    git(root, "commit", "--quiet", "-m", "first fixed Host API edition");
+    const baseBranch = git(root, "branch", "--show-current");
+    git(root, "checkout", "--quiet", "-b", "editorial");
+    const path = EXPECTED_V2_NORMATIVE_PROSE[1];
+    const editorialBytes = Buffer.from("# clearer HTTP prose after merge\n");
+    write(root, path, editorialBytes);
+    v2Manifest.normativeProse[1].sha256 = digest(editorialBytes);
+    write(root, V2_FREEZE_PATH, `${JSON.stringify(v2Manifest, null, 2)}\n`);
+    git(root, "add", path, V2_FREEZE_PATH);
+    git(root, "commit", "--quiet", "-m", "one editorial edition");
+    git(root, "checkout", "--quiet", baseBranch);
+    write(root, "website/index.md", "# New presentation\n");
+    git(root, "add", "website/index.md");
+    git(root, "commit", "--quiet", "-m", "independent presentation");
+    git(root, "merge", "--quiet", "--no-ff", "editorial", "-m", "merge editorial edition");
+    expect(inspectHostAPIFreeze(root, { mode: "check" })).toEqual([]);
   });
   test("pins the complete semantic prose, machine, schema-root, and recursive schema closure", () => {
     expect(EXPECTED_NORMATIVE_PROSE).toEqual([

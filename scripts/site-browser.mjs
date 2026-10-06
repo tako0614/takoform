@@ -258,18 +258,28 @@ async function run() {
     for (const colorScheme of ["light", "dark"]) {
       await page.emulateMedia({ colorScheme });
       await visit("/");
-      assert.equal(await page.locator(".VPSidebar").isVisible(), false, "homepage is a concise index without the v1 sidebar");
+      assert.equal(await page.locator(".VPSidebar").isVisible(), false, "homepage explains Takoform without a version-specific sidebar");
       assert.equal(await page.locator("html").evaluate((element) => element.classList.contains("dark")), colorScheme === "dark");
       assert.deepEqual(await page.evaluate(inspectGeometry), [], `1280px ${colorScheme}`);
-      const primary = page.locator('.home-index a[href="/v2/"]');
+      assert.equal(await page.locator(".home-index").count(), 0, "home is not a version list");
+      assert.deepEqual(await page.locator(".home-page h2").allTextContents(), [
+        "Forms, Hosts and clients", "A resource, from request to result", "Using and implementing Takoform",
+      ]);
+      assert.equal(await page.locator(".home-roles dt").count(), 3);
+      assert.equal(await page.locator(".home-steps li").count(), 4);
+      const exampleRequest = readFileSync(join(root, "website/start/index.md"), "utf8")
+        .match(/^POST .+ HTTP\/1\.1$/mu)?.[0];
+      assert.ok(exampleRequest, "the getting-started guide includes a create request");
+      assert.ok((await page.locator(".home-example pre").textContent()).includes(exampleRequest), "home uses the guide's illustrative create request");
+      const primary = page.locator('.version-context select');
       const bounds = await primary.boundingBox();
-      assert.ok(bounds && bounds.y >= 0 && bounds.y + bounds.height <= 800, `${colorScheme}: primary action must fit first viewport`);
+      assert.ok(bounds && bounds.y >= 0 && bounds.y + bounds.height <= 800, `${colorScheme}: API selection must fit first viewport`);
       await page.keyboard.press("Tab");
       await primary.focus();
       assert.ok(await primary.evaluate((element) => {
         const style = getComputedStyle(element);
         return element.matches(":focus-visible") && style.outlineStyle !== "none" && parseFloat(style.outlineWidth) >= 2;
-      }), `${colorScheme}: primary action must have a keyboard focus indicator`);
+      }), `${colorScheme}: API selection must have a keyboard focus indicator`);
       await page.screenshot({ path: `/tmp/takoform-docs-home-${colorScheme}.png`, fullPage: true });
       await visit("/spec/host-api/v1");
       await page.locator(".VPNavBarSearch button").click();

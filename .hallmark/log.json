@@ -1,6 +1,15 @@
 [
   {
     "date": "2026-10-06",
+    "macrostructure": "Explanatory long document: shared model, illustrative HTTP lifecycle, reader guides",
+    "theme": "Existing VitePress light/dark and sans/mono tokens",
+    "enrichment": "An explicitly illustrative v2 request, without decorative chrome",
+    "brief": "English home titles; substantial explanation; API selection only in the header; no fixed/frozen status labels in navigation",
+    "slopTest": "Parent inspected 375px Japanese and 1280px light/dark screenshots. Browser checks passed 152 route/width combinations plus version, language, search and keyboard journeys. No synthetic checklist score, real Host execution or publication is implied by this record.",
+    "viewports": [320, 375, 414, 768, 1280]
+  },
+  {
+    "date": "2026-10-06",
     "macrostructure": "Takoform overview with direct v1/v2 entries and version-scoped long-document navigation",
     "theme": "Existing VitePress light/dark and sans/mono tokens",
     "enrichment": "none; concise product overview with direct documentation links",

@@ -13,18 +13,6 @@ const changingVersion = ref(false);
 const currentPath = computed(() => route.path);
 const currentVersion = computed(() => documentVersion(currentPath.value));
 const isEnglish = computed(() => currentPath.value === "/en" || currentPath.value.startsWith("/en/"));
-const currentStatus = computed(() => {
-  if (currentVersion.value === "v1") return isEnglish.value ? "Frozen" : "凍結済み";
-  if (currentVersion.value === "v2") return isEnglish.value ? "Fixed" : "固定済み";
-  return "";
-});
-const controlLabel = computed(() => isEnglish.value
-  ? currentVersion.value
-    ? `Documentation version, current ${currentVersion.value}, ${currentStatus.value}`
-    : "Documentation version, v1 frozen, v2 fixed"
-  : currentVersion.value
-    ? `文書の版、現在 ${currentVersion.value}、${currentStatus.value}`
-    : "文書の版、v1凍結済み、v2固定済み");
 
 const options = computed(() => [
   { version: "v1", label: "API v1" },
@@ -44,21 +32,15 @@ async function changeVersion(event: Event) {
 </script>
 
 <template>
-  <p v-if="variant === 'status' && currentVersion" class="version-status">
-    <span>{{ currentVersion }}</span>
-    <span aria-hidden="true"> · </span>
-    <span>{{ currentStatus }}</span>
-  </p>
-  <label v-else-if="variant === 'control'" class="version-context">
-    <span class="visually-hidden">{{ isEnglish ? "Documentation version" : "文書の版" }}</span>
+  <label v-if="variant === 'control'" class="version-context">
+    <span class="visually-hidden">{{ isEnglish ? "API version" : "APIの版" }}</span>
     <select
       :value="currentVersion ?? 'shared'"
       :disabled="changingVersion"
-      :title="currentStatus"
-      :aria-label="controlLabel"
+      :aria-label="isEnglish ? 'API version' : 'APIの版'"
       @change="changeVersion"
     >
-      <option value="shared" disabled>{{ isEnglish ? "Docs" : "文書" }}</option>
+      <option value="shared" disabled>API</option>
       <option v-for="item in options" :key="item.version" :value="item.version">{{ item.label }}</option>
     </select>
     <span class="vpi-chevron-down version-chevron" aria-hidden="true"></span>
@@ -66,13 +48,6 @@ async function changeVersion(event: Event) {
 </template>
 
 <style scoped>
-.version-status {
-  margin: 0 0 0.75rem;
-  color: var(--vp-c-text-2);
-  font-size: 0.75rem;
-  line-height: 1.4;
-}
-
 .version-context {
   position: relative;
   display: block;

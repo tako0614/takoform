@@ -1,13 +1,9 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import { useData } from "vitepress";
 const { lang } = useData();
-// A mirrored page is a derived copy, not the authority. Readers who arrive
-// from a search result have no other way to know which of the two bytes they
-// are quoting, so every mirrored page says so above its first heading. The
-// generator supplies authority and release state independently: a mutable
-// index must never inherit normative wording. Both published API contracts
-// are fixed; their surrounding explanations are not additional requirements.
-withDefaults(
+// Keep the source language and normative/explanatory distinction visible.
+const props = withDefaults(
   defineProps<{
     source: string;
     url?: string;
@@ -17,6 +13,11 @@ withDefaults(
   }>(),
   { normative: false, sourceLanguage: "en", releaseState: "published" },
 );
+const sourceLanguageName = computed(() => {
+  const isJapaneseSource = props.sourceLanguage === "ja-JP";
+  if (lang.value === "ja-JP") return isJapaneseSource ? "日本語" : "英語";
+  return isJapaneseSource ? "Japanese" : "English";
+});
 </script>
 
 <template>
@@ -26,22 +27,15 @@ withDefaults(
     :data-release-state="releaseState"
   >
     <p v-if="lang === 'ja-JP'">
-      {{ normative ? `仕様の原文（${sourceLanguage === 'ja-JP' ? '日本語' : '英語'}・固定済み）:` : `案内文の原文（${sourceLanguage === 'ja-JP' ? '日本語' : '英語'}）:` }}
+      {{ normative ? `規範原文（${sourceLanguageName}）:` : `解説原文（${sourceLanguageName}）:` }}
       <a v-if="url" :href="url"><code>{{ source }}</code></a>
-      <code v-else>{{ source }}</code>。
-      {{ normative ? '本文は英語の原文を掲載しています。リンク先だけを置き換えており、正とする情報はリポジトリ内のファイルです。' : '本文は英語の案内文です。仕様そのものではありません。' }}
-    </p>
-    <p v-else-if="normative">
-      Specification source:
-      <a v-if="url" :href="url"><code>{{ source }}</code></a>
-      <code v-else>{{ source }}</code>
-      ({{ sourceLanguage === 'ja-JP' ? 'Japanese' : 'English' }}, frozen). This copy changes link addresses only; the repository file is authoritative.
+      <code v-else>{{ source }}</code>{{ normative ? "。" : "。規範要件ではありません。" }}
     </p>
     <p v-else>
-      Explanatory source:
+      {{ normative ? `Normative source (${sourceLanguageName} original):` : `Explanatory source (${sourceLanguageName} original):` }}
       <a v-if="url" :href="url"><code>{{ source }}</code></a>
       <code v-else>{{ source }}</code>
-      ({{ sourceLanguage === 'ja-JP' ? 'Japanese' : 'English' }}). This explanation is not a normative specification.
+      <template v-if="!normative"> Not a specification requirement.</template>
     </p>
   </aside>
 </template>

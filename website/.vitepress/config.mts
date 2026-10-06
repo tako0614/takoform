@@ -73,7 +73,7 @@ const contractSidebar = [
     ],
   },
   {
-    text: "Host API v1（履歴）",
+    text: "API仕様",
     items: [
       { text: "Wire contract", link: "/spec/host-api/v1" },
     ],
@@ -128,7 +128,7 @@ const v2Sidebar = [
 ];
 
 const v1Sidebar = [
-  { text: "Host API v1（凍結）", link: "/v1/" },
+  { text: "Host API v1", link: "/v1/" },
   { text: "適合性の検証", link: "/conformance/" },
   { text: "スキーマ一覧", link: "/schemas/" },
   ...contractSidebar,
@@ -143,11 +143,11 @@ const englishLabels: Record<string, string> = {
   適合性の検証: "Conformance checks", スキーマ一覧: "Schema index",
   サイト情報: "Site information", このサイトについて: "About this site",
   "Host API v2": "Host API v2",
-  "Host API v1（履歴）": "Host API v1 (historical)",
+  API仕様: "API specification",
   "HTTP wire format": "HTTP API", 概要: "Overview", "Form 仕様": "Form requirements",
   具体例: "Examples", "v1からの移行": "Migration from v1", "使い方と参照": "Use and reference",
   "履歴として残す v1 仕様": "Historical v1 specification",
-  "Host API v1（凍結）": "Host API v1 (frozen)",
+  "Host API v1": "Host API v1",
 };
 
 function englishSidebar(items: DefaultTheme.SidebarItem[]): DefaultTheme.SidebarItem[] {
@@ -204,8 +204,6 @@ export default defineConfig({
       themeConfig: {
         nav: [
           { text: "Overview", link: "/en/" },
-          { text: "v1", link: "/en/v1/" },
-          { text: "v2", link: "/en/v2/" },
         ],
         sidebar: {
           ...englishSpecSidebars,
@@ -347,8 +345,6 @@ export default defineConfig({
     } } } } },
     nav: [
       { text: "概要", link: "/" },
-      { text: "v1", link: "/v1/" },
-      { text: "v2", link: "/v2/" },
     ],
     sidebar: {
       ...rootSpecSidebars,

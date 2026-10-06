@@ -37,8 +37,8 @@ a second management protocol inside a Form.
 
 Illustrative URLs use reserved example domains. They do not identify a running
 service, a published Form, or an implementation that has passed testing.
-Conformance does not require a particular SDK, schema language, programming
-language, test program, database, or Terraform Provider.
+Implementers choose their programming language, storage, tools, and client
+libraries.
 
 ## 2. Terms and responsibilities {#terms}
 
@@ -261,8 +261,8 @@ Hosts MUST NOT return private values in Resources, Operations, observations,
 outputs, preview responses, diagnostics, or ordinary logs. They may retain
 encrypted, time-limited execution inputs for asynchronous work and restart
 recovery. A target's stored secret and the Host's temporary transport copy are
-different things. Cryptography, storage, key management, and backup mechanisms
-are Host responsibilities, not a required shared secret-management product.
+different things. The Host chooses its cryptography, storage, key management,
+and backup mechanisms.
 
 Temporary values and the confidential material used to compare replays have
 different lifetimes. If an unsent step loses its temporary input, the Host can
@@ -277,8 +277,7 @@ a network data plane; a compute Form can define a programming ABI; a Binding
 can present one resource's Interface inside another. These contracts belong to
 the Form or an exact external specification it references.
 
-An Interface or Binding does not need a separate package, global registry, or
-independent version stream. A Form can define it in its own specification.
+A Form can define an Interface or Binding in its own specification.
 A reference alone does not transfer ownership, supply credentials, or authorize
 action on another resource.
 
@@ -296,16 +295,15 @@ specification and distributing application artifacts are different actions.
 ## 8. Publication and compatibility {#compatibility}
 
 A Form author MUST publish human-readable normative specifications at the
-identity URL. Machine schemas, generated types, SDKs, or signatures can assist
+identity URL. Publication requires no package, transparency log, central
+registration, or installation transaction. Machine schemas, generated types, SDKs, or signatures can assist
 implementations but are not prerequisites. Optional schemas do not silently
 override normative behavior.
 
 HTTPS provides a location and transport protection; a URL alone is not
 cryptographic proof of past document bytes. Authors maintain the meaning of
 version-specific URLs. Implementers may keep copies, compare revisions, or use
-optional signatures. Takoform does not require package distribution,
-transparency logs, central registration, or an installation transaction before
-a specification exists.
+optional signatures.
 
 | Versioned item | Identity and compatibility responsibility |
 | --- | --- |
@@ -315,7 +313,7 @@ a specification exists.
 | Provider | A software release version for client mappings, with no privileged protocol status. |
 
 Layout, navigation, translations, and informative explanations can improve
-without a separate specification-version stream. A normative behavior change
+while normative behavior remains unchanged. A normative behavior change
 must not be concealed as an editorial clarification. SemVer-looking Form URLs
 do not acquire automatic compatibility or aliasing rules from the common API.
 
@@ -331,7 +329,7 @@ The [HTTP conformance requirements](http.md#conformance) include concurrency,
 response loss, Host-process restart with the same durable state, partial
 effects, and secret-input failures where applicable. Recreating handles in a
 running process does not establish recovery after process termination. The
-specification requires the behavior, not a particular test framework.
+choice of test framework belongs to the implementer.
 
 Common-API tests do not qualify every Form or backend. A management operation
 does not prove application health. An implementation report should identify

@@ -23,6 +23,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { CORE_RELEASE } from "./core-release.mjs";
+import { INITIAL_V2_NORMATIVE_SHA256 } from "./host-api-freeze.mjs";
 import {
   SCHEMA_IDENTITY_ORIGIN,
   SCHEMA_LEDGER_PATH,
@@ -97,6 +98,11 @@ export const V2_RAW_SOURCE_ROUTES = Object.freeze(
   V2_SPEC_DOCUMENTS.filter((document) => document.normative).map((document) =>
     v2NormativeSourceRoute(document.path)),
 );
+const INITIAL_V2_RAW_SOURCE_DIGESTS = Object.freeze(Object.fromEntries(
+  V2_SPEC_DOCUMENTS.filter((document) => document.normative).map((document) => [
+    v2NormativeSourceRoute(document.path), INITIAL_V2_NORMATIVE_SHA256[document.path],
+  ]),
+));
 export const SITE_CONTRACT_READBACK_ROUTES = Object.freeze([
   ...PAGE_READBACK_ROUTES, ...V1_RETENTION_ROUTES, ...V2_NORMATIVE_ROUTES,
 ]);
@@ -1399,10 +1405,12 @@ export async function runSiteDeploy(parsed, options = {}) {
   };
 
   if (v2SiteSurface && parsed.environment === "production") {
-    const changedFixedSource = V2_RAW_SOURCE_ROUTES.filter((route) =>
-      priorV2Projection.sources[route] !== expected.sources[route]);
-    if (changedFixedSource.length !== 0) {
-      throw new Error(`refused before touching the target: prior public Host API v2 source differs from the fixed normative bytes for ${changedFixedSource.join(", ")}`);
+    const sameCurrentEdition = V2_RAW_SOURCE_ROUTES.every((route) =>
+      priorV2Projection.sources[route] === expected.sources[route]);
+    const sameOriginalEdition = V2_RAW_SOURCE_ROUTES.every((route) =>
+      priorV2Projection.sources[route] === INITIAL_V2_RAW_SOURCE_DIGESTS[route]);
+    if (!sameCurrentEdition && !sameOriginalEdition) {
+      throw new Error("refused before touching the target: prior public Host API v2 source differs from both the fixed current bytes and the exact original editorial predecessor");
     }
     const confirmedPrior = await requirePriorV2Projection(fetchImpl, rollbackCandidate, expected.schemas);
     if (!sameProjection(confirmedPrior, priorV2Projection)) {

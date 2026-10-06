@@ -9,8 +9,7 @@ v2 behavior.
 ## What changes
 
 v2 identifies a Form by the publisher’s immutable, version-specific HTTPS specification URL. A Host
-implements that exact contract and reports support for it; the presence of a document at the URL does not
-certify Host support or grant the Host permission to fetch and execute arbitrary content.
+implements that exact contract and reports support for it.
 
 | Concern | v1 model | v2 model |
 | --- | --- | --- |
@@ -25,17 +24,15 @@ This table is a migration map, not a substitution rule for wire requests. Consul
 [frozen v1 HTTP specification](../v1.md) for exact v1 messages and [v2 HTTP API](http.md) for exact v2
 messages.
 
-A v2-only Host, client, or library can conform without v1 packages, signatures, Snapshots, `schemaDigest`,
-prepare/apply, or old data envelopes. Adopting v2 does not require adding features to v1. An implementation
-may independently use signatures or other supply-chain controls, but these are not conditions of
-participation in the common v2 API. No specific SDK, toolkit, or Terraform Provider is required.
+The v1 package, signature, Snapshot, `schemaDigest`, prepare/apply, and wire envelopes do not carry over
+as v2 conformance requirements. A v2-only implementation can be built independently. Publishers and
+Hosts may still choose their own supply-chain controls.
 
 ## Keep the v1 contract and existing use intact
 
 Published v1 prose, schemas, reference URLs, tags, and releases retain their original meaning and bytes;
 the [v1 freeze record](../v1.freeze.json) identifies the frozen set. Do not overwrite a v1 URL with v2
-prose or redirect it to a v2 Form. New Takoform specification design, guidance, and adoption focus on v2,
-but third parties are not prohibited from continuing to implement or use v1.
+prose or redirect it to a v2 Form. Third parties may continue to implement or use v1.
 
 Each Host decides and communicates its own v1 support period, and each library its maintenance period. A
 service also owns the policy for retaining existing v1 Resources. The public availability of a frozen API
@@ -85,5 +82,4 @@ an existing object, a product-specific migration plan should answer:
 - If migration stops halfway, how can it resume, and what state can actually be restored?
 - After migration, can the new owner read, update, and delete the object safely?
 
-These are planning questions, not a common Host migration feature or a demand to implement both APIs. A new
-v2 user need not migrate any v1 Resource.
+These are planning questions for a product-specific migration, not a common Host migration feature.

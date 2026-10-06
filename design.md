@@ -1,14 +1,15 @@
 # Takoform documentation design
 
-Approved direction: a concise Takoform overview followed by direct v1 and v2
-documentation entries. This is a documentation interface, not a product marketing
+Approved direction: an explanatory Takoform overview with version selection in
+the header. This is a documentation interface, not a product marketing
 page. Its readers are Form authors, Host implementers and client implementers.
 
 ## Shared system
 
 - Genre: modern-minimal, technical and restrained.
-- Home: explain the shared resource/Form/Host/client model, then link directly to v1
-  and v2. Do not add a catalogue-status panel or an extra index layer.
+- Home: explain the shared resource/Form/Host/client model, illustrate a management
+  request and its lifecycle, then offer reader-specific guides. Do not add a
+  version list, catalogue-status panel or extra index layer.
 - Documentation: long-document layout with a version-scoped sidebar and outline.
 - Preserve VitePress's installed sans/mono fonts, light/dark palette, search
   launcher, language switch, footer and keyboard conventions. Do not rotate themes.
@@ -22,14 +23,16 @@ page. Its readers are Form authors, Host implementers and client implementers.
 ## Information architecture
 
 The root is the actual Takoform overview, not a catalogue or secondary index. Primary
-navigation contains only Overview, v1 and v2. The API documentation is fixed: v1 is
-frozen and v2 is fixed. These statuses do not claim that any Host, SDK or Provider is
-available or conformant.
+navigation contains Overview and a separate API version selector. Keep publication
+status chatter out of the reading interface; the normative source and its language
+remain identified on specification pages. The home title, subtitle and section
+headings are English in both locales, with localized explanatory prose.
 
 `/v1/` and `/v2/` are the documentation entries. Existing guide and specification
 URLs remain reachable; a single route classifier assigns their version. v1 pages
 must not inherit v2 guides in the sidebar or previous/next navigation. Normative
-prose, raw sources and JSON schemas are not rewritten for presentation.
+prose, raw sources and JSON schemas are not rewritten for presentation. The separately
+approved v2 editorial correction preserves protocol meaning and v1 bytes.
 
 Every documentation page identifies its version separately from its language.
 Switch versions using explicit equivalent-page mappings only; when no equivalent

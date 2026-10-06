@@ -861,9 +861,9 @@ export function inspectRenderedSitePages(pages, servedPaths = new Set()) {
     }
     if (page.releaseState === "published" && page.authority === "normative") {
       const notice = page.html.match(/<aside\b[^>]*class="[^"]*\bmirror-notice\b[^"]*"[^>]*>([\s\S]*?)<\/aside>/u);
-      if (notice === null || !/(?:frozen|fixed|固定済み)/iu.test(readableText(notice[1])) ||
+      if (notice === null || !/(?:Normative source \(English original\)|規範原文（英語）)/u.test(readableText(notice[1])) ||
           /(?:revision.open|open to revision|改訂可能)/iu.test(readableText(notice[1]))) {
-        problems.push(`${page.path} does not identify its fixed normative source`);
+        problems.push(`${page.path} does not identify its English normative source`);
       }
     }
     if (page.sourceLanguage !== undefined &&

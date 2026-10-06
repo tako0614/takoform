@@ -94,14 +94,15 @@ describe("takoform.com site derivation", () => {
     expect(output).toContain("パッケージ を 検証");
     expect(renderForSearch("", { frontmatter: { search: false } }, { render: () => html })).toBe("");
   });
-  test("presents a version-neutral homepage with two documentation entries", () => {
+  test("explains the model and lifecycle with version selection left to the header", () => {
     const source = readFileSync("website/index.md", "utf8");
     expect(source).toContain("title: Takoform\n");
     expect(source).toContain("titleTemplate: false");
     const component = readFileSync("website/.vitepress/theme/components/HomePage.vue", "utf8");
     for (const target of [
-      "/v1/",
-      "/v2/",
+      "/client/",
+      "/authoring/",
+      "/host-api/",
     ]) expect(component).toContain(target);
     expect(component).toContain('<h1 id="home-title">Takoform</h1>');
     expect(component).toContain("Form");
@@ -109,7 +110,10 @@ describe("takoform.com site derivation", () => {
     expect(component).not.toContain("Open to revision");
     expect(component).not.toContain("改訂可能");
     expect(component).not.toContain("/reference/");
-    expect(component).not.toContain("home-request");
+    expect(component).not.toContain("home-index");
+    expect(component).toContain("A common HTTP API for resource management.");
+    expect(component).toContain("Forms, Hosts and clients");
+    expect(component).toContain("POST /apis/forms.takoform.com/v2/resources");
   });
   test("separates version sidebars and keeps shared pages out of their sequences", async () => {
     const config = (await import("../website/.vitepress/config.mts")).default;
@@ -118,7 +122,7 @@ describe("takoform.com site derivation", () => {
     for (const localePrefix of ["", "/en"]) {
       const theme = localePrefix ? config.locales.en.themeConfig : config.themeConfig;
       expect(theme.nav.map((item) => item.link)).toEqual(
-        ["/", "/v1/", "/v2/"].map((page) => `${localePrefix}${page}`),
+        [`${localePrefix}/`],
       );
       const sidebars = theme.sidebar;
       expect(Array.isArray(sidebars)).toBe(false);
@@ -165,7 +169,7 @@ describe("takoform.com site derivation", () => {
       expect(v2Links.filter((link) => link.startsWith("/")).sort()).toEqual(
         [...new Set(expectedV2Routes)].sort(),
       );
-      expect(theme.nav.map((item) => documentVersion(item.link))).toEqual([null, "v1", "v2"]);
+      expect(theme.nav.map((item) => documentVersion(item.link))).toEqual([null]);
     }
   });
   test("translations preserve every example byte and pair all guide headings", async () => {
@@ -197,9 +201,9 @@ describe("takoform.com site derivation", () => {
       expect(links(english)).toEqual(links(japanese));
     }
     expect(readFileSync("website/en/v2/index.md", "utf8"))
-      .toContain("The English normative source is fixed.");
+      .toContain("The overview, HTTP API, and Form requirements are normative.");
     expect(readFileSync("website/en/v2/index.md", "utf8"))
-      .toContain("Changes to protocol meaning require another API major.");
+      .toContain("Examples and migration guidance explain the specification.");
     expect(readFileSync("spec/host-api/v2/migration.md", "utf8"))
       .toContain("[v1 contract](../v1.md)");
     expect(readFileSync("website/en/v2/index.md", "utf8"))
@@ -491,7 +495,7 @@ describe("takoform.com site derivation", () => {
     expect(files.has("website/spec/host-api/v2/unlisted.md")).toBe(false);
   });
 
-  test("rejects a fixed normative mirror incorrectly described as open to revision", () => {
+  test("identifies the English normative source without requiring release-status copy", () => {
     const html = `<!doctype html><html lang="en" data-document-authority="normative"><head>
 <title>V2 contract</title><meta property="og:title" content="V2 contract">
 <meta property="og:url" content="https://takoform.com/">
@@ -499,16 +503,16 @@ describe("takoform.com site derivation", () => {
 <meta name="twitter:title" content="V2 contract">
 <meta name="twitter:description" content="V2 contract">
 </head><body><main><h1>V2 contract</h1>
-<aside class="mirror-notice" data-document-authority="normative" data-release-state="published">English frozen source</aside>
+<aside class="mirror-notice" data-document-authority="normative" data-release-state="published">Normative source (English original)</aside>
 <div lang="en" class="specification-source">Source</div></main></body></html>`;
     const page = {
       path: "dist/index.html", route: "/", html, lang: "en", authority: "normative",
       mirror: true, releaseState: "published", sourceLanguage: "en",
     };
     expect(inspectRenderedSitePages([page])).toEqual([]);
-    for (const wrong of ["revision-open source", "source", "frozen source, open to revision", "改訂可能"]) {
-      expect(inspectRenderedSitePages([{ ...page, html: html.replace("English frozen source", wrong) }]))
-        .toContain("dist/index.html does not identify its fixed normative source");
+    for (const wrong of ["revision-open source", "source", "English explanatory source", "Normative source (English original), open to revision", "改訂可能"]) {
+      expect(inspectRenderedSitePages([{ ...page, html: html.replace("Normative source (English original)", wrong) }]))
+        .toContain("dist/index.html does not identify its English normative source");
     }
   });
 
@@ -768,13 +772,9 @@ describe("takoform.com site derivation", () => {
     }
     expect(config.themeConfig?.nav).toEqual([
       { text: "概要", link: "/" },
-      { text: "v1", link: "/v1/" },
-      { text: "v2", link: "/v2/" },
     ]);
     expect(config.locales.en.themeConfig.nav).toEqual([
       { text: "Overview", link: "/en/" },
-      { text: "v1", link: "/en/v1/" },
-      { text: "v2", link: "/en/v2/" },
     ]);
     const links = [];
     const collectLinks = (value) => {

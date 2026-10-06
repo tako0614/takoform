@@ -16,8 +16,7 @@ This is the normative HTTP, lifecycle, concurrency, and retry contract for Takof
 contracts; [examples](/spec/host-api/v2/examples) are non-normative request/response illustrations. Normative prose here
 is binding: “must” and “must not” state conformance requirements regardless of capitalization. Uppercase
 BCP 14 terms used for emphasis elsewhere in the normative v2 documents do not make lowercase obligations
-optional. “May” identifies an implementation choice. The TypeScript-like shapes below describe JSON; they
-do not require TypeScript.
+optional. “May” identifies an implementation choice. The JSON shapes below use TypeScript-like notation.
 
 A client discovers a Host, checks support for an exact Form URL, submits a resource change, and follows the
 returned Operation. Acceptance of an Operation is distinct from completion and from application availability.
@@ -59,9 +58,8 @@ All successful bodies are JSON. This matrix identifies the successful body and s
 
 The API identifier is `forms.takoform.com/v2`; the standard API root is `/apis/forms.takoform.com/v2`. A
 minimal Host implements discovery, Form support, Resource create/list/read/update/delete, and Operation
-read. Offerings, previews, and private inputs are independent optional capabilities. The common API
-specifies the transport and lifecycle, not a universal resource-type catalog, backend, SDK, or application
-data-transfer mechanism.
+read. Offerings, previews, and private inputs are independent optional capabilities. A Form specifies
+resource-specific behavior; the common API specifies transport and lifecycle.
 
 ### HTTP and JSON
 
@@ -138,8 +136,8 @@ rather than “repair” the URL and send authenticated requests to the result.
 Both `documentation` values are absolute HTTPS URLs. `schemes` is a nonempty array of nonempty HTTP
 authentication-scheme strings (for example `Bearer`). Only a Host contained within a local administration
 boundary may declare `None`. `None` is not permission to expose unauthenticated writes to the Internet; the
-Host operator constrains reachability. This API does not define account creation, login, credential
-issuance, role hierarchy, or payment agreements.
+Host operator constrains reachability. Credential enrollment, role hierarchies, and commercial terms are
+Host-owned rather than part of this common wire protocol.
 
 Each `limits` value is a positive integer. `maxRequestBytes` limits the UTF-8 octets of a JSON request
 body, excluding HTTP headers and transfer framing; if the Host accepts a content-coded request, the limit
@@ -593,8 +591,8 @@ At minimum, a Host must demonstrate through its public API that it:
    instead of hiding an orphan as success.
 6. For each advertised optional feature, also satisfies its refusal, retry, and secret non-disclosure rules.
 
-Common API conformance does not imply completion of any particular Form, backend, SDK, or Provider. Form
-conformance is also measured against that author’s exact specification.
+Common API conformance covers the rules above. Conformance to a particular Form is measured separately
+against that author’s exact specification.
 
 
 </div>

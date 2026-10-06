@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-// One-way verifier for the fixed Host API v1 and v2 normative sources. There
-// is deliberately no writer: each manifest's first Git addition is the
-// authority for every later check.
+// Read-only verifier: v1 remains at first-add bytes; v2 permits the one
+// approved editorial commit while preserving its original public edition.
+// Subsequent normative-source changes require a new API identity.
 
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
@@ -20,6 +20,13 @@ export const EXPECTED_V2_NORMATIVE_PROSE = Object.freeze([
   "spec/host-api/v2/http.md",
   "spec/host-api/v2/forms.md",
 ]);
+// The first public English edition remains an exact transition predecessor,
+// not an open-ended alternative to the current fixed edition.
+export const INITIAL_V2_NORMATIVE_SHA256 = Object.freeze({
+  "spec/host-api/v2/README.md": "sha256:d93d3118bf231b00066e4cf1402f3a214f7e279aa93fde56e508e593bf6dc6b8",
+  "spec/host-api/v2/http.md": "sha256:2d5d272430bfea0f4daa7955d6ecc4db1a9cf4f79048fcf6737e9691126d0a1a",
+  "spec/host-api/v2/forms.md": "sha256:5754a1fcca22054a5fe849128acd18ead0bd90e9e6b973daa5ae1243f4de359d",
+});
 export const SCHEMA_LEDGER_PATH = "release/public-schema-identities.json";
 export const EXPECTED_NORMATIVE_PROSE = Object.freeze([
   "spec/host-api/v1.md",
@@ -147,6 +154,23 @@ function commitAccessor(root, commit) {
       return result.stdout;
     },
   };
+}
+
+function contentChangingCommits(root, commits, paths) {
+  // --full-history also lists a merge that merely selected one parent's
+  // already-reviewed bytes. That is not a third editorial edition.
+  const bytesAt = (commit, path) => {
+    try { return commitAccessor(root, commit).read(path); } catch { return null; }
+  };
+  return commits.filter((commit) => {
+    const [, ...parents] = runGit(root, ["rev-list", "--parents", "-n", "1", commit]).stdout.trim().split(/\s+/u);
+    if (parents.length < 2) return true;
+    return !parents.some((parent) => paths.every((path) => {
+      const current = bytesAt(commit, path);
+      const before = bytesAt(parent, path);
+      return current === null ? before === null : before !== null && current.equals(before);
+    }));
+  });
 }
 
 function validateDigestEntries(entries, expectedPaths, label, problems, lane = "v1") {
@@ -424,7 +448,7 @@ function inspectV2Tree(accessor) {
       problems.push(`${entry.path} differs from its frozen sha256`);
     }
   }
-  return { problems: [...new Set(problems)], manifestBytes };
+  return { problems: [...new Set(problems)], manifest, manifestBytes };
 }
 
 export function readHostAPIFreezeManifest(root) {
@@ -452,29 +476,63 @@ function repositoryHistory(root, manifestPath = FREEZE_PATH) {
   const atHead = runGit(root, ["cat-file", "-e", `HEAD:${manifestPath}`], {
     allowFailure: true,
   }).status === 0;
-  return { shallow, firstAddCommit: commits[0] ?? null, atHead };
+  const changes = manifestPath === V2_FREEZE_PATH
+    ? contentChangingCommits(root,
+      runGit(root, ["log", "--full-history", "--reverse", "--format=%H", "--root", "HEAD", "--", manifestPath]).stdout.trim().split(/\s+/u).filter(Boolean),
+      [manifestPath])
+    : null;
+  return { shallow, firstAddCommit: commits[0] ?? null, atHead, changes };
 }
 
-function compareV2FirstAdd(root, current, firstAddCommit, problems) {
+function compareV2Edition(root, current, history, problems) {
+  const firstAddCommit = history.firstAddCommit;
   const historical = inspectV2Tree(commitAccessor(root, firstAddCommit));
   for (const problem of historical.problems) {
     problems.push(`first-add commit ${firstAddCommit}: ${problem}`);
   }
-  if (historical.manifestBytes !== null && current.manifestBytes !== null &&
-    !current.manifestBytes.equals(historical.manifestBytes)) {
-    problems.push(`${V2_FREEZE_PATH} differs from its first-add commit ${firstAddCommit}`);
-  }
-  const currentAccessor = fileAccessor(root);
-  const historicalAccessor = commitAccessor(root, firstAddCommit);
-  for (const path of EXPECTED_V2_NORMATIVE_PROSE) {
-    try {
-      if (!currentAccessor.read(path).equals(historicalAccessor.read(path))) {
-        problems.push(`${path} differs from its first-add commit ${firstAddCommit}`);
-      }
-    } catch {
-      // inspectV2Tree already reports missing current or historical source.
+  for (const entry of historical.manifest?.normativeProse ?? []) {
+    if (entry.sha256 !== INITIAL_V2_NORMATIVE_SHA256[entry.path]) {
+      problems.push(`first-add commit ${firstAddCommit}: ${entry.path} differs from the original public edition`);
     }
   }
+  const changes = history.changes ?? [];
+  if (changes[0] !== firstAddCommit || changes.length > 2) {
+    problems.push(`${V2_FREEZE_PATH} must have only its first-add and one editorial modification in full Git history`);
+    return firstAddCommit;
+  }
+  const editionCommit = changes[1] ?? firstAddCommit;
+  const edition = editionCommit === firstAddCommit ? historical
+    : inspectV2Tree(commitAccessor(root, editionCommit));
+  if (edition !== historical) {
+    for (const problem of edition.problems) problems.push(`editorial commit ${editionCommit}: ${problem}`);
+    if (edition.manifestBytes?.equals(historical.manifestBytes)) {
+      problems.push(`${V2_FREEZE_PATH} editorial commit did not change the manifest bytes`);
+    }
+  }
+  const sourceChanges = contentChangingCommits(root,
+    runGit(root, ["log", "--full-history", "--format=%H",
+      `${firstAddCommit}..HEAD`, "--", ...EXPECTED_V2_NORMATIVE_PROSE]).stdout.trim().split(/\s+/u).filter(Boolean),
+    EXPECTED_V2_NORMATIVE_PROSE);
+  if (sourceChanges.some((commit) => commit !== editionCommit) ||
+    (editionCommit !== firstAddCommit && !sourceChanges.includes(editionCommit))) {
+    problems.push(`v2 normative sources may change only in the one ${V2_FREEZE_PATH} editorial commit`);
+  }
+  if (edition.manifestBytes !== null && current.manifestBytes !== null &&
+    !current.manifestBytes.equals(edition.manifestBytes)) {
+    problems.push(`${V2_FREEZE_PATH} differs from its ${editionCommit === firstAddCommit ? "first-add" : "editorial"} commit ${editionCommit}`);
+  }
+  const currentAccessor = fileAccessor(root);
+  const editionAccessor = commitAccessor(root, editionCommit);
+  for (const path of EXPECTED_V2_NORMATIVE_PROSE) {
+    try {
+      if (!currentAccessor.read(path).equals(editionAccessor.read(path))) {
+        problems.push(`${path} differs from its ${editionCommit === firstAddCommit ? "first-add" : "editorial"} commit ${editionCommit}`);
+      }
+    } catch {
+      // inspectV2Tree already reports missing current or committed source.
+    }
+  }
+  return editionCommit;
 }
 
 function compareFirstAdd(root, current, firstAddCommit, problems) {
@@ -546,12 +604,15 @@ export function verifyHostAPIFreeze(root, { mode = "check" } = {}) {
   } else {
     compareFirstAdd(root, current, history.firstAddCommit, problems);
   }
-  if (v2History.firstAddCommit === null) {
+  let v2EditionCommit = null;
+  if (v2History.shallow) {
+    problems.push("cannot prove the v2 editorial history from a shallow Git history");
+  } else if (v2History.firstAddCommit === null) {
     problems.push(`${V2_FREEZE_PATH} has no first-add commit; commit the fixed current v2 source and manifest together`);
   } else {
-    compareV2FirstAdd(root, currentV2, v2History.firstAddCommit, problems);
+    v2EditionCommit = compareV2Edition(root, currentV2, v2History, problems);
   }
-  return { problems: [...new Set(problems)], firstAddCommit: history.firstAddCommit, v2FirstAddCommit: v2History.firstAddCommit };
+  return { problems: [...new Set(problems)], firstAddCommit: history.firstAddCommit, v2FirstAddCommit: v2History.firstAddCommit, v2EditionCommit };
 }
 
 export function inspectHostAPIFreeze(root, options = {}) {
@@ -579,7 +640,7 @@ export function main(argv = process.argv.slice(2)) {
     process.stdout.write("host-api-freeze: bootstrap verified the uncommitted Host API v1 and v2 closures\n");
   } else {
     process.stdout.write(
-      `host-api-freeze: current v1/v2 bytes equal first-add commits ${result.firstAddCommit} and ${result.v2FirstAddCommit}\n`,
+      `host-api-freeze: current v1 bytes equal first-add ${result.firstAddCommit}; v2 edition ${result.v2EditionCommit} retains first-add ${result.v2FirstAddCommit}\n`,
     );
   }
 }
