@@ -1,5 +1,4 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -92,7 +91,7 @@ function fixtureRoot(pageBodies = {}) {
     const file = join(root, `${SITE_DIST}${fileRoute}`);
     mkdirSync(dirname(file), { recursive: true });
     writeFileSync(file, pageBodies[route] ?? (V2_NORMATIVE_ROUTES.includes(route)
-      ? `<aside data-release-state="revision-open">v2 source ${route}</aside>` : `bytes for ${route}`));
+      ? `<aside data-release-state="published">v2 source ${route}</aside>` : `bytes for ${route}`));
   }
   for (const entry of SCHEMA_ENTRIES) {
     const route = new URL(entry.id).pathname;
@@ -240,15 +239,17 @@ function servingFetch(root, {
   };
 }
 
-function priorRevisionRoot() {
+function priorRevisionRoot({ changeSource = true, state = "revision-open" } = {}) {
   const root = fixtureRoot();
-  for (const route of V2_RAW_SOURCE_ROUTES) {
-    writeFileSync(join(root, `${SITE_DIST}${route}`), `previous published source for ${route}\n`);
+  if (changeSource) {
+    for (const route of V2_RAW_SOURCE_ROUTES) {
+      writeFileSync(join(root, `${SITE_DIST}${route}`), `previous source for ${route}\n`);
+    }
   }
   for (const route of V2_NORMATIVE_ROUTES) {
     const fileRoute = route.endsWith("/") ? `${route}index.html` : `${route}.html`;
     writeFileSync(join(root, `${SITE_DIST}${fileRoute}`),
-      `<aside data-release-state="published">previous published page for ${route}</aside>`);
+      `<aside data-release-state="${state}">previous page for ${route}</aside>`);
   }
   return root;
 }
@@ -646,7 +647,7 @@ describe("takoform-site runs", () => {
     expect(run.calls.some(([command, ...args]) => command === "wrangler" && args.includes("deploy"))).toBe(false);
   });
 
-  test("a revision-open preview does not sample public aliases", async () => {
+  test("a preview does not sample public aliases", async () => {
     const root = fixtureRoot();
     const run = gitRunner({ dirty: true, branch: "feature/v2-preview" });
     const normal = servingFetch(root);
@@ -827,9 +828,14 @@ describe("takoform-site runs", () => {
       expect(events).not.toContain(`fetch:${SCHEMA_PUBLIC_ORIGIN}${route}`);
     }
     for (const route of ABSENT_ROUTES) {
+      expect(events).toContain(`fetch:${DEPLOYMENT}${route}`);
       expect(events).toContain(`fetch:${SITE_PUBLIC_ORIGIN}${route}`);
       expect(events).toContain(`fetch:${SITE_WWW_ORIGIN}${route}`);
     }
+    expect(ABSENT_ROUTES).toEqual(expect.arrayContaining([
+      "/reference/", "/en/reference/", "/spec/", "/en/spec/",
+      "/spec/host-api/", "/en/spec/host-api/",
+    ]));
     expect(ABSENT_ROUTES).toContain("/spec/project-lifecycle");
     expect(ABSENT_ROUTES).toContain("/spec/project-lifecycle/");
     expect(run.calls.filter(([command]) => command === "bun")).toEqual([
@@ -844,28 +850,61 @@ describe("takoform-site runs", () => {
     ).toHaveLength(1);
   });
 
-  test("routine production publishes changed English v2 source against a published prior revision", async () => {
+  test("routine production refuses a prior v2 source that differs from fixed current bytes", async () => {
     const root = fixtureRoot();
     const priorRoot = priorRevisionRoot();
     const run = gitRunner();
-    const result = await runSiteDeploy(
+    await expect(runSiteDeploy(
       parseSiteDeployArgs(["--apply", "--environment", "production", "--execute"]),
       { root, run, env: {}, fetch: changedRevisionFetch(root, priorRoot, run) },
+    )).rejects.toThrow("prior public Host API v2 source differs from the fixed normative bytes");
+    expect(run.calls.some(([command, ...args]) => command === "wrangler" && args.includes("deploy"))).toBe(false);
+  });
+
+  test("a removed index on the prior deployment does not block an absent new deployment", async () => {
+    const root = fixtureRoot();
+    const run = gitRunner();
+    const current = servingFetch(root);
+    const removedRoute = "/reference/";
+    const fetch = (url, init) => {
+      if (url === `${ROLLBACK_CANDIDATE}${removedRoute}`) {
+        return { status: 200, arrayBuffer: async () => Buffer.from("old reference index") };
+      }
+      return current(url, init);
+    };
+    const result = await runSiteDeploy(
+      parseSiteDeployArgs(["--apply", "--environment", "production", "--execute"]),
+      { root, run, env: {}, fetch },
     );
     expect(result.executed).toBe(true);
-    expect(Object.keys(result.readback.immutable.sources)).toEqual(V2_RAW_SOURCE_ROUTES);
-    expect(result.readback.apex.sources).toEqual(result.readback.immutable.sources);
-    expect(result.readback.www.sources).toEqual(result.readback.immutable.sources);
-    expect(result.readback.immutable.sources).not.toEqual(
-      Object.fromEntries(V2_RAW_SOURCE_ROUTES.map((route) => [route,
-        `sha256:${createHash("sha256").update(localBody(priorRoot, route)).digest("hex")}`])),
-    );
+    expect(result.readback.immutable.absent).toContain(removedRoute);
+  });
+
+  test("new deployment exposing a removed index fails exact post-upload readback", async () => {
+    const root = fixtureRoot();
+    const run = gitRunner();
+    const removedRoute = "/en/spec/host-api/";
+    const fetch = servingFetch(root, {
+      override: new Map([[`${DEPLOYMENT}${removedRoute}`,
+        { status: 200, arrayBuffer: async () => Buffer.from("stale index") }]]),
+    });
+    let failure;
+    try {
+      await runSiteDeploy(parseSiteDeployArgs(["--apply", "--environment", "production", "--execute"]),
+        { root, run, env: {}, fetch });
+    } catch (error) { failure = error; }
+    expect(failure).toMatchObject({
+      kind: "takoform.site-post-upload-failure",
+      uploadSucceeded: true,
+      reason: "immutable deployment readback failed",
+    });
+    expect(failure.message).toContain(`retired route ${DEPLOYMENT}${removedRoute} returned HTTP 200`);
     expect(run.calls.filter(([command, ...args]) => command === "wrangler" && args.includes("deploy"))).toHaveLength(1);
   });
 
-  test("post-upload failure may offer the exact prior revision without demanding new v2 bytes", async () => {
+  test("post-upload failure may offer a prior revision-open page with the same fixed v2 bytes", async () => {
     const root = fixtureRoot();
-    const priorRoot = priorRevisionRoot();
+    const priorRoot = priorRevisionRoot({ changeSource: false });
     const run = gitRunner();
     const fetch = changedRevisionFetch(root, priorRoot, run, {
       override: new Map([[`${DEPLOYMENT}${SCHEMA_ROUTES[0]}`,

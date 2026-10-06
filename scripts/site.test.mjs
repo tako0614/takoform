@@ -102,12 +102,13 @@ describe("takoform.com site derivation", () => {
     for (const target of [
       "/v1/",
       "/v2/",
-      "/reference/",
-      "/site",
     ]) expect(component).toContain(target);
     expect(component).toContain('<h1 id="home-title">Takoform</h1>');
-    expect(component).toContain("Frozen specification");
-    expect(component).toContain("Open to revision");
+    expect(component).toContain("Form");
+    expect(component).toContain("Host");
+    expect(component).not.toContain("Open to revision");
+    expect(component).not.toContain("改訂可能");
+    expect(component).not.toContain("/reference/");
     expect(component).not.toContain("home-request");
   });
   test("separates version sidebars and keeps shared pages out of their sequences", async () => {
@@ -117,7 +118,7 @@ describe("takoform.com site derivation", () => {
     for (const localePrefix of ["", "/en"]) {
       const theme = localePrefix ? config.locales.en.themeConfig : config.themeConfig;
       expect(theme.nav.map((item) => item.link)).toEqual(
-        ["/", "/reference/", "/site"].map((page) => `${localePrefix}${page}`),
+        ["/", "/v1/", "/v2/"].map((page) => `${localePrefix}${page}`),
       );
       const sidebars = theme.sidebar;
       expect(Array.isArray(sidebars)).toBe(false);
@@ -134,7 +135,7 @@ describe("takoform.com site derivation", () => {
         return links;
       };
       expect(sidebars["/"]).toEqual([]);
-      for (const page of ["/reference/", "/site"]) expect(sidebars[`${localePrefix}${page}`]).toEqual([]);
+      expect(sidebars[`${localePrefix}/site`]).toEqual([]);
       const v1Links = collect(sidebars[`${localePrefix}/v1/`]);
       const v2Links = collect(sidebars[`${localePrefix}/v2/`]);
       const publishedRoutes = [
@@ -164,9 +165,7 @@ describe("takoform.com site derivation", () => {
       expect(v2Links.filter((link) => link.startsWith("/")).sort()).toEqual(
         [...new Set(expectedV2Routes)].sort(),
       );
-      for (const item of theme.nav) {
-        expect(documentVersion(item.link)).toBe(null);
-      }
+      expect(theme.nav.map((item) => documentVersion(item.link))).toEqual([null, "v1", "v2"]);
     }
   });
   test("translations preserve every example byte and pair all guide headings", async () => {
@@ -198,13 +197,13 @@ describe("takoform.com site derivation", () => {
       expect(links(english)).toEqual(links(japanese));
     }
     expect(readFileSync("website/en/v2/index.md", "utf8"))
-      .toContain("The normative source is English and remains open to revision.");
+      .toContain("The English normative source is fixed.");
     expect(readFileSync("website/en/v2/index.md", "utf8"))
-      .toContain("Local copies and previews may contain different text.");
+      .toContain("Changes to protocol meaning require another API major.");
     expect(readFileSync("spec/host-api/v2/migration.md", "utf8"))
       .toContain("[v1 contract](../v1.md)");
     expect(readFileSync("website/en/v2/index.md", "utf8"))
-      .toContain("remains open to revision");
+      .not.toContain("remains open to revision");
     expect(readFileSync("website/v2/index.md", "utf8"))
       .toContain("Host実装者:");
     expect(readFileSync("website/v2/index.md", "utf8"))
@@ -437,11 +436,11 @@ describe("takoform.com site derivation", () => {
     expect(V2_SPEC_DOCUMENTS.map(({ path, normative, sourceLanguage, releaseState }) => ({
       path, normative, sourceLanguage, releaseState,
     }))).toEqual([
-      { path: "spec/host-api/v2/README.md", normative: true, sourceLanguage: "en", releaseState: "revision-open" },
-      { path: "spec/host-api/v2/http.md", normative: true, sourceLanguage: "en", releaseState: "revision-open" },
-      { path: "spec/host-api/v2/forms.md", normative: true, sourceLanguage: "en", releaseState: "revision-open" },
-      { path: "spec/host-api/v2/examples.md", normative: false, sourceLanguage: "en", releaseState: "revision-open" },
-      { path: "spec/host-api/v2/migration.md", normative: false, sourceLanguage: "en", releaseState: "revision-open" },
+      { path: "spec/host-api/v2/README.md", normative: true, sourceLanguage: "en", releaseState: "published" },
+      { path: "spec/host-api/v2/http.md", normative: true, sourceLanguage: "en", releaseState: "published" },
+      { path: "spec/host-api/v2/forms.md", normative: true, sourceLanguage: "en", releaseState: "published" },
+      { path: "spec/host-api/v2/examples.md", normative: false, sourceLanguage: "en", releaseState: "published" },
+      { path: "spec/host-api/v2/migration.md", normative: false, sourceLanguage: "en", releaseState: "published" },
     ]);
     for (const document of V2_SPEC_DOCUMENTS) {
       expect(MIRRORED_SPEC_DOCUMENTS).not.toContain(document.path);
@@ -485,13 +484,14 @@ describe("takoform.com site derivation", () => {
     }
     expect(files.get("website/spec/host-api/v1.md").toString("utf8"))
       .toContain("normative: true");
-    expect(files.get("website/spec/index.md").toString("utf8"))
-      .toContain("[Host API v2 specification](/spec/host-api/v2/)");
+    expect(files.has("website/spec/index.md")).toBe(false);
+    expect(files.has("website/spec/host-api/index.md")).toBe(false);
+    expect(HAND_AUTHORED_PAGE_SOURCES).not.toContain("website/reference/index.md");
     expect(files.has("website/drafts/v2/host-api-v2.md")).toBe(false);
     expect(files.has("website/spec/host-api/v2/unlisted.md")).toBe(false);
   });
 
-  test("rejects a revision-open mirror whose notice still claims the old frozen state", () => {
+  test("rejects a fixed normative mirror incorrectly described as open to revision", () => {
     const html = `<!doctype html><html lang="en" data-document-authority="normative"><head>
 <title>V2 contract</title><meta property="og:title" content="V2 contract">
 <meta property="og:url" content="https://takoform.com/">
@@ -499,15 +499,17 @@ describe("takoform.com site derivation", () => {
 <meta name="twitter:title" content="V2 contract">
 <meta name="twitter:description" content="V2 contract">
 </head><body><main><h1>V2 contract</h1>
-<aside class="mirror-notice" data-document-authority="normative" data-release-state="revision-open">English revision-open candidate</aside>
+<aside class="mirror-notice" data-document-authority="normative" data-release-state="published">English frozen source</aside>
 <div lang="en" class="specification-source">Source</div></main></body></html>`;
     const page = {
       path: "dist/index.html", route: "/", html, lang: "en", authority: "normative",
-      mirror: true, releaseState: "revision-open", sourceLanguage: "en",
+      mirror: true, releaseState: "published", sourceLanguage: "en",
     };
     expect(inspectRenderedSitePages([page])).toEqual([]);
-    expect(inspectRenderedSitePages([{ ...page, html: html.replace("revision-open candidate", "frozen source") }]))
-      .toContain("dist/index.html does not render its revision-open release state");
+    for (const wrong of ["revision-open source", "source", "frozen source, open to revision", "改訂可能"]) {
+      expect(inspectRenderedSitePages([{ ...page, html: html.replace("English frozen source", wrong) }]))
+        .toContain("dist/index.html does not identify its fixed normative source");
+    }
   });
 
   test("rewrites v2 document links to locale-correct routes without changing frozen v1", () => {
@@ -532,7 +534,7 @@ describe("takoform.com site derivation", () => {
     expect(page).toContain("[migration](/spec/host-api/v2/migration)");
     expect(page).toContain("[v1](/spec/host-api/v1)");
     expect(page).toContain("normative: true");
-    expect(page).toContain("releaseState: revision-open");
+    expect(page).toContain("releaseState: published");
     expect(page).not.toContain("draft:");
     expect(page).not.toContain("design/takoform-v2-spec-20261004");
 
@@ -702,7 +704,8 @@ describe("takoform.com site derivation", () => {
       expect.arrayContaining([
         "website/start/index.md",
         "website/guides/index.md",
-        "website/reference/index.md",
+        "website/v1/index.md",
+        "website/v2/index.md",
         "website/glossary.md",
       ]),
     );
@@ -712,7 +715,6 @@ describe("takoform.com site derivation", () => {
       "website/authoring/index.md",
       "website/client/index.md",
       "website/use/index.md",
-      "website/reference/index.md",
       "website/v1/index.md",
       "website/v2/index.md",
       "website/glossary.md",
@@ -728,7 +730,8 @@ describe("takoform.com site derivation", () => {
         [
           "website/start/index.md",
           "website/guides/index.md",
-          "website/reference/index.md",
+          "website/v1/index.md",
+          "website/v2/index.md",
           "website/glossary.md",
           "website/public/_headers",
           "website/public/robots.txt",
@@ -764,14 +767,14 @@ describe("takoform.com site derivation", () => {
       expect(head).toContainEqual(["meta", { property: "og:title", content: "Page | Takoform" }]);
     }
     expect(config.themeConfig?.nav).toEqual([
-      { text: "トップ", link: "/" },
-      { text: "仕様一覧", link: "/reference/" },
-      { text: "このサイトについて", link: "/site" },
+      { text: "概要", link: "/" },
+      { text: "v1", link: "/v1/" },
+      { text: "v2", link: "/v2/" },
     ]);
     expect(config.locales.en.themeConfig.nav).toEqual([
-      { text: "Home", link: "/en/" },
-      { text: "Reference", link: "/en/reference/" },
-      { text: "About", link: "/en/site" },
+      { text: "Overview", link: "/en/" },
+      { text: "v1", link: "/en/v1/" },
+      { text: "v2", link: "/en/v2/" },
     ]);
     const links = [];
     const collectLinks = (value) => {
@@ -785,7 +788,7 @@ describe("takoform.com site derivation", () => {
     collectLinks(config.themeConfig?.nav);
     collectLinks(config.themeConfig?.sidebar);
     expect(links).toEqual(
-      expect.arrayContaining(["/start/", "/guides/", "/reference/", "/glossary"]),
+      expect.arrayContaining(["/start/", "/guides/", "/v1/", "/v2/", "/glossary"]),
     );
     const frozen = config.transformHtml?.(
       '<html lang="ja-JP"><head></head></html>',

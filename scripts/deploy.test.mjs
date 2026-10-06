@@ -124,8 +124,9 @@ describe("Takoform deploy entrypoint", () => {
     expect(site.obligations.provenance).toContain("check:site");
     expect(site.obligations.provenance).toContain("check:host-api-freeze");
     expect(site.obligations.provenance).toContain("credential-free read of the public refs/heads/main");
-    expect(site.obligations.provenance).toContain("Host API v1 and ledgered schema bytes remain fixed");
-    expect(site.obligations.provenance).toContain("revision-open");
+    expect(site.obligations.provenance).toContain("Both Host API v1 and current English v2 normative source bytes are fixed");
+    expect(site.obligations.provenance).toContain("ledgered schema bytes remain fixed");
+    expect(site.obligations.provenance).toContain("current English v2 normative source bytes are fixed");
     expect(site.obligations["post-conditions"]).toContain("immutable per-deployment URL");
     expect(site.obligations["post-conditions"]).toContain("https://takoform.com");
     expect(site.obligations["post-conditions"]).toContain("https://www.takoform.com");
@@ -164,7 +165,7 @@ describe("Takoform deploy entrypoint", () => {
     expect(result).toEqual({ delegated: "site" });
   });
 
-  test("publishes revised v2 documentation through routine site only", () => {
+  test("publishes site presentation around fixed v2 source through routine site only", () => {
     expect(DEPLOY_CONTRACT.surfaces.find((entry) => entry.surface === SITE_SURFACE).triggers).toEqual([]);
     expect(parseDeployArgs([SITE_SURFACE, "--apply", "--environment", "production"]))
       .toMatchObject({ mode: "site", surface: SITE_SURFACE,

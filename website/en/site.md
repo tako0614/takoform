@@ -7,7 +7,7 @@ title: About this site
 This site explains Takoform, its HTTP API and how to write a Form specification.
 The [v1](/en/v1/) and [v2](/en/v2/) documentation have separate entry points. Switch versions at the top of the page; the sidebar and search follow the version you are reading.
 Language is a separate choice. Specifications retain their English source; guides are available in English and Japanese.
-Guides and examples are distinct from normative requirements. The v1 specification is frozen; v2 remains open to revision.
+Guides and examples are distinct from normative requirements. Both the v1 and v2 specifications are fixed.
 
 ## Scope {#この-repository-が扱う範囲}
 
@@ -25,8 +25,8 @@ This does not indicate v2 support. Each Form publisher maintains its own site fo
 
 ## Specifications and schemas {#identity-と配信}
 
-V2 pages are generated from their English specification sources. Their source and
-published, revision-open status appear on each specification page; the [overview](/en/v2/)
+V2 normative pages are generated from their fixed English sources. Their source and
+normative status appear on each specification page; the [overview](/en/v2/)
 provides the reading map. The frozen v1 specification scope is recorded in
 [`v1.freeze.json`](https://github.com/tako0614/takoform/blob/main/spec/host-api/v1.freeze.json).
 Public schema identities and digests are recorded in
@@ -46,7 +46,6 @@ with the publisher and the Host separately.
 
 - [Read v2](/en/v2/)
 - [Read v1](/en/v1/)
-- [Reference](/en/reference/)
 - [Schema index](/en/schemas/)
 - [Source code](https://github.com/tako0614/takoform)
 - [OpenTofu / Terraform HCL quick start](https://github.com/tako0614/terraform-provider-takoform/blob/main/README.md#quick-start)

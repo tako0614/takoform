@@ -88,20 +88,31 @@ describe("version-separated documentation navigation", () => {
     expect(getSidebar(rootSidebar, "/spec/host-api/v1.html")).toEqual(rootSidebar["/spec/host-api/v1"]);
     expect(getSidebar(rootSidebar, "/spec/core/index.html")).toEqual(rootSidebar["/spec/host-api/v1"]);
     expect(getSidebar(rootSidebar, "/spec/host-api/v2/http.html")).toEqual(rootSidebar["/spec/host-api/v2"]);
-    expect(config.themeConfig.nav.map((item) => item.link)).toEqual(["/", "/reference/", "/site"]);
-    expect(rootSidebar["/reference/"]).toEqual([]);
+    expect(config.themeConfig.nav.map((item) => item.link)).toEqual(["/", "/v1/", "/v2/"]);
+    expect(config.themeConfig.nav.map((item) => item.text)).toEqual(["概要", "v1", "v2"]);
+    expect(rootSidebar["/reference/"]).toBeUndefined();
     const englishSidebar = config.locales.en.themeConfig.sidebar;
-    expect(englishSidebar["/en/reference/"]).toEqual([]);
+    expect(englishSidebar["/en/reference/"]).toBeUndefined();
     expect(getSidebar(englishSidebar, "/en/spec/")).toEqual([]);
     expect(getSidebar(englishSidebar, "/en/spec/host-api/")).toEqual([]);
     expect(getSidebar(englishSidebar, "/en/spec/host-api/v1.html"))
       .toEqual(englishSidebar["/en/spec/host-api/v1"]);
     expect(config.locales.en.themeConfig.nav.map((item) => item.link))
-      .toEqual(["/en/", "/en/reference/", "/en/site"]);
+      .toEqual(["/en/", "/en/v1/", "/en/v2/"]);
+    expect(config.locales.en.themeConfig.nav.map((item) => item.text))
+      .toEqual(["Overview", "v1", "v2"]);
 
     const versionContext = readFileSync("website/.vitepress/theme/components/VersionContext.vue", "utf8");
+    const homePage = readFileSync("website/.vitepress/theme/components/HomePage.vue", "utf8");
     const layout = readFileSync("website/.vitepress/theme/Layout.vue", "utf8");
-    expect(versionContext).toContain("v1 frozen, v2 revision-open");
+    expect(versionContext).toContain("v1 frozen, v2 fixed");
+    expect(versionContext).toContain('"Fixed" : "固定済み"');
+    expect(homePage).toContain("A common HTTP API for managing resources.");
+    expect(homePage).toContain('`${localePrefix}/v1/`');
+    expect(homePage).toContain('`${localePrefix}/v2/`');
+    expect(homePage).not.toContain("/reference/");
+    expect(homePage).not.toContain("/site");
+    expect(homePage).not.toContain("Open to revision");
     expect(versionContext).toContain("class=\"version-status\"");
     expect(versionContext).toContain('label: "API v1"');
     expect(versionContext).toContain('label: "API v2"');

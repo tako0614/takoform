@@ -70,4 +70,4 @@ For checks of the OpenTofu implementation, see
 
 - [Retained Host API v1](/en/spec/host-api/v1) — v1 discovery and operations.
 - [Migration to v2](/en/spec/host-api/v2/migration) — differences when moving to the separate API.
-- [Reference](/en/reference/) — implementation specifications.
+- [Host API v1](/en/v1/) — the specification covered by these checks.

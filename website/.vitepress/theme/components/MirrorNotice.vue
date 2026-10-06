@@ -5,8 +5,8 @@ const { lang } = useData();
 // from a search result have no other way to know which of the two bytes they
 // are quoting, so every mirrored page says so above its first heading. The
 // generator supplies authority and release state independently: a mutable
-// index must never inherit normative wording, nor confuse v2's public,
-// revision-open contract with v1's frozen publication.
+// index must never inherit normative wording. Both published API contracts
+// are fixed; their surrounding explanations are not additional requirements.
 withDefaults(
   defineProps<{
     source: string;
@@ -25,31 +25,7 @@ withDefaults(
     :data-document-authority="normative ? 'normative' : 'non-normative'"
     :data-release-state="releaseState"
   >
-    <p v-if="releaseState === 'revision-open' && lang === 'ja-JP'">
-      {{ normative ? 'v2規範文書の原文' : 'v2の非規範的な解説の原文' }}（英語・改訂可能）:
-      <a v-if="url" :href="url"><code>{{ source }}</code></a>
-      <code v-else>{{ source }}</code>。
-      {{ normative ? '本文は今後も変更されることがあります。' : 'この解説は改訂可能で、規範文書ではありません。' }}
-      公開版は<a href="https://takoform.com/v2/">takoform.com</a>で確認できます。プレビューは公開版と異なる場合があります。
-    </p>
-    <p v-else-if="releaseState === 'revision-open'">
-      {{ normative ? 'V2 normative source' : 'V2 non-normative explanatory source' }}
-      (English, revision-open):
-      <a v-if="url" :href="url"><code>{{ source }}</code></a>
-      <code v-else>{{ source }}</code>.
-      {{ normative ? 'The text remains open to revision.' : 'This explanation may change and is not normative.' }}
-      See <a href="https://takoform.com/en/v2/">takoform.com</a> for the published version. Previews may differ.
-    </p>
-    <p v-else-if="releaseState === 'unpublished' && lang === 'ja-JP'">
-      {{ normative ? 'v2仕様の原文' : 'v2の解説' }}（{{ sourceLanguage === 'ja-JP' ? '日本語' : '英語' }}）:
-      <code>{{ source }}</code>。公開準備中です。
-    </p>
-    <p v-else-if="releaseState === 'unpublished'">
-      {{ normative ? 'V2 specification source' : 'V2 explanatory source' }}
-      ({{ sourceLanguage === 'ja-JP' ? 'Japanese' : 'English' }}):
-      <code>{{ source }}</code>. Publication is being prepared.
-    </p>
-    <p v-else-if="lang === 'ja-JP'">
+    <p v-if="lang === 'ja-JP'">
       {{ normative ? `仕様の原文（${sourceLanguage === 'ja-JP' ? '日本語' : '英語'}・固定済み）:` : `案内文の原文（${sourceLanguage === 'ja-JP' ? '日本語' : '英語'}）:` }}
       <a v-if="url" :href="url"><code>{{ source }}</code></a>
       <code v-else>{{ source }}</code>。
@@ -62,10 +38,10 @@ withDefaults(
       ({{ sourceLanguage === 'ja-JP' ? 'Japanese' : 'English' }}, frozen). This copy changes link addresses only; the repository file is authoritative.
     </p>
     <p v-else>
-      Index source:
+      Explanatory source:
       <a v-if="url" :href="url"><code>{{ source }}</code></a>
       <code v-else>{{ source }}</code>
-      ({{ sourceLanguage === 'ja-JP' ? 'Japanese' : 'English' }}). This is a navigation guide, not a specification.
+      ({{ sourceLanguage === 'ja-JP' ? 'Japanese' : 'English' }}). This explanation is not a normative specification.
     </p>
   </aside>
 </template>

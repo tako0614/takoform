@@ -3,7 +3,7 @@
 normative: false
 canonicalSource: spec/host-api/v2/migration.md
 sourceLanguage: en
-releaseState: revision-open
+releaseState: published
 ---
 
 <div lang="en" class="specification-source">

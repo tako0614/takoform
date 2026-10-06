@@ -105,6 +105,12 @@ export const SITE_CONTRACT_READBACK_ROUTES = Object.freeze([
 export const READBACK_ROUTES = PAGE_READBACK_ROUTES;
 export const ABSENT_ROUTES = Object.freeze([
   "/.well-known/takoform-site.json",
+  "/reference/",
+  "/en/reference/",
+  "/spec/",
+  "/en/spec/",
+  "/spec/host-api/",
+  "/en/spec/host-api/",
   "/forms/",
   "/release/",
   "/proposals/",
@@ -1393,6 +1399,11 @@ export async function runSiteDeploy(parsed, options = {}) {
   };
 
   if (v2SiteSurface && parsed.environment === "production") {
+    const changedFixedSource = V2_RAW_SOURCE_ROUTES.filter((route) =>
+      priorV2Projection.sources[route] !== expected.sources[route]);
+    if (changedFixedSource.length !== 0) {
+      throw new Error(`refused before touching the target: prior public Host API v2 source differs from the fixed normative bytes for ${changedFixedSource.join(", ")}`);
+    }
     const confirmedPrior = await requirePriorV2Projection(fetchImpl, rollbackCandidate, expected.schemas);
     if (!sameProjection(confirmedPrior, priorV2Projection)) {
       throw new Error("refused before touching the target: prior v2 source or page bytes changed during the site gate");

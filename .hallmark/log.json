@@ -1,6 +1,15 @@
 [
   {
     "date": "2026-10-06",
+    "macrostructure": "Takoform overview with direct v1/v2 entries and version-scoped long-document navigation",
+    "theme": "Existing VitePress light/dark and sans/mono tokens",
+    "enrichment": "none; concise product overview with direct documentation links",
+    "brief": "Actual Takoform overview; Overview/v1/v2 primary navigation; v1 frozen and v2 fixed; version selector independent of language; version-scoped local search",
+    "slopTest": "User corrected the direction from a version catalogue to an actual Takoform overview with direct v1/v2 links. Browser and owner checks are recorded separately in TASK-0096. No synthetic full-checklist score or Host conformance claimed.",
+    "viewports": [320, 375, 414, 768, 1280]
+  },
+  {
+    "date": "2026-10-06",
     "macrostructure": "Version catalogue with version-scoped long-document navigation",
     "theme": "Existing VitePress light/dark and sans/mono tokens",
     "enrichment": "none; API version entries are the primary content",
