@@ -300,6 +300,11 @@ Cloudflare Pages自体は以前の成功deploymentへ戻せますが、このrep
 raw原文3件を保持するとexact readbackで確認でき、v2規範文書の日英6 pageとv1入口の日英pageが
 HTTP 200で読めるdeploymentだけをrollback候補として提示します。v2 pageは公開済み表示も確認します。
 HTMLやCSSは固定しません。公開先の現在のHTMLは毎回その候補buildに対してexact readbackします。
+`website/public/_headers` は日英の仕様path (`/spec/*`、`/en/spec/*`) に `no-transform` を付け、
+CDNが仕様例の本文を書き換えないようにします。Cloudflareのメールアドレス難読化も抑止されます。
+Pages既定のHTML再検証 (`public, max-age=0, must-revalidate`) と、別pathの `/schemas/*` の
+既存cache/CORS指定は保持します。これはsite自身の応答headerであり、zone全体の
+設定変更ではありません（[Cloudflareの説明](https://developers.cloudflare.com/waf/tools/scrape-shield/email-address-obfuscation/)）。
 候補がなければv2を落とすrollbackは行わず、provider historyからforward repairします。
 旧Workerへ戻すと公開済みschema17件が消えるため候補ではありません。自動rollbackやblind retryは
 行いません。

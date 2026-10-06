@@ -229,6 +229,18 @@ describe("takoform.com site derivation", () => {
     }
   });
 
+  test("preserves specification bytes and HTML revalidation without changing schema caching and CORS", () => {
+    const headers = readFileSync("website/public/_headers", "utf8");
+    // The production zone's email obfuscation rewrote user@host.example in
+    // the HTTP specification while the immutable Pages URL stayed intact.
+    // Pages overrides its default Cache-Control with custom headers, and
+    // combines matching rules. Keep HTML and schema cache policies disjoint.
+    expect(headers).toMatch(/^\/spec\/\*\r?\n[ \t]+cache-control: public, max-age=0, must-revalidate, no-transform\s*$/m);
+    expect(headers).toMatch(/^\/en\/spec\/\*\r?\n[ \t]+cache-control: public, max-age=0, must-revalidate, no-transform\s*$/m);
+    expect(headers).not.toMatch(/^\/\*\s*$/m);
+    expect(headers).toMatch(/^\/schemas\/\*\r?\n[ \t]+access-control-allow-origin: \*\r?\n[ \t]+cache-control: public, max-age=3600\s*$/m);
+  });
+
   test("keeps design records explicit without treating a review score as a product gate", () => {
     const root = mkdtempSync(join(tmpdir(), "takoform-design-records-"));
     try {

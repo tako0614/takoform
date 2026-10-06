@@ -1,3 +1,10 @@
+# Preserve specification examples through CDN transformations (including email
+# obfuscation), retaining Pages' HTML revalidation and separate schema caching.
+/spec/*
+  cache-control: public, max-age=0, must-revalidate, no-transform
+/en/spec/*
+  cache-control: public, max-age=0, must-revalidate, no-transform
+
 # Published schema bytes are resolved by machines from other origins. Without
 # an explicit allow, a browser-based validator resolving a $id gets an opaque
 # failure that looks like the schema being absent.
