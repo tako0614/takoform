@@ -168,9 +168,9 @@ credential を持ちません。
    byte 単位で読み戻し、撤去した catalog/status/release/decision route も不在であることを
    確認します。schema の sample 2件だけで成功にはしません。
 
-   v2の公開済みprojectionを含むsourceでは、routine previewもpublic apexがすでにv2公開済み
-   と読める場合に限ります。初回v2公開候補を通常のpreview/deploy経路から正式公開したことには
-   しません。
+   integration/rehearsalのpreviewは、public apexでのv2正式公開前にも利用できます。
+   規範本文の固定検査はpreviewでも必要です。preview URLの成功を正式公開とは扱いません。
+   通常のproduction更新だけは、apex/wwwですでに同じv2本文が公開済みであることを要求します。
 ## 一度限りの historical runbook（initial cutover の記録）
 
 以下の手順4〜6は、Host API v1 の identity/domain を最初に切り替えるための一度限りの
