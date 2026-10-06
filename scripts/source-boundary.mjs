@@ -103,6 +103,9 @@ const retiredPublicHostClientTokens = [
 
 const v2ContractToolPaths = new Set([
   "conformance/v2/host-api.mjs",
+  // This verifier must name the exact fixed Host API v2 lane to validate its
+  // manifest; it does not create a second client or publishing authority.
+  "scripts/host-api-freeze.mjs",
 ]);
 
 function isRuntimeGoSource(path) {

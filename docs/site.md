@@ -101,7 +101,7 @@ Chrome / Chromium を headless で動かします。browser が見つからな�
 標準 path にない場合は `TAKOFORM_BROWSER=/absolute/path/to/chrome` を設定してください。
 browser の自動 download や、既存 browser profile の利用はしません。
 
-- `/`、v1/v2入口、両版のAPI本文、共通仕様索引、schema索引、各ガイドとサイト案内の日英を
+- `/`、v1/v2入口、両版のAPI本文、schema索引、各ガイドとサイト案内の日英を
   320 / 375 / 414 / 768 px で開き、横 overflow と切れた操作要素がないことを確認します。
 - トップと共通ページにはsidebarがなく、v1・v2のページはその版の目次・前後リンクだけを表示することを確認します。
   目次の全グループは最初から開きます。
