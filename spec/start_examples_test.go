@@ -11,9 +11,9 @@ import (
 
 var startHTTPFence = regexp.MustCompile("(?s)```http\\n(.*?)\\n```")
 
-func TestStartHostAPIExamplesMatchFrozenSchemas(t *testing.T) {
+func TestRetainedV1HTTPExamplesMatchFrozenSchemas(t *testing.T) {
 	t.Parallel()
-	raw, err := os.ReadFile("../website/start/index.md")
+	raw, err := os.ReadFile("../hostclient/testdata/v1-http-exchange.md")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +86,7 @@ func startHTTPBlock(t *testing.T, source, marker string) string {
 			return match[1]
 		}
 	}
-	t.Fatalf("website/start/index.md has no http fence containing %q", marker)
+	t.Fatalf("retained v1 HTTP exchange has no http fence containing %q", marker)
 	return ""
 }
 

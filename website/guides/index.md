@@ -1,81 +1,31 @@
 ---
-title: 実装ガイド
+title: ガイド
+description: 利用者、Form作者、クライアント実装者、Host実装者ごとにv2の学習順序を案内します。
 ---
 
-# 実装ガイド
+# ガイド {#guides}
 
-Formを作る人、Goから使う人、Hostを実装する人では、最初に必要な情報が違います。
-以下から作業を選んでください。実装時の要件は、リンク先の英語の仕様が基準です。
+目的に合わせてv2の契約を読み進めてください。ここで示す例は説明用であり、共通API仕様は公開Hostや実装の提供状況を表しません。
 
-| やりたいこと | 最初に試すもの |
-| --- | --- |
-| リソースの設定と振る舞いを定義して配布する | [Formを作る](/authoring/)：定義 → パッケージ → 検証 |
-| GoアプリケーションからHostを操作する | [GoからHostを使う](/client/)：接続先確認 → 対応確認 → prepare → apply |
-| 既存の配布物を検証する | [はじめる](/start/)：パッケージ検証とSnapshot構築 |
-| リソースを管理するHostを実装する | このページのHost実装の節からAPIと適合性の要件へ |
+## 利用者 {#users}
 
-## 全体の設計を理解する {#architect}
+1. [v2を使い始める](/start/)でFormとHostを区別します。
+2. 使うHostのDiscovery、認証、Space条件を運営者の案内で確認します。
+3. 正確なForm URLの仕様と、そのHostの`support`を確認します。
+4. [要求・応答例](/spec/host-api/v2/examples)でCreateからDeleteまでのOperation追跡を読みます。
 
-1. [共通モデル](/model/) — FormRef、Form Package、Snapshotの関係。
-2. [移植性の範囲](/spec/portability-boundary) — Formで定義する内容と、Hostや運用者が決める内容。
-3. [バージョンと互換性](/spec/versioning) — API・Formのバージョンと、各実装のリリースの関係。
+## Form作者 {#form-authors}
 
-Formはサービスの設定や振る舞いを表します。アカウント、認証情報、配置先、料金、
-バックエンドの選択は、利用するHostや運用環境で決めます。
+Form URLを版固定で公開し、`spec`、`observed`、`output`、操作の意味、部分失敗の復旧を記述します。[Form要件](/spec/host-api/v2/forms)はv2の規範で、[例](/spec/host-api/v2/examples)はHTTPの利用を示す架空の説明です。
 
-## Goライブラリでパッケージを扱う {#core-artifact-user}
+## クライアント実装者 {#client-implementers}
 
-1. [はじめる](/start/) のコマンドで、パッケージの検証とSnapshotの作成を試します。
-2. [Form Package](/spec/form-package/) で、収録ファイルとダイジェストの計算方法を確認します。
-3. [Snapshot](/spec/core/) で、参照先の検証、既定値、入力順に依存しない構築処理を確認します。
-4. [`formpackage`](https://github.com/tako0614/takoform/tree/main/formpackage)、
-   [`snapshot`](https://github.com/tako0614/takoform/tree/main/snapshot)、
-   [`trust`](https://github.com/tako0614/takoform/tree/main/trust) のAPIを使います。
+[クライアントガイド](/client/)からDiscovery、support、Idempotency-Key、世代条件、Operationの読み方を確認し、[HTTP API](/spec/host-api/v2/http)を要求・応答の正本として参照します。応答喪失や競合は、盲目的な再送ではなくOperationとResourceの照合で扱います。
 
-これらの処理はデータの検証です。Hostへの接続やリソースの作成は行いません。
+## Host実装者 {#host-implementers}
 
-## Hostを実装する {#host-client-implementer}
+[概要](/spec/host-api/v2/)、[HTTP API](/spec/host-api/v2/http)、[Form要件](/spec/host-api/v2/forms)の順に読みます。認証とSpace認可、Resource UIDとgeneration、Idempotency-Key、Operation記録、観測状態、再起動後の回復までを一つの耐久性境界として設計します。
 
-1. [Host APIの概要](/host-api/) で、接続先の取得とAPIの構成を確認します。
-2. [Host API v1](/spec/host-api/v1) で、各エンドポイント、FormRef、同時更新の制御、
-   非同期処理、エラーの扱いを確認します。
-3. 必要な機能に応じて [Interface](/spec/interface-contract/)、
-   [Binding](/spec/binding-contract/)、[Artifactの転送](/spec/artifact-transport/) を読みます。
-4. 外部プロトコルを使う場合は [Standard Services](/spec/standard-services/) を確認します。
+## v1から移る場合 {#migration}
 
-クライアント側のスキーマや状態管理、インポート処理は、そのクライアントで実装します。
-Host側ではバックエンド、認証情報、テナントごとのポリシー、Formの有効化を管理します。
-
-まず一つのFormで接続先確認、対応情報、prepare、作成・読み取りを通し、続けて更新競合、
-何度実行しても結果が同じ再試行、非同期処理、エラーを実装・検証します。HTTPが通るだけでなく、そのFormが
-約束する振る舞いと [Hostの適合性](/conformance/) の対象項目を満たす必要があります。
-
-## 検証結果を確認する {#verifier-reviewer}
-
-1. [適合性の検証](/conformance/) で、レポートの対象と検証項目を確認します。
-2. [適合性の分類](/spec/conformance) で、仕様の要件と検証の分類を確認します。
-3. [署名と失効](/spec/trust/) で、呼び出し側が指定する信頼ポリシーと検証に必要なデータを確認します。
-
-パッケージの検証に成功しても、その公開状況や特定のHostで使えるかどうかは分かりません。
-公開元と利用先のHostで、それぞれ確認してください。
-
-## OpenTofuから使う {#opentofu-provider-を使う-reader}
-
-設定ファイル（Terraform / OpenTofuのHCL）からHostを使う場合は、
-[OpenTofu / Terraformから使う](/use/) から始めてください。接続先の取得、route、正確なFormRef、
-バージョンの軸、providerとpublisherの境界をまとめています。Takoformは公式のproviderを
-指定しません。Host API v1を話すproviderなら、同じAPIをそのまま扱えます。
-
-使うproviderのHCLの書き方は
-[ProviderのHCLクイックスタート](https://github.com/tako0614/terraform-provider-takoform/blob/main/docs/ja/getting-started.md)
-にあります。Takoform ProviderはHost API v1を利用するOpenTofu / Terraformクライアントの一つです。
-他の業界向けProviderも同じHCLの設定で組み合わせられます。詳しくは
-[他のProviderと組み合わせる例](https://github.com/tako0614/terraform-provider-takoform/blob/main/README.md#native-opentofu-provider-composition)
-を参照してください。
-
-## 個別のFormを調べる {#この-site-にないもの}
-
-各Formの具体的な定義や利用例は、そのFormを公開するpublisherのサイトで確認してください。
-たとえば [Edge Forms](https://edge.forms.takoform.com/ja/) では、Workerやストレージなどの
-Formと、それぞれの定義・利用例を確認できます。
-このサイトではpublisher間で共通するデータ形式とHost APIを説明し、個々のFormの内容は定義しません。
+v2へpackageやSnapshotを持ち込む必要はありません。仕様が自動変換することもありません。旧Resourceやproviderの移行は、それを所有する製品の案内で確認します。[v2移行案内](/spec/host-api/v2/migration)は判断事項を説明し、[凍結されたv1仕様](/spec/host-api/v1)は旧契約を保持します。

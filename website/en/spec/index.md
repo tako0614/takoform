@@ -9,14 +9,30 @@ canonicalUrl: https://github.com/tako0614/takoform/blob/main/spec/README.md
 
 # Takoform API and common model
 
-This non-normative page maps the family-neutral contracts for portable
-identities, data-only Form Packages, immutable Snapshot compilation, Host
-lifecycle messages, trust inputs, and conformance language. It does not add to
-or reinterpret those contracts.
+This non-normative index separates the v2 specification source from the
+published, frozen v1 reference. It does not add to or reinterpret either contract.
 
-## Current Host API
+## Host API v2 specification
 
-The current Host API is the unchanged literal v1 lane:
+The [Host API v2 specification](/en/spec/host-api/v2/) treats publisher-owned
+HTTP specifications as Form identities and allows v2-only implementations.
+The normative source is English and remains open to revision. The published
+version is at [takoform.com](https://takoform.com/en/v2/); local copies and previews
+may differ. This is not a separate document-version stream or immutable final text. Publication and
+deployed Host support are separate facts. Published v1 remains frozen reference
+material; retaining it does not require new v2 Hosts or clients to implement v1.
+
+Read the v2 [overview](/en/spec/host-api/v2/), [HTTP API](/en/spec/host-api/v2/http),
+[Form authoring rules](/en/spec/host-api/v2/forms), and [examples](/en/spec/host-api/v2/examples).
+The [migration guide](/en/spec/host-api/v2/migration) explains the differences from v1.
+
+Examples and guides remain informative, separate from normative requirements.
+
+## Published Host API v1 reference
+
+The retained Host API v1 is the unchanged literal v1 lane. The rest
+of this index maps v1 only; its package, Snapshot, and trust requirements do
+not apply to v2:
 
 - discovery: `GET /.well-known/takoform/v1`;
 - API root: `/apis/forms.takoform.com/v1`;
@@ -25,13 +41,14 @@ The current Host API is the unchanged literal v1 lane:
 
 API v1 normative bytes are frozen by
 [`host-api/v1.freeze.json`](https://github.com/tako0614/takoform/blob/main/spec/host-api/v1.freeze.json). Errata are non-normative
-and cannot reinterpret v1; every behavior change requires a future v2 proposal.
+and cannot reinterpret v1. Behavioral changes belong to a different API major;
+the v2 specification text is linked above and does not modify published v1.
 There is no Host API minor lane such as `/v1.1`. Form compatibility is
 versioned independently by each Form's `definitionVersion`, and that and the
 literal v1 lane are the only two compatibility axes
 ([decision 0060](https://github.com/tako0614/takoform/blob/main/spec/decisions/0060-two-version-axes-and-no-numbered-specification-stream.md)).
 
-## Authority and contract map
+## v1 authority and contract map
 
 The current Host API v1/common-model normative closure is exactly the prose,
 machine roots, and recursive schema identities named by

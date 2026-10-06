@@ -1,13 +1,22 @@
-# Portable Form Host APIs
+# Takoform Host APIs
 
-This page is non-normative navigation. The immutable contract is
-[`v1.md`](v1.md), and its exact closure is named by
-[`v1.freeze.json`](v1.freeze.json). Nothing on this page adds to or reinterprets
-that contract.
+This page is non-normative navigation between the English v2 specification and
+the retained, unchanged v1 contract. It does not add requirements to either API.
 
-## Current Host API v1
+## Host API v2
 
-The current Host lane uses the unchanged literal, provider-neutral Host API v1
+Start with the [v2 model](v2/README.md), then the [HTTP reference](v2/http.md)
+and [Form requirements](v2/forms.md). The [examples](v2/examples.md) show
+creation through deletion and recovery after failures. The
+[migration guide](v2/migration.md) explains the separate v1 and v2 contracts.
+
+The English source defines v2 and remains open to revision. See
+[takoform.com](https://takoform.com/en/v2/) for the published version; local copies
+and previews may differ. Publication does not certify any Host implementation.
+
+## Retained Host API v1
+
+Existing v1 implementations use the unchanged, provider-neutral Host API v1
 contract ([`v1.md`](v1.md)). Its endpoints are:
 
 - discovery: `GET /.well-known/takoform/v1`;
@@ -17,10 +26,11 @@ contract ([`v1.md`](v1.md)). Its endpoints are:
 
 The lane is a protocol identity, not a Form catalog or publisher allowlist. A
 Host implements the contract and support profile independently. Its normative
-bytes never change. Errata are non-normative and cannot reinterpret v1; a
-normative or behavioral change requires a future Host API v2 proposal.
+bytes remain fixed by [`v1.freeze.json`](v1.freeze.json). Errata are
+non-normative and cannot reinterpret v1. The separately defined v2 contract
+does not modify these retained bytes or require dual-version implementations.
 
-## Conformance
+## V1 conformance material
 
 The current generic artifact corpus is
 [`conformance/takoform-v1/generic.json`](../../conformance/takoform-v1/generic.json).

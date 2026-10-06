@@ -1,40 +1,50 @@
 ---
 title: 用語集
+description: Host API v2の主要語を、FormとHostの責任分担に沿って説明します。
 ---
 
-# 用語集
+# 用語集 {#glossary}
 
-仕様で使う用語を日本語で説明します。厳密な定義や検証条件は
-[仕様一覧](/reference/) から確認してください。
+## Form {#form}
 
-| 用語 | 説明 |
-| --- | --- |
-| `Form` | サービスやリソースの設定と振る舞いを、実装から独立して定めたもの。 |
-| `Form Definition` | Formの識別情報、設定・状態・出力のスキーマ、対応する操作、他のリソースとの関係を記述したデータ。 |
-| `FormRef` | `apiVersion`、`kind`、`definitionVersion`、`schemaDigest` の4項目で、一つの定義を特定する参照。 |
-| `Form Family` | 公開元が逆DNS形式で管理する名前空間。名前にバージョンを含めない。 |
-| `Form Package` | 一つのFormRef、その定義、収録ファイルをまとめた配布単位。実行コードは含まない。 |
-| `Core` | パッケージの検証、Snapshotの構築、Host APIクライアント、署名等の検証を提供するGoライブラリ。 |
-| `Snapshot` | 検証済みのパッケージ、Interface、Bindingと参照関係をまとめた変更不可のデータ。入力順によらず同じ結果になる。 |
-| `Host API` | 接続先の取得、リソースの管理、非同期処理、同時更新の制御、エラーの形式を定めたHTTP API。APIバージョンは `forms.takoform.com/v1`。 |
-| `Host` | Host APIを提供し、対応するFormのリソースを作成・管理する実装。 |
-| `Operation` | 時間のかかる処理の受付状態と最終結果を表す記録。 |
-| `Interface` | リソースが提供する操作、入出力、エラー、一貫性などを定めたもの。ダイジェストで特定する。 |
-| `Binding` | 接続元と接続先に必要な能力と役割を定めたもの。ダイジェストで特定する。 |
-| `Artifact` | 内容のダイジェストで識別するマニフェストとバイナリデータ。ダイジェスト自体は認証情報ではない。 |
-| `Standard Service` | 外部プロトコルを、定義済みの参照項目として指定する仕組み。実際の提供方法はHostが実装する。 |
-| `publisher` | Formやパッケージのソース、来歴、配布物を公開する主体。 |
-| `client adapter` | SnapshotとHost APIを、クライアント固有のスキーマや状態管理に対応させる実装。 |
-| `Conformance` | 対象のデータや実装が、指定された仕様の要件を満たすか検証すること。 |
-| `trust / revocation` | 呼び出し側が指定した信頼ポリシーに従い、署名、来歴、失効情報をオフラインで検証する仕組み。 |
-| `desired` | 利用者が指定する、リソースに求める状態。 |
-| `observed` | Hostが観測して返す現在の状態。 |
-| `output` | Formが定義した型に従って返す結果。Hostの秘密情報や内部設定ではない。 |
-| `schemaDigest` | 規定の方法で正規化したForm DefinitionのSHA-256ダイジェスト。FormRefの一部。 |
-| `packageDigest` | 規定の方法で正規化したパッケージ索引のSHA-256ダイジェスト。FormRefには含まれない。 |
-| `uid` | Hostがリソースに発行する変更不可の識別子。同じ名前でも削除して作り直すと変わる。 |
-| `generation` | desiredの変更に伴って進む番号。同時更新の制御に使う。 |
-| `revision` | 状態や出力を含む応答データの変更に伴って進む番号。同時更新の制御に使う。 |
+作者が公開する版固定URLの仕様。Resourceの意味と操作の条件を定めます。Hostや実行環境そのものではありません。
 
-パッケージの検証、公開、Hostへのインストール、対応、有効化、商用提供はそれぞれ別です。
-一つの検証結果から、ほかの状態まで確認できるわけではありません。
+## Host {#host}
+
+Formを実装し、認証されたクライアントへResource APIを提供するサービス。特定Formのサポート状況はHostごとに異なります。
+
+## Resource {#resource}
+
+Hostが管理する対象。UID、Form URL、Space、name、generation、`spec`、`observed`、`output`などを持ちます。
+
+## spec {#spec}
+
+Resourceの受理済み希望状態。Updateでは文書全体を置き換えます。
+
+## observed {#observed}
+
+Hostが最後に確認した状態。specの希望世代に追いついていない場合があります。
+
+## output {#output}
+
+Formが意味を定める操作結果や接続情報。空である場合もあります。
+
+## generation / observedGeneration {#generation-observedgeneration}
+
+generationは受理された希望状態の世代です。observedGenerationはobservedが反映する世代を示します。
+
+## Operation {#operation}
+
+Create、Update、Deleteの進行と結果を表す記録。クライアントはOperationを読み、必要に応じてResourceの状態を再取得します。
+
+## Idempotency-Key {#idempotency-key}
+
+同じ要求の再送を識別するクライアント指定キー。同じキーを使う再送では、元の要求内容も同じでなければなりません。
+
+## Space {#space}
+
+Host内のResourceスコープ。Spaceを指定すること自体は、そのSpaceを使う権限を与えません。
+
+## v1専用語 {#v1-terms}
+
+FormRef、Form Package、Snapshot、revision、schemaDigestは凍結されたv1契約の語彙です。v2のForm URLやResource generationと同一視せず、詳細は[凍結v1仕様](/spec/host-api/v1)で確認してください。

@@ -1,81 +1,44 @@
 ---
-title: Use a Host from Go
+title: Implementing a v2 client
+description: Design client recovery around durable intent records, replay deadlines, Operations, generations, and authorization changes.
 ---
 
-# Use a Host from Go {#client}
+# Implementing a v2 client {#client}
 
-Core's `hostclient` discovers a Host, checks Form availability, prepares changes
-and creates or updates resources. For asynchronous responses it waits for the
-Operation to finish. Start by trying the call sequence against a local HTTP test
-fixture.
+Read the Host's Discovery response for `baseUrl`, authentication guidance, and `replayWindowSeconds`. Build each request from the Form specification at its exact URL. Check `support`, Space authorization, and operation outcome as separate facts.
 
-## Run locally {#run}
+## Record intent before sending {#intent}
 
-You need Go, Git and a network connection for the initial
-source and dependency downloads. In an existing checkout, run the last two
-commands from the repository root.
+To identify the same operation across a client restart or a lost acknowledgement, persist one intent record before transmitting. Keep at least:
 
-```sh
-git clone https://github.com/tako0614/takoform.git
-cd takoform
-go mod download
-go test -v ./hostclient -run '^ExampleClient_ApplyResource$' -count=1
-```
+- Host origin and API version, Form URL, Space, and Resource name or UID.
+- Method, API-root-relative path and query, and the complete request (including the generation condition and complete `spec` for Update).
+- An Idempotency-Key created for this intent and its initial send time.
+- The replay window read from Discovery. Do not reset the initial time on each retry.
+- After a response, the Operation ID, Resource UID, accepted generation, `Location`, and `retainUntil`.
 
-The test verifies this output and finishes with `PASS`.
+Do not copy authentication credentials into the intent log; use the client's authentication manager. If a Form uses private inputs, do not write those values to ordinary logs or public state; follow the HTTP contract's secret handling.
 
-```text
-greeting example-uid true
-discovery -> availability -> prepare -> apply
-```
+An Idempotency-Key is not reusable merely because a request body happens to match. It identifies one user intent while that request is being retried. A new desired value or distinct change uses a new key, even on the same Resource.
 
-The loopback test server uses a fictional Form and fixed responses. It needs no
-credentials, external service or durable data. It teaches client calls; it is not
-a deployable Host implementation.
+## Decide from the outcome {#decisions}
 
-## Call the client {#call}
-
-<<< @/../hostclient/example_test.go#client{go}
-
-1. Pass the Host origin and authentication token to `New`. The token is empty in this test.
-2. `Discover` checks the API endpoint and required features.
-3. `ApplyResource` checks support and admission for the exact FormRef, then uses the `prepare` result to create the resource.
-4. This example completes synchronously with `201 Created`. If a real Host returns
-   `202 Accepted`, the same method polls the Operation until completion.
-
-Read the full code, including the fixture server, in
-[`hostclient/example_test.go`](https://github.com/tako0614/takoform/blob/main/hostclient/example_test.go).
-For wire-format examples, see [Host API requests and responses](/en/start/#_3-host-apiの要求・応答例を読む).
-
-## Before using a real Host {#real-host}
-
-| Requirement | What to check |
+| Outcome | Client action |
 | --- | --- |
-| Host origin and authentication | Obtain these from the Host's documentation. A Form Family namespace is not an endpoint |
-| FormRef and settings | Use the exact version and digest from a verified definition, with input matching that definition |
-| Space and resource name | Select the scope and name you intend to manage |
-| Permission | Confirm that the Host admits the Form and operation for the current caller |
+| `202 Accepted` | Wait `Retry-After`, then GET the `Location` or Operation ID. Follow that Operation to a terminal state and reread the Resource. Do not create another mutation. |
+| Lost response, still within replay window | Resend the stored method, path/query, body, and key unchanged. Do not alter the body or create a new key. The replay returns the original Operation. |
+| Operation is `reconciling` / `effect: unknown` | Retain the UID and Operation ID as unresolved and continue checking the Operation. Do not send another mutation to that UID until the Host resolves the original backend identity. GET is not a substitute for recovery work. |
+| `409 generation_conflict` | The request was not accepted and has no Operation. GET the current Resource and decide what change is still intended. If continuing, create a new intent with the current generation and a new key. |
+| Replay window near or past its deadline | Stop automatic replay before `initial send time + replayWindowSeconds`. Check any known Operation ID and reconcile Resource/list evidence. If acceptance remains unknown, do not blindly resend with either the old or a new key. |
 
-The current `hostclient` rejects a prepare response that adds omitted defaults.
-For a Form with defaults, build a Snapshot from the exact package admitted under
-your trust policy, call `Snapshot.Materialize` to fill defaults, and pass the
-result as `Resource.Spec`. Decode that JSON into `map[string]any` with
-`formpackage.DecodeStrictIJSON`. This workaround addresses schema defaults only.
-The current client also rejects a changed prepare echo when a Host canonicalizes
-settings such as hostnames. There is still an implementation gap with Host API
-v1's required Host-side materialization/canonicalization and client acceptance.
-The fixture Form on this page has neither defaults nor canonicalization.
+Keep Resource `generation`, `observedGeneration`, and `observedAt` distinct from Operation state. Operation success means the Form-defined management action completed; it is not a general application-health guarantee.
 
-Only then replace `server.URL`, the token and `desired`. Applying to a real Host
-changes resources. Keep credentials out of source files and logs.
+## When authentication changes {#auth-change}
 
-## Handle updates and failures {#changes}
+The Host authenticates and authorizes each request. Follow its authentication documentation to learn whether credential rotation preserves the same stable principal and permissions. A different principal has a different Idempotency-Key scope; do not use a new principal's key to “retry” a request accepted under the old one.
 
-An empty `Fence` requests creation. For an update, pass the UID and generation
-from a retrieved Resource into `Fence` to avoid overwriting concurrent changes.
-Do not increment generation by hand.
+If access was revoked, the Host may return `403` or `404` without revealing an existing Operation. Keep an uncertain intent rather than discarding or recreating it under another key. Restore authorized access to the original principal or agree on reconciliation with the user or Host operator.
 
-A timeout does not mean that nothing changed. Inspect the Resource or Operation
-before retrying. See [Host API v1](/en/spec/host-api/v1) for the contract, the
-[Host API overview](/en/host-api/) for implementation context and
-[Conformance checks](/en/conformance/) for verification scope.
+## Return to the HTTP contract {#http-contract}
+
+See the [HTTP retry contract](/en/spec/host-api/v2/http#retry) for matching and retention, and [Update](/en/spec/host-api/v2/http#update) plus [errors](/en/spec/host-api/v2/http#errors) for generation conflicts. The [illustrative examples](/en/spec/host-api/v2/examples) contain complete request/response values.

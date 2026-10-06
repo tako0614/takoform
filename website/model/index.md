@@ -1,79 +1,41 @@
 ---
-title: 共通モデル
+title: v2のモデル
+description: Form、Host、Resource、Operation、世代がどの責任を表すかを説明します。
 ---
 
-# 共通モデル
+# v2のモデル {#model}
 
-Takoformでは、リソースの設定や振る舞いをFormとして定義します。定義を配布する単位が
-Form Package、検証済みのパッケージと参照関係をまとめたものがSnapshotです。
+v2では、仕様を定義するForm、仕様を実行するHost、Hostが管理するResource、変更の進行を示すOperationを区別します。この分離により、Formの意味と、あるHostが実際に提供する機能を混同せずに扱えます。
 
-設定のキーだけが同じでも、更新の意味や失敗後の扱いが違えば、同じアプリケーションは
-そのまま動きません。Formは、アプリケーションから見える振る舞いまで共通の基準にします。
-同じ定義に適合するHostではその約束を保ち、意味が異なるサービスを同じFormに押し込みません。
+## FormとHost {#form-host}
 
-公開元が定義とパッケージを作り、利用側が内容と参照先を検証してSnapshotにまとめ、
-Hostが対応するFormを実装します。クライアントは、そのHostで利用可能かを確認してから操作します。
-すべてのHostがすべてのFormに対応するという意味ではありません。
+Formは作者が公開する版固定のHTTPS URLで識別される仕様です。Resourceの`spec`、`observed`、`output`の意味や操作の条件を定義します。Form自体はAPIサーバーや実行環境ではありません。
 
-公開元によって形式や検証手順が変わることはありません。このページは概要です。
-厳密な要件は [仕様一覧](/reference/) から確認してください。
+HostはFormを実装し、認証されたクライアントにResource操作を提供します。HostのDiscoveryは接続先や機能を示し、`support`は正確なForm URLへの対応状況を示します。Formの公開、Hostの対応、利用者の権限はそれぞれ別の事実です。
 
-## 定義を識別する {#identity-の文法}
+## Resourceの希望状態と観測状態 {#resource-state}
 
-| 項目 | 内容 |
-| --- | --- |
-| Form Familyの名前空間 | 公開元が逆DNS形式で管理する名前。バージョンや `/` を含めない |
-| FormRef | `apiVersion`、`kind`、`definitionVersion`、`schemaDigest` の4項目 |
-| `definitionVersion` | Formの設定と振る舞いの互換性を表すバージョン |
-| `schemaDigest` | RFC 8785に従って正規化したForm Definitionのダイジェスト |
-| `packageDigest` | パッケージ索引のダイジェスト。FormRefには含まれない |
+ResourceはHost内で一意なUIDを持ち、Form URL、Space、名前、世代と状態を持ちます。UIDは削除後に再利用されません。
 
-名前空間を変更すると定義とダイジェストも変わり、別のFormになります。
+- `spec`: クライアントが望み、Hostが受け付けた状態。Update要求では`spec`文書全体を置き換えます。Resourceの識別情報や他の状態を置き換える意味ではありません。
+- `observed`: Hostが最後に観測した状態。希望値に追いついていないことがあります。
+- `output`: Formが定義する操作結果や接続情報。空であることもあります。
+- `generation`: 受理された希望状態の世代。Create後に始まり、Update/Delete受理で進みます。
+- `observedGeneration`: `observed`がどの世代を反映するかを示します。
+- `observedAt`: Hostが観測結果を記録した時刻です。GET要求時刻とは限りません。
 
-名前とバージョンだけでなく内容のダイジェストも照合するため、別の定義を同じものとして
-読み込むことを防げます。Snapshotは依存する定義をまとめて検証し、利用中に参照先だけが
-すり替わらないようにします。これは内容の一致の確認であり、公開元を信頼する判断そのものではありません。
+したがって、Operationが成功したこと、Hostがあるgenerationを観測したこと、利用者のアプリケーションが稼働していることは同義ではありません。利用可能性はFormとHostが明示する別の観測情報で判断します。
 
-## 主なデータ型 {#data-の層}
+## Operationと再送 {#operations-retry}
 
-- [Form Definition](/spec/form-definition/)：識別情報と、設定・状態・出力の形式を記述します。
-- [Form Package](/spec/form-package/)：一つのForm定義と収録ファイルをまとめます。実行コードは含みません。
-- [Snapshot](/spec/core/)：検証済みのデータと参照関係を、入力順に依存せず構築します。
-  構築後は変更できません。検証に失敗した場合、不完全なSnapshotは返しません。
-- [Interface](/spec/interface-contract/)・[Binding](/spec/binding-contract/)：操作やリソース間の
-  接続に必要な能力を定めます。名前から推測せず、ダイジェストで特定した定義を参照します。
-- [Artifact](/spec/artifact-transport/)：内容のダイジェストで識別するマニフェストとバイナリデータです。
-  ダイジェスト自体はアクセス権限や認証情報ではありません。
-- [Standard Services](/spec/standard-services/)：外部プロトコルを、定められた項目から参照します。
-- [署名と失効情報](/spec/trust/)：呼び出し側が指定する信頼ポリシーに従って、配布物の来歴を検証します。
+Create、Update、DeleteはOperationを生成します。HostはOperation ID、対象Resource、action、generation、状態、結果を返します。ClientはOperationを読み、必要に応じてResourceを再取得します。GETは読み取りであり、処理を開始しません。
 
-## バージョンの関係 {#named-stream-は四つ、domain-axis-は二つ}
+Clientが同じ操作を再送する場合は、同じIdempotency-Keyと同じ要求内容を使います。新しい操作には新しいキーを使います。再送範囲・保持時間はHostのDiscoveryにある値を確認します。キーの保持期限後に再送を重複防止できるとは限りません。
 
-APIとFormには、それぞれ互換性を表すバージョンがあります。CoreとProviderの
-リリース番号は、それらとは別に管理します。
+## 世代条件と競合 {#generation-conflicts}
 
-| 対象 | バージョンが示すもの |
-| --- | --- |
-| Host API | APIの互換性。現在は `forms.takoform.com/v1` |
-| Form定義 | 各Formの設定と振る舞いの互換性。`definitionVersion` で指定 |
-| Core | GoライブラリやCLIのリリース。現在は `v1.1.0` |
-| Provider | Terraform / OpenTofu向け実装のリリース |
+Update/Delete要求には読み取ったgenerationを`Takoform-Expected-Generation`として指定します。世代が変わっていればHostは古い意図を暗黙に再適用せず、競合として扱います。Clientは最新Resourceを読み、どの変更を続けるかを決め直します。
 
-CoreやProviderを更新しても、APIやFormの識別子が自動的に変わることはありません。
-スキーマやパッケージの `$id`、InterfaceやBindingの参照、署名等の記録も、APIやFormとは
-別のバージョン軸を追加するものではありません。Host APIにマイナーバージョンのURLはありません。
+## v1との語彙の違い {#v1-terms}
 
-## 公開元と利用先 {#publisher-の平等}
-
-Coreには特定の公開元を優先するリストや `official` フラグはありません。
-どの公開元を信頼するかは、利用者や運用者がポリシーとして指定します。
-
-パッケージを検証できること、Hostにインストールされていること、対応・有効化されていること、
-商用サービスとして提供されていることは別です。利用するHostで必要な条件を確認してください。
-
-## 次に読む
-
-- [はじめる](/start/) — パッケージを検証してSnapshotを作成します。
-- [Host APIの概要](/host-api/) — リソースを操作するAPI。
-- [バージョンと互換性](/spec/versioning) — 詳しい規則。
-- [用語集](/glossary) — 用語の説明。
+FormRef、Form Package、Snapshot、schemaDigestはv1の契約に属する語彙です。v2のForm URLやResource状態と同じものとして置き換えてはいけません。v1を調べる場合は[凍結されたv1仕様](/spec/host-api/v1)を参照してください。v2の規範は[概要](/spec/host-api/v2/)、[HTTP API](/spec/host-api/v2/http)、[Form要件](/spec/host-api/v2/forms)にあります。

@@ -20,7 +20,6 @@ const USAGE = [
   `       bun run deploy -- ${SITE_SURFACE} --status`,
   `       bun run deploy -- ${SITE_SURFACE} --apply --environment <${SITE_ENVIRONMENTS.join("|")}> [--branch <name>] [--execute]`,
   `       bun run deploy -- ${API_CUTOVER_SURFACE} --status`,
-  `       bun run deploy -- ${API_CUTOVER_SURFACE} --apply --environment production --review <non-secret-reference> [--execute]`,
   `       bun run deploy -- ${API_CUTOVER_SURFACE} --verify-cutover --deployment-url <exact-immutable-url>`,
 ].join("\n");
 
@@ -49,9 +48,8 @@ export const DEPLOY_CONTRACT = Object.freeze({
           "reads the exact public tag before evaluating main, re-reads the action-specific tag/main state and Release absence after the owner gate, rejects any changed or conflicting tag and any existing Release, and uses only ordinary create operations without force, edit, delete, or retag paths",
       }),
     }),
-    // Routine presentation publication is intentionally separate from the
-    // one-time topology/identity cutover below. A typo fix must not inherit
-    // the cutover surface's irreversible trigger.
+    // Routine site publication is separate from the historical one-time
+    // topology/identity cutover below.
     Object.freeze({
       surface: SITE_SURFACE,
       target:
@@ -63,15 +61,15 @@ export const DEPLOY_CONTRACT = Object.freeze({
       triggers: Object.freeze([]),
       obligations: Object.freeze({
         provenance:
-          "uses the operator's standard Wrangler login/profile (run `wrangler login`): a read-only `wrangler pages project list --json` preflight confirms the exact Pages project before any gate or upload, then runs `check:host-api-freeze`, `check:site`, and `build:site` over the bytes it publishes; the site gate drives a locally installed Chrome/Chromium browser selected by TAKOFORM_BROWSER when no executable is autodetected. Production additionally refuses a dirty worktree or a HEAD that is not a credential-free read of the public refs/heads/main and records the source/digest and immutable deployment URL; integration and rehearsal may publish a dirty preview branch. This routine surface publishes presentation, does not change the fixed Host API v1, and never performs the identity/domain cutover",
+          "uses the operator's standard Wrangler login/profile (run `wrangler login`): a read-only `wrangler pages project list --json` preflight confirms the exact Pages project before any gate or upload, then runs `check:host-api-freeze`, `check:site`, and `build:site` over the bytes it publishes; the site gate drives a locally installed Chrome/Chromium browser selected by TAKOFORM_BROWSER when no executable is autodetected. Production additionally refuses a dirty worktree or a HEAD that is not a credential-free read of the public refs/heads/main and records the source/digest and immutable deployment URL; integration and rehearsal may publish a dirty preview branch. English Host API v2 documentation remains revision-open and may change through this routine site surface; Host API v1 and ledgered schema bytes remain fixed",
         "post-conditions":
-          "reads back exact bytes rather than status alone: every environment verifies the landing page, sitemap, and all 33 current plus 15 retired ledgered schema routes at the immutable per-deployment URL, with retired site-status, Form-catalog, release, project-lifecycle, and decision routes absent. Routine production additionally verifies the apex and www pages and negative routes at https://takoform.com and https://www.takoform.com, plus all 48 schema bytes at https://forms.takoform.com, against the production deployment history. This surface cannot request --initial-cutover or --verify-cutover",
+          "reads back exact bytes rather than status alone: every environment verifies the landing page, sitemap, retained v1, six rendered v2 normative pages, three raw current v2 sources, and all 33 current plus 15 retired ledgered schema routes at the immutable per-deployment URL, with retired routes absent. Production additionally verifies apex and www pages and raw sources at https://takoform.com and https://www.takoform.com, plus all 48 schema bytes at https://forms.takoform.com against production deployment history. This surface cannot request --initial-cutover or --verify-cutover",
         reversal:
-          `presentation-only changes may promote a previous ${SITE_PROJECT} Pages deployment only after proving it still serves every ledgered schema byte. Once the initial domain cutover makes the 17 previously absent $id routes public, the predecessor Worker is never a rollback target; schema or domain-cutover failure is forward repair from provider history to a Pages deployment that serves all 48 exact bytes`,
+          `an earlier ${SITE_PROJECT} Pages deployment is a rollback candidate only after its own exact prior v2 raw-source and rendered-page bytes match the public aliases, it still serves every ledgered schema byte and retained v1 entry page, and its v2 pages identify the same public revision. New v2 source bytes need not match the earlier revision. Cloudflare does not enforce this qualification. The predecessor Worker cannot serve all 48 schema identities; otherwise forward repair is required`,
         "failure-handling":
           "refuses before touching the target on a missing or unknown environment, an unauthenticated or unreadable Wrangler profile, a missing Pages project, an unreadable public ref, a dirty or non-main production source, an empty production history in normal production mode, or a failed scoped gate. An upload that fails prints the provider output verbatim, states that the target may or may not have changed, and never retries. A finished upload that prints no single immutable deployment URL, and any status, redirect, or digest mismatch, halt and require authoritative provider readback and forward repair instead of guessing",
         "no-overwrite":
-          "a served schema path only ever carries the bytes its ledger entry digests, and bun run check:site fails if a published path drifts from its normative source or if the built tree serves any file under /schemas/ that names no ledger identity, so republishing cannot change an already-minted $id in place",
+          "a served schema path only ever carries the bytes its ledger entry digests; Host API v1 freeze remains byte-exact; bun run check:site rejects an unlisted /schemas/ identity or raw v2 source path",
       }),
     }),
     Object.freeze({
@@ -85,7 +83,7 @@ export const DEPLOY_CONTRACT = Object.freeze({
       triggers: Object.freeze(["published-identity", "irreversible"]),
       obligations: Object.freeze({
         provenance:
-          "one-time Host API v1 identity/domain cutover through the same Pages project: automatically invokes the internal initial-cutover implementation, runs check:host-api-freeze before check:site and build:site, with the site gate's browser selected by TAKOFORM_BROWSER when no Chrome/Chromium executable is autodetected, and records the exact source, schema ledger partition, immutable deployment, and provider production readback without changing the frozen API bytes",
+          "historical-only Host API v1 identity/domain cutover through the same Pages project: the current published v2 projection refuses this apply path before provider mutation; the preserved historical procedure automatically invokes the internal initial-cutover implementation, runs check:host-api-freeze before check:site and build:site, with the site gate's browser selected by TAKOFORM_BROWSER when no Chrome/Chromium executable is autodetected, and records the exact source, schema ledger partition, immutable deployment, and provider production readback without changing the frozen API bytes",
         "post-conditions":
           "the reviewed production-only initial flow reads the predecessor forms origin as 31 exact HTTP 200 schema bytes plus 17 exact HTTP 404 routes, uploads once with no custom domains attached, proves the returned deployment belongs to production history, and verifies the immutable Pages URL; after the operator moves domains in order www→apex→forms (forms last), upload-free --verify-cutover reads the immutable URL, apex pages/negative routes at https://takoform.com, www pages/negative routes at https://www.takoform.com, and all 48 forms schema bytes at https://forms.takoform.com with exact bodies and no redirects",
         reversal:

@@ -16,10 +16,10 @@ import (
 	"time"
 )
 
-// The website's conceptual HTTP exchange must remain valid client input. The
-// paired-page site test separately keeps the Japanese and English bytes equal.
+// The retained v1 exchange must remain valid client input. The website's
+// current reader entry documents v2 and is not an input to this v1 client.
 func TestDocumentationHTTPExchange(t *testing.T) {
-	raw, err := os.ReadFile("../website/start/index.md")
+	raw, err := os.ReadFile("testdata/v1-http-exchange.md")
 	if err != nil {
 		t.Fatal(err)
 	}

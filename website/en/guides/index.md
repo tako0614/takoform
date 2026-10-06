@@ -1,83 +1,31 @@
 ---
-title: Implementation guides
+title: Guides
+description: Choose a v2 learning path for users, Form authors, client implementers, or Host implementers.
 ---
 
-# Implementation guides {#実装ガイド}
+# Guides {#guides}
 
-Form publishers, Go client users and Host implementers need different starting
-points. Choose the task below. This guide is non-normative; the linked
-specifications define the implementation requirements.
+Follow the v2 contract for the role you have. Examples are illustrative; publication of the common API specification does not indicate that a public Host or implementation is available.
 
-| Task | Start here |
-| --- | --- |
-| Define and distribute resource settings and behavior | [Create a Form](/en/authoring/): definition → package → verification |
-| Manage resources from a Go application | [Use a Host from Go](/en/client/): discovery → availability → prepare → apply |
-| Verify existing packages | [Getting started](/en/start/): package verification and Snapshot construction |
-| Implement a resource Host | Continue to the Host implementation section below for API and conformance requirements |
+## Users {#users}
 
-## Understand the architecture {#architect}
+1. Start with [Getting started](/en/start/) to distinguish a Form from a Host.
+2. Check the chosen Host operator's guidance for Discovery, authentication, and Space access.
+3. Read the exact Form URL and check that Host's `support` response.
+4. Follow the [request/response examples](/en/spec/host-api/v2/examples) through Create, Operation tracking, and Delete.
 
-1. [Common model](/en/model/) — the relationship between FormRef, Form Package and Snapshot.
-2. [Portability boundary](/en/spec/portability-boundary) — what a Form defines and what Hosts or operators decide.
-3. [Versioning and compatibility](/en/spec/versioning) — API and Form versions versus implementation releases.
+## Form authors {#form-authors}
 
-A Form describes service settings and behavior. Accounts, credentials, placement,
-pricing and backend selection belong to the Host or operating environment.
+Publish a versioned Form URL and describe `spec`, `observed`, `output`, operation semantics, and recovery from partial failure. [Form requirements](/en/spec/host-api/v2/forms) are normative; the [examples](/en/spec/host-api/v2/examples) illustrate HTTP use with fictional data.
 
-## Work with packages in Go {#core-artifact-user}
+## Client implementers {#client-implementers}
 
-1. Try package verification and Snapshot construction in [Getting started](/en/start/).
-2. Read [Form Package](/en/spec/form-package/) for declared files and digest calculation.
-3. Read [Snapshot](/en/spec/core/) for reference verification, defaults and order-independent construction.
-4. Use the [`formpackage`](https://github.com/tako0614/takoform/tree/main/formpackage),
-   [`snapshot`](https://github.com/tako0614/takoform/tree/main/snapshot) and
-   [`trust`](https://github.com/tako0614/takoform/tree/main/trust) APIs.
+Use the [client guide](/en/client/) to understand Discovery, support, Idempotency-Keys, generation conditions, and Operations. Treat the [HTTP API](/en/spec/host-api/v2/http) as the source of request and response requirements. Reconcile a lost response or conflict against Operations and Resources rather than blindly retrying.
 
-These operations verify data. They do not connect to a Host or create resources.
+## Host implementers {#host-implementers}
 
-## Implement a Host {#host-client-implementer}
+Read the [overview](/en/spec/host-api/v2/), [HTTP API](/en/spec/host-api/v2/http), and [Form requirements](/en/spec/host-api/v2/forms). Design authentication and Space authorization, Resource UIDs and generations, Idempotency-Key handling, Operation records, observed state, and post-restart recovery as one durability boundary.
 
-1. Read the [Host API overview](/en/host-api/) for discovery and the API structure.
-2. Implement the requests, responses, concurrency checks and errors in [Host API v1](/en/spec/host-api/v1).
-3. Read [Interface](/en/spec/interface-contract/), [Binding](/en/spec/binding-contract/)
-   and [Artifact transport](/en/spec/artifact-transport/) for the capabilities you need.
-4. Check [Standard Services](/en/spec/standard-services/) when using external protocols.
+## Moving from v1 {#migration}
 
-Client-specific schemas, state management and import behavior belong to the client.
-The Host manages backends, credentials, tenant policies and Form activation.
-
-Start with discovery, availability, preparation, creation and reads for one Form.
-Then implement and verify update conflicts, idempotent retries, asynchronous work
-and errors. Successful HTTP exchanges are only part of the job: implement the
-Form's promised behavior and the applicable [Host conformance checks](/en/conformance/).
-
-## Interpret verification results {#verifier-reviewer}
-
-1. Read [Conformance checks](/en/conformance/) for report scope and checks.
-2. Read [Conformance](/en/spec/conformance) for requirement language and claim categories.
-3. Read [Trust and revocation](/en/spec/trust/) for caller-supplied trust policy and verification data.
-
-A valid package does not prove public availability or support on a particular Host.
-Check publication and Host support with their respective owners.
-
-## Use OpenTofu {#opentofu-provider-を使う-reader}
-
-To use a Host from Terraform / OpenTofu configuration, start with
-[Use from OpenTofu / Terraform](/en/use/): discovery, routes, the exact FormRef,
-the version axes, and the provider and publisher boundaries. Takoform does not
-designate an official provider; any provider that speaks Host API v1 talks to the
-same API.
-
-The HCL documentation for the provider you use starts at the
-[Provider HCL quick start](https://github.com/tako0614/terraform-provider-takoform/blob/main/docs/getting-started.md).
-Takoform Provider is one OpenTofu / Terraform client for Host API v1. Industry
-providers can be declared alongside it in the same HCL module. See the example
-for [composing native providers](https://github.com/tako0614/terraform-provider-takoform/blob/main/README.md#native-opentofu-provider-composition).
-
-## Look up an individual Form {#この-site-にないもの}
-
-For an individual Form's definition and usage examples, use its publisher's
-site. For example, [Edge Forms](https://edge.forms.takoform.com/) lists Worker
-and storage Forms with their definitions and usage examples. This site documents
-the data formats and Host API shared across publishers; it does not define
-individual Forms.
+v2 does not require packages or Snapshots, and the specification does not automatically convert them. Check the product that owns existing Resources or Providers for its migration plan. The [v2 migration guide](/en/spec/host-api/v2/migration) explains questions to resolve; the [frozen v1 specification](/en/spec/host-api/v1) retains the earlier contract.

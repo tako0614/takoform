@@ -23,11 +23,17 @@ import {
   inspectSiteAssets,
   inspectDesignRecords,
   renderMirroredDocument,
+  V2_SPEC_DOCUMENTS,
+  V2_SOURCE_PREFIX,
+  v2NormativeSourceRoute,
+  renderV2SpecDocument,
   rewriteLinkTarget,
   servedPathForIdentity,
   siteRouteForSpecDocument,
   siteRouteForPageSource,
   sitePathForSpecDocument,
+  sitePathForV2SpecDocument,
+  siteRouteForV2SpecDocument,
 } from "./site.mjs";
 
 const schemas = deriveSchemas(".");
@@ -42,28 +48,37 @@ const context = {
 };
 
 describe("takoform.com site derivation", () => {
-  test("publishes authoring and client guides with executable examples", () => {
+  test("connects the authoring, client, and getting-started guides to v2", () => {
     for (const prefix of ["", "en/"]) {
-      for (const page of ["authoring", "client"]) {
-        const file = `website/${prefix}${page}/index.md`;
-        expect(HAND_AUTHORED_PAGE_SOURCES).toContain(file);
-        const source = readFileSync(file, "utf8");
-        expect(source).toContain("go test");
-        expect(source).toContain("<<<");
-      }
+      const authoringPath = `website/${prefix}authoring/index.md`;
+      const clientPath = `website/${prefix}client/index.md`;
+      expect(HAND_AUTHORED_PAGE_SOURCES).toContain(authoringPath);
+      expect(HAND_AUTHORED_PAGE_SOURCES).toContain(clientPath);
+      const authoring = readFileSync(authoringPath, "utf8");
+      const client = readFileSync(clientPath, "utf8");
+      expect(authoring).toContain("https://forms.publisher.example/key-value-entry/1.0.0");
+      expect(authoring).toContain("BASE_URL");
+      expect(authoring).toContain(`/${prefix}spec/host-api/v2/forms`);
+      expect(client).toContain("Idempotency-Key");
+      expect(client).toContain(`/${prefix}spec/host-api/v2/http`);
       const start = readFileSync(`website/${prefix}start/index.md`, "utf8");
-      expect(start).toContain("POST https://host.example/apis/forms.takoform.com/v1/resources/prepare");
-      expect(start).toMatch(/HTTP\/1\.1 201 Created\nContent-Type: application\/json\nETag: "1"\n\n\{/u);
+      expect(start).toContain("GET /.well-known/takoform/v2 HTTP/1.1");
+      expect(start).toContain("POST /apis/forms.takoform.com/v2/resources HTTP/1.1");
+      expect(start).toContain("PUT /apis/forms.takoform.com/v2/resources/r_1 HTTP/1.1");
+      expect(start).toContain("DELETE /apis/forms.takoform.com/v2/resources/r_1 HTTP/1.1");
+      expect(start).toContain("Takoform-Expected-Generation: 1");
+      expect(start).toContain("Takoform-Expected-Generation: 2");
+      expect(start).toContain("HTTP/1.1 202 Accepted");
     }
   });
-  test("renders tested source regions in both authoring and client guides", async () => {
+  test("renders v2 contract links in both authoring and client guides", async () => {
     const { createMarkdownRenderer } = await import("vitepress");
     const markdown = await createMarkdownRenderer(join(process.cwd(), "website"));
     for (const prefix of ["", "en/"]) {
-      for (const [page, names] of [["authoring", ["exampleDefinition", "ExampleVerifyFS"]], ["client", ["ExampleClient_ApplyResource"]]]) {
+      for (const page of ["authoring", "client"]) {
         const path = `website/${prefix}${page}/index.md`;
         const html = markdown.render(readFileSync(path, "utf8"), { path: join(process.cwd(), path) });
-        for (const name of names) expect(html).toContain(name);
+        expect(html).toContain(`href="/${prefix}spec/host-api/v2/http.html`);
         expect(html).not.toContain("Code snippet path not found");
       }
     }
@@ -78,45 +93,73 @@ describe("takoform.com site derivation", () => {
     expect(output).toContain("パッケージ を 検証");
     expect(renderForSearch("", { frontmatter: { search: false } }, { render: () => html })).toBe("");
   });
-  test("keeps the standard-theme homepage useful without a custom palette", () => {
+  test("exposes v2 specification destinations and retains a v1 reference", () => {
     const source = readFileSync("website/index.md", "utf8");
-    for (const target of ["/start/", "/reference/", "/model/", "/host-api/"]) {
-      expect(source).toContain(`link: ${target}`);
-    }
-    expect(source).not.toContain("sidebar: false");
+    expect(source).toContain("Host API v2");
     const component = readFileSync("website/.vitepress/theme/components/HomePage.vue", "utf8");
-    expect(component).toContain("<VPHomeHero />");
-    expect(component).toContain("<VPHomeFeatures />");
-    const css = readFileSync("website/.vitepress/theme/custom.css", "utf8");
-    expect(css).not.toMatch(/--vp-(?:c-|font-family)[\w-]*\s*:/u);
-    expect(css).not.toContain("tokens.css");
+    for (const target of [
+      "/v2/",
+      "/spec/host-api/v2/http",
+      "/spec/host-api/v2/forms",
+      "/spec/host-api/v2/examples",
+    ]) expect(component).toContain(target);
+    expect(component).toContain("Host API v1");
   });
   test("exposes every locale page and top-level destination in a complete sidebar", async () => {
     const config = (await import("../website/.vitepress/config.mts")).default;
     expect(config.locales.root.label).toBe("日本語");
     expect(config.locales.en.label).toBe("English");
-    for (const prefix of ["", "/en"]) {
-    const theme = prefix ? config.locales.en.themeConfig : config.themeConfig;
-    const sidebar = theme.sidebar;
-    expect(Array.isArray(sidebar)).toBe(true);
-    const links = [];
-    const visit = (items) => {
-      for (const item of items) {
-        expect(item.collapsed).not.toBe(true);
-        if (item.link) links.push(item.link);
-        if (item.items) visit(item.items);
+    for (const localePrefix of ["", "/en"]) {
+      const theme = localePrefix ? config.locales.en.themeConfig : config.themeConfig;
+      expect(theme.nav.map((item) => item.link)).toEqual(
+        ["start", "guides", "v2", "reference"].map((page) => `${localePrefix}/${page}/`),
+      );
+      const sidebars = theme.sidebar;
+      expect(Array.isArray(sidebars)).toBe(false);
+      const collect = (items) => {
+        const links = [];
+        const visit = (nested) => {
+          for (const item of nested) {
+            expect(item.collapsed).not.toBe(true);
+            if (item.link) links.push(item.link);
+            if (item.items) visit(item.items);
+          }
+        };
+        visit(items);
+        return links;
+      };
+      const generalLinks = collect(sidebars["/"]);
+      const readerJourney = ["start", "model", "client", "authoring", "use", "host-api", "v2", "guides", "reference"]
+        .map((page) => `${localePrefix}/${page}/`);
+      expect(readerJourney.map((link) => generalLinks.indexOf(link)))
+        .toEqual([...readerJourney.keys()].map((index) => generalLinks.indexOf(readerJourney[index])).sort((a, b) => a - b));
+      const publishedRoutes = [
+        ...HAND_AUTHORED_PAGE_SOURCES.map(siteRouteForPageSource),
+        ...GENERATED_INDEX_PAGES.map(siteRouteForPageSource),
+        ...MIRRORED_SPEC_DOCUMENTS.map((source) =>
+          `${localePrefix}${siteRouteForSpecDocument(source)}`
+        ),
+      ].filter((route) => route.startsWith("/en/") === !!localePrefix);
+      expect(generalLinks.filter((link) => link.startsWith("/")).sort()).toEqual(
+        [...new Set(publishedRoutes)].sort(),
+      );
+
+      const v2Links = collect(sidebars[localePrefix ? "/en/v2/" : "/v2/"]);
+      const expectedV2Routes = [
+        `${localePrefix}/v2/`,
+        ...V2_SPEC_DOCUMENTS.map((document) =>
+          siteRouteForV2SpecDocument(document.path, localePrefix ? "en" : "ja")
+        ),
+        ...["start", "model", "client", "authoring", "use", "host-api", "guides", "reference"]
+          .map((page) => `${localePrefix}/${page}/`),
+        `${localePrefix}/spec/host-api/v1`,
+      ];
+      expect(v2Links.filter((link) => link.startsWith("/")).sort()).toEqual(
+        [...new Set(expectedV2Routes)].sort(),
+      );
+      for (const item of theme.nav) {
+        expect([...generalLinks, ...v2Links]).toContain(item.link);
       }
-    };
-    visit(sidebar);
-    const publishedRoutes = [
-      ...HAND_AUTHORED_PAGE_SOURCES.map(siteRouteForPageSource),
-      ...GENERATED_INDEX_PAGES.map(siteRouteForPageSource),
-      ...MIRRORED_SPEC_DOCUMENTS.map((source) => `${prefix}${siteRouteForSpecDocument(source)}`),
-    ].filter((route) => route.startsWith("/en/") === !!prefix);
-    expect(links.filter((link) => link.startsWith("/")).sort()).toEqual(
-      [...new Set(publishedRoutes)].sort(),
-    );
-    for (const item of theme.nav) expect(links).toContain(item.link);
     }
   });
   test("translations preserve every example byte and pair all guide headings", async () => {
@@ -126,7 +169,8 @@ describe("takoform.com site derivation", () => {
     const fences = (source) => source.match(/^```[^\n]*\n[\s\S]*?^```/gmu) ?? [];
     const links = (source, normalizeExternalLocale = false) => [...source.matchAll(/\[[^\]]*\]\(([^)]+)\)/gu)]
       .map((match) => {
-        const target = match[1].replace(/^\/en\//u, "/");
+        const target = match[1].replace(/^\/en\//u, "/")
+          .replace(/^https:\/\/takoform\.com\/en\//u, "https://takoform.com/");
         return normalizeExternalLocale
           ? target
             .replace(/^(https:\/\/[^/]+)\/(?:en|ja)(?=\/|[?#]|$)(.*)$/iu, "$1$2")
@@ -136,23 +180,36 @@ describe("takoform.com site derivation", () => {
             )
           : target;
       }).sort();
-    for (const source of HAND_AUTHORED_PAGE_SOURCES.filter((path) => !path.startsWith("website/en/"))) {
+    for (const source of HAND_AUTHORED_PAGE_SOURCES.filter((path) =>
+      !path.startsWith("website/en/") && path !== "website/v2/index.md"
+    )) {
       const japanese = readFileSync(source, "utf8");
       const english = readFileSync(source.replace("website/", "website/en/"), "utf8");
       expect(fences(english)).toEqual(fences(japanese));
       expect(english.match(/^<<< .+$/gmu) ?? []).toEqual(japanese.match(/^<<< .+$/gmu) ?? []);
       expect(ids(english, source.replace("website/", "website/en/"))).toEqual(ids(japanese, source));
-      const isGuideEntry = source === "website/guides/index.md";
-      if (isGuideEntry) {
-        expect(japanese).toContain(
-          "https://github.com/tako0614/terraform-provider-takoform/blob/main/docs/ja/getting-started.md",
-        );
-        expect(english).toContain(
-          "https://github.com/tako0614/terraform-provider-takoform/blob/main/docs/getting-started.md",
-        );
-      }
-      expect(links(english, isGuideEntry)).toEqual(links(japanese, isGuideEntry));
+      expect(links(english)).toEqual(links(japanese));
     }
+    expect(readFileSync("website/en/v2/index.md", "utf8"))
+      .toContain("The normative source is English and remains open to revision.");
+    expect(readFileSync("website/en/v2/index.md", "utf8"))
+      .toContain("Local copies and previews may contain different text.");
+    expect(readFileSync("spec/host-api/v2/migration.md", "utf8"))
+      .toContain("[v1 contract](../v1.md)");
+    expect(readFileSync("website/en/v2/index.md", "utf8"))
+      .toContain("remains open to revision");
+    expect(readFileSync("website/v2/index.md", "utf8"))
+      .toContain("Host実装者:");
+    expect(readFileSync("website/v2/index.md", "utf8"))
+      .toContain("クライアント実装者:");
+    expect(readFileSync("website/en/v2/index.md", "utf8"))
+      .toContain("Host implementers:");
+    expect(readFileSync("website/en/v2/index.md", "utf8"))
+      .toContain("Client implementers:");
+    expect(readFileSync("website/v2/index.md", "utf8"))
+      .toContain("/spec/host-api/v2/migration");
+    expect(readFileSync("website/en/v2/index.md", "utf8"))
+      .toContain("/en/spec/host-api/v2/migration");
     expect(links("[guide](https://publisher.example/en/forms/?lang=en#start)", true))
       .toEqual(links("[guide](https://publisher.example/forms/?lang=en#start)", true));
     expect(links("[guide](https://publisher.example/en/forms/)", true))
@@ -181,6 +238,18 @@ describe("takoform.com site derivation", () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+
+  test("preserves specification bytes and HTML revalidation without changing schema caching and CORS", () => {
+    const headers = readFileSync("website/public/_headers", "utf8");
+    // The production zone's email obfuscation rewrote user@host.example in
+    // the HTTP specification while the immutable Pages URL stayed intact.
+    // Pages overrides its default Cache-Control with custom headers, and
+    // combines matching rules. Keep HTML and schema cache policies disjoint.
+    expect(headers).toMatch(/^\/spec\/\*\r?\n[ \t]+cache-control: public, max-age=0, must-revalidate, no-transform\s*$/m);
+    expect(headers).toMatch(/^\/en\/spec\/\*\r?\n[ \t]+cache-control: public, max-age=0, must-revalidate, no-transform\s*$/m);
+    expect(headers).not.toMatch(/^\/\*\s*$/m);
+    expect(headers).toMatch(/^\/schemas\/\*\r?\n[ \t]+access-control-allow-origin: \*\r?\n[ \t]+cache-control: public, max-age=3600\s*$/m);
   });
 
   test("keeps design records explicit without treating a review score as a product gate", () => {
@@ -357,6 +426,132 @@ describe("takoform.com site derivation", () => {
     }
   });
 
+  test("projects only the explicit v2 specification and migration sources with authority and release state separate", () => {
+    expect(V2_SPEC_DOCUMENTS.map(({ path, normative, sourceLanguage, releaseState }) => ({
+      path, normative, sourceLanguage, releaseState,
+    }))).toEqual([
+      { path: "spec/host-api/v2/README.md", normative: true, sourceLanguage: "en", releaseState: "revision-open" },
+      { path: "spec/host-api/v2/http.md", normative: true, sourceLanguage: "en", releaseState: "revision-open" },
+      { path: "spec/host-api/v2/forms.md", normative: true, sourceLanguage: "en", releaseState: "revision-open" },
+      { path: "spec/host-api/v2/examples.md", normative: false, sourceLanguage: "en", releaseState: "revision-open" },
+      { path: "spec/host-api/v2/migration.md", normative: false, sourceLanguage: "en", releaseState: "revision-open" },
+    ]);
+    for (const document of V2_SPEC_DOCUMENTS) {
+      expect(MIRRORED_SPEC_DOCUMENTS).not.toContain(document.path);
+      expect(FROZEN_HOST_API_SPEC_DOCUMENTS).not.toContain(document.path);
+    }
+    expect(sitePathForV2SpecDocument("spec/host-api/v2/README.md"))
+      .toBe("website/spec/host-api/v2/index.md");
+    expect(siteRouteForV2SpecDocument("spec/host-api/v2/README.md"))
+      .toBe("/spec/host-api/v2/");
+    expect(sitePathForV2SpecDocument("spec/host-api/v2/forms.md", "en"))
+      .toBe("website/en/spec/host-api/v2/forms.md");
+    expect(siteRouteForV2SpecDocument("spec/host-api/v2/forms.md", "en"))
+      .toBe("/en/spec/host-api/v2/forms");
+    expect(sitePathForV2SpecDocument("spec/host-api/v2/migration.md"))
+      .toBe("website/spec/host-api/v2/migration.md");
+    expect(siteRouteForV2SpecDocument("spec/host-api/v2/migration.md", "en"))
+      .toBe("/en/spec/host-api/v2/migration");
+
+    const files = buildSiteFiles(".");
+    expect(V2_SOURCE_PREFIX).toBe("/_source/host-api/v2");
+    for (const document of V2_SPEC_DOCUMENTS.filter((entry) => entry.normative)) {
+      const raw = `website/public${v2NormativeSourceRoute(document.path)}`;
+      expect(files.get(raw)).toEqual(readFileSync(document.path));
+    }
+    expect(() => v2NormativeSourceRoute("spec/host-api/v2/examples.md"))
+      .toThrow("unlisted v2 normative source");
+    for (const document of V2_SPEC_DOCUMENTS) {
+      for (const locale of ["ja", "en"]) {
+        const page = files.get(sitePathForV2SpecDocument(document.path, locale))?.toString("utf8");
+        expect(page).toContain(`normative: ${document.normative}`);
+        expect(page).toContain(`canonicalSource: ${document.path}`);
+        expect(page).toContain(`sourceLanguage: ${document.sourceLanguage}`);
+        expect(page).toContain(`releaseState: ${document.releaseState}`);
+        expect(page).toContain('<div lang="en" class="specification-source">');
+        if (document.normative) {
+          expect(page).toContain(`canonicalUrl: ${v2NormativeSourceRoute(document.path)}`);
+        } else {
+          expect(page).not.toContain("canonicalUrl:");
+        }
+      }
+    }
+    expect(files.get("website/spec/host-api/v1.md").toString("utf8"))
+      .toContain("normative: true");
+    expect(files.get("website/spec/index.md").toString("utf8"))
+      .toContain("[Host API v2 specification](/spec/host-api/v2/)");
+    expect(files.has("website/drafts/v2/host-api-v2.md")).toBe(false);
+    expect(files.has("website/spec/host-api/v2/unlisted.md")).toBe(false);
+  });
+
+  test("rejects a revision-open mirror whose notice still claims the old frozen state", () => {
+    const html = `<!doctype html><html lang="en" data-document-authority="normative"><head>
+<title>V2 contract</title><meta property="og:title" content="V2 contract">
+<meta property="og:url" content="https://takoform.com/">
+<meta property="og:description" content="V2 contract">
+<meta name="twitter:title" content="V2 contract">
+<meta name="twitter:description" content="V2 contract">
+</head><body><main><h1>V2 contract</h1>
+<aside class="mirror-notice" data-document-authority="normative" data-release-state="revision-open">English revision-open candidate</aside>
+<div lang="en" class="specification-source">Source</div></main></body></html>`;
+    const page = {
+      path: "dist/index.html", route: "/", html, lang: "en", authority: "normative",
+      mirror: true, releaseState: "revision-open", sourceLanguage: "en",
+    };
+    expect(inspectRenderedSitePages([page])).toEqual([]);
+    expect(inspectRenderedSitePages([{ ...page, html: html.replace("revision-open candidate", "frozen source") }]))
+      .toContain("dist/index.html does not render its revision-open release state");
+  });
+
+  test("rewrites v2 document links to locale-correct routes without changing frozen v1", () => {
+    const v2Context = {
+      ...context,
+      mirrored: new Map([
+        ...MIRRORED_SPEC_DOCUMENTS.map((path) => [path, siteRouteForSpecDocument(path)]),
+        ...V2_SPEC_DOCUMENTS.map((document) => [
+          document.path,
+          siteRouteForV2SpecDocument(document.path),
+        ]),
+      ]),
+    };
+    const page = renderV2SpecDocument(
+      V2_SPEC_DOCUMENTS[0],
+      "[HTTP](http.md) [Form](forms.md) [examples](examples.md) [migration](migration.md) [v1](../v1.md)",
+      v2Context,
+    );
+    expect(page).toContain("[HTTP](/spec/host-api/v2/http)");
+    expect(page).toContain("[Form](/spec/host-api/v2/forms)");
+    expect(page).toContain("[examples](/spec/host-api/v2/examples)");
+    expect(page).toContain("[migration](/spec/host-api/v2/migration)");
+    expect(page).toContain("[v1](/spec/host-api/v1)");
+    expect(page).toContain("normative: true");
+    expect(page).toContain("releaseState: revision-open");
+    expect(page).not.toContain("draft:");
+    expect(page).not.toContain("design/takoform-v2-spec-20261004");
+
+    const first = buildSiteFiles(".");
+    const second = buildSiteFiles(".");
+    for (const document of V2_SPEC_DOCUMENTS) {
+      for (const locale of ["ja", "en"]) {
+        const path = sitePathForV2SpecDocument(document.path, locale);
+        expect(second.get(path)).toEqual(first.get(path));
+      }
+    }
+  });
+
+  test("rejects an unlisted v2 source instead of admitting arbitrary proposals", () => {
+    const files = buildSiteFiles(".");
+    expect(() => sitePathForV2SpecDocument("spec/host-api/v2/unlisted.md"))
+      .toThrow("unlisted v2 specification source");
+    expect(inspectPublishedSourceAllowlist(
+      ["website/spec/host-api/v2/unlisted.md", "website/drafts/v2/unlisted.md"],
+      new Set(files.keys()),
+    )).toEqual([
+      "website/spec/host-api/v2/unlisted.md would publish a page outside the API/common-model allowlist",
+      "website/drafts/v2/unlisted.md would publish a page outside the API/common-model allowlist",
+    ]);
+  });
+
   test("does not mirror publisher-owned lifecycle records", () => {
     expect(MIRRORED_SPEC_DOCUMENTS).not.toContain("spec/project-lifecycle.md");
     expect(buildSiteFiles(".").has("website/spec/project-lifecycle.md")).toBe(false);
@@ -511,6 +706,7 @@ describe("takoform.com site derivation", () => {
       "website/client/index.md",
       "website/use/index.md",
       "website/reference/index.md",
+      "website/v2/index.md",
       "website/glossary.md",
     ]);
     expect(HAND_AUTHORED_PUBLIC_FILES).toEqual(
@@ -559,10 +755,17 @@ describe("takoform.com site derivation", () => {
       expect(head).toContainEqual(["meta", { property: "og:url", content: `https://takoform.com${route}` }]);
       expect(head).toContainEqual(["meta", { property: "og:title", content: "Page | Takoform" }]);
     }
-    expect(config.themeConfig?.nav?.slice(0, 3)).toEqual([
+    expect(config.themeConfig?.nav).toEqual([
       { text: "はじめる", link: "/start/" },
       { text: "ガイド", link: "/guides/" },
-      { text: "仕様", link: "/reference/" },
+      { text: "Host API v2", link: "/v2/" },
+      { text: "仕様一覧", link: "/reference/" },
+    ]);
+    expect(config.locales.en.themeConfig.nav).toEqual([
+      { text: "Start", link: "/en/start/" },
+      { text: "Guides", link: "/en/guides/" },
+      { text: "Host API v2", link: "/en/v2/" },
+      { text: "Reference", link: "/en/reference/" },
     ]);
     const links = [];
     const collectLinks = (value) => {

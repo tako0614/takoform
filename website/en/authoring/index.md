@@ -4,77 +4,97 @@ title: Create a Form
 
 # Create a Form {#authoring}
 
-A Form describes resource settings and the behavior those settings mean.
-Packaging the definition lets publishers, clients and Hosts verify the same
-contents. This example builds a small package, validates input and detects a
-changed payload.
+A Takoform v2 Form defines the settings and behavior for one kind of Host-managed Resource. Start by stating what the Resource owns; then make its inputs, observations, operations, and failure recovery precise. A Host does not fetch code from a published Form URL. It explicitly implements the Forms it supports.
 
-## Run the example {#run}
+This guide walks through designing and checking a fictional `KeyValueEntry` Form. It is a teaching example, not a claim that the Form is published or supported by any Host.
 
-You need Go, Git and a network connection for the
-initial source and dependency downloads. In an existing checkout, run the last
-two commands from the repository root.
+## 1. Define the Resource and its boundary {#purpose}
 
-```sh
-git clone https://github.com/tako0614/takoform.git
-cd takoform
-go mod download
-go test -v ./formpackage -run '^ExampleVerifyFS$' -count=1
-```
+The example Resource is “one named string entry in a Space.” It owns that entry, not the entire collection or other entries. The [Host API v2](/en/spec/host-api/v2/http) defines common HTTP behavior; the [Form specification](/en/spec/host-api/v2/forms) defines the meaning specific to this Resource.
 
-The test verifies this output and finishes with `PASS`.
+The example uses this fictional exact Form URL:
 
 ```text
-GreetingPolicy 1
-changed payload rejected: true
+https://forms.publisher.example/key-value-entry/1.0.0
 ```
 
-The example uses a fictional `GreetingPolicy` and local temporary data. It does
-not sign or publish a package, or create resources on a Host.
+Forms are identified by exact URL string. Do not silently change the contract at an existing URL; use a new URL for a semantic change. A SemVer-shaped path is an authoring convention, not a Host API version or an automatic compatibility rule.
 
-## Define settings and meaning {#definition}
+## 2. Separate desired input from observation {#definition}
 
-The setting is a greeting prefix of at most 40 characters. Creation stores it
-unchanged, updates replace it and deletion removes it. There is no runtime
-endpoint.
+`spec` is desired state, `observed` is what the Host has confirmed, and `output` contains values needed to use the Resource. Keep the three separate. In particular, do not turn an unknown result into “absent” or “ready.”
 
-<<< @/../formpackage/example_test.go#definition{go}
+This example's `spec` has exactly two fields. Unknown fields and `null` are rejected; neither field has an implicit default.
 
-`desiredSchema` validates the input shape. It does not by itself explain what an
-update changes or whether an operation can be retried after failure. A real Form
-also defines lifecycle behavior, failure handling and any required Interfaces or
-Bindings. See [Form Definition](/en/spec/form-definition/) and the
-[portability boundary](/en/spec/portability-boundary) for the behavior that can
-be offered under the same Form identity.
+| Field | Meaning | Create | Update |
+| --- | --- | --- | --- |
+| `key` | Unique within the same Host, Space, and Form URL. 1–128 Unicode scalar values; case-sensitive. | Required | Immutable |
+| `value` | Stored string, 0–4096 Unicode scalar values. Empty string is valid. | Required | Replaceable |
 
-## Build and verify the package {#package}
+```json
+{
+  "key": "welcome",
+  "value": "Hello, Ada!"
+}
+```
 
-This code validates the definition and input, then builds a virtual filesystem
-containing `definition.json` and `package-index.json`. `VerifyFS` uses a temporary
-directory for verification and removes that directory afterward.
+Lengths count Unicode scalar values, not UTF-8 bytes. Before the first confirmed observation, use `observed: {}`. Confirmed presence is `{ "entryExists": true, "key": "welcome", "value": "Hello, Ada!" }`; confirmed absence is `{ "entryExists": false }`. If the Host cannot check, it must not claim absence. `output` is always `{}`. This Form does not claim that an application is running.
 
-<<< @/../formpackage/example_test.go#authoring{go}
+## 3. Define operations and recovery {#lifecycle}
 
-`schemaDigest` identifies the canonicalized definition. Each file's `digest` and
-`size` in the index verify the exact packaged bytes. The final part adds a newline
-to the definition without updating the index and confirms that verification
-rejects the changed payload.
+Define what create, read, update, and delete mean for this Form. Use common API rules for HTTP statuses, generations, `Idempotency-Key`, and Operation shape rather than redefining them in each Form.
 
-To distribute files, save the same definition and index, with all declared files
-and references present. [Form Package](/en/spec/form-package/) defines the index
-format and calculation rules.
+- **Create:** Create one entry scoped by `(Host, Space, Form URL, key)`. If the key is already in use, fail with `key_conflict` and leave its existing value unchanged.
+- **Read:** Return the Resource and its last confirmed state. This Form does not require a new backend lookup for every GET.
+- **Update:** Replace only `value`. Reject a changed `key` before external effects. Updating a missing entry does not recreate it.
+- **Delete:** Remove only the entry this Resource represents. If it is confirmed absent, deletion is complete. Do not delete the collection or another entry.
 
-## Prepare for publication {#publish}
+If the response is lost after a write may have happened, a timeout does not prove that nothing happened. Keep the same Resource and Operation, read back the same key, and compare its value. If the result cannot be proved, retain the Operation as unresolved. Before adding more examples, decide and test how the Form handles partial success, failure, and unknown outcomes.
 
-1. Choose a publisher-controlled namespace and define the Form's purpose and behavior.
-2. Document settings, updates, deletion, errors and retry rules, and write tests for them.
-3. Follow the [compatibility rules](/en/spec/versioning) when choosing a version; do not overwrite published contents.
-4. Provide publisher-owned provenance, signatures and revocation information following [Trust and revocation](/en/spec/trust/), alongside examples and limitations.
-5. Check that the intended Host implements the exact FormRef and admits it for the intended caller.
+## 4. Write and test the Form specification {#write}
 
-Successful signature verification does not decide whether to trust the publisher.
-Users and operators supply that policy. Registration in a central Core catalog is
-not what makes a Form usable.
+Turn the table above into a human-readable normative specification. A reader should be able to find all of these answers without guessing:
 
-Continue with the [common model](/en/model/) to understand references in a
-Snapshot, or [use a Host from Go](/en/client/) to try the API calls.
+1. The Resource's purpose and what it does not own.
+2. Every `spec` field's type, requiredness, omission behavior, limits, unknown-field rule, and mutability.
+3. The meaning of `observed`, `output`, unobserved or stale values, and any readiness claim.
+4. Create/read/update/delete effects, failures, partial effects, same-UID recovery, and deletion scope.
+5. Exact identities, owners, and constraints for any Resource references, Interfaces, Bindings, or artifacts. Say “none” when not applicable.
+6. For private inputs: their names, values, and when they are required; whether they are optional or intrinsic to every valid use; and how they stay out of public Resources and logs.
+
+This example has no references, Interfaces, Bindings, artifacts, or private inputs. If you add JSON Schema or another machine-readable aid, test that it agrees with the normative text. See [Form requirements](/en/spec/host-api/v2/forms#what-a-form-specification-must-define) and the [author checklist](/en/spec/host-api/v2/forms#author-checklist) for the full contract.
+
+## 5. Check a Host's support and try the API {#check}
+
+Ask the Host operator for the API root, Space, and authentication method. The following shell example assumes those values are set. Since the Form URL is fictional, a real Host may not support it.
+
+```sh
+export BASE_URL='https://host.example.test/api-root-returned-by-discovery'
+export FORM_URL='https://forms.publisher.example/key-value-entry/1.0.0'
+export SPACE='development'
+export TOKEN='replace-with-a-short-lived-token'
+
+curl --fail-with-body -G "$BASE_URL/support" \
+  -H "Authorization: Bearer $TOKEN" \
+  --data-urlencode "form=$FORM_URL"
+```
+
+Check that `form` exactly equals the URL you sent and inspect `supported` and the required operations. `supported: true` declares implementation; it does not promise your authorization, capacity, or success for an individual Operation. If unsupported, do not create a Resource; ask the Host operator.
+
+On a Host that supports the Form, use a fresh `Idempotency-Key` for create. A `200` response contains a terminal Operation; for `202`, poll the Operation at `Location`. Wait for a terminal result before reading the Resource.
+
+```sh
+curl --fail-with-body -X POST "$BASE_URL/resources" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -H 'Idempotency-Key: tutorial-create-001' \
+  --data '{"form":"https://forms.publisher.example/key-value-entry/1.0.0","space":"development","name":"welcome-entry","spec":{"key":"welcome","value":"Hello, Ada!"}}'
+```
+
+GET the Operation at its `Location`. After terminal success, GET the Resource by its returned UID. For update, send the complete `spec` with the current generation and the same `key`, replacing only `value`. For delete, send the current generation and a new idempotency key, then wait for that Operation to complete. The [HTTP API's create/read/update/delete sections](/en/spec/host-api/v2/http#create) define the exact headers and responses.
+
+## Continue
+
+- [Normative Form specification](/en/spec/host-api/v2/forms)
+- [Common Host API v2 format and operations](/en/spec/host-api/v2/http)
+- [Form author checklist](/en/spec/host-api/v2/forms#author-checklist)

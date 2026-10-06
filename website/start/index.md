@@ -1,380 +1,181 @@
 ---
-title: はじめる
+title: v2を使い始める
+description: 架空のKeyValueEntryを例に、DiscoveryからResourceの削除確認までを一続きでたどります。
 ---
 
-# はじめる
+# v2を使い始める {#start}
 
-テスト用のパッケージを検証し、Snapshotを作成します。後半ではHost APIの要求・応答例を
-説明します。ここで使うのは架空のFormのテストデータです。Hostへの接続やリソースの作成は行いません。
+Host API v2では、FormがResourceの意味を定義し、Hostが対応するFormを実装し、クライアントがResourceを管理します。下の一連のHTTP例は架空のHost `host.example` とForm URL `https://forms.publisher.example/key-value-entry/1.0.0` を使った説明です。接続可能なサービスや実在する公開Formを示すものではありません。完全な要求・応答の記録と失敗時の分岐は[要求・応答例](/spec/host-api/v2/examples)にあります。
 
-## 0. 準備
+## 1. Hostを見つけ、Formへの対応を調べる {#discover-support}
 
-Takoformリポジトリのルートで作業します。最初にGoの依存モジュールを取得してください。
-取得済みであれば、この手順の検証コマンドはネットワーク接続なしで実行できます。
-
-```console
-go mod download
-```
-
-この準備にはネットワーク接続が必要な場合があります。BunやHostへの接続は不要です。
-
-## 1. パッケージを検証する
-
-Form Packageは、一つのFormRef、その定義、収録ファイルからなります。
-次のコマンドで、必要なファイルが揃っていること、内容とダイジェスト、FormRefの一致を
-検証します。結果はJSONで標準出力に表示されます。
-
-```console
-go run ./cmd/form-package verify conformance/takoform-v1/generic-host/external-family/counter-reservation
-```
-
-出力の抜粋です。
-
-```json
-{
-  "packageDigest": "sha256:3af4d09e2939b533a800fba945a85fb7a168ca8fae3454727a028505e38981d7",
-  "formRef": {
-    "apiVersion": "resources.publisher.example",
-    "kind": "CounterReservation",
-    "definitionVersion": "0.1.0",
-    "schemaDigest": "sha256:9981fb7988d13844b8e22ab2428407aa90e7e368df876086e0e456151ff61116"
-  },
-  "fileCount": 1,
-  "payloadBytes": 1689
-}
-```
-
-`packageDigest` は正規化したパッケージ索引、`schemaDigest` は正規化した定義の内容を指します。
-この例の名前空間とkindはテスト専用です。検証に成功しても、公開されていることや
-Hostで利用できることを確認したわけではありません。
-
-## 2. Snapshotを作成して検証する
-
-次のコマンドは、マニフェストが指定するパッケージ、Interface、Bindingを検証し、
-入力順に依存しない、変更不可のSnapshotを構築します。
-
-```console
-go run ./cmd/generic-conformance verify --manifest conformance/takoform-v1/generic.json
-```
-
-検証レポートの抜粋です。
-
-```json
-{
-  "format": "takoform.generic-conformance-report@v1",
-  "status": "passed",
-  "hostApiLane": "forms.takoform.com/v1",
-  "manifestDigest": "sha256:7caed449cd40068c0ac940a20e6c5d1fe8555ce4a16812416ea5962d2a243e38",
-  "snapshots": [
-    { "name": "external-family", "snapshotDigest": "sha256:54f0d997aa1660b07a70dd694713bdd322a9e51774020f70f3d980c8800c360c" },
-    { "name": "zero-family", "snapshotDigest": "sha256:591e5ca6da361ba9dc3ca8f091a601ae90ae3cc362b959e37ee23a634a2b2e50" }
-  ],
-  "checks": [
-    { "name": "snapshot-compilation", "status": "passed" },
-    { "name": "permutation-stable", "status": "passed" },
-    { "name": "no-partial-snapshot", "status": "passed" }
-  ]
-}
-```
-
-`snapshot-compilation` は参照先とダイジェストの一致、`permutation-stable` は入力順に
-よらず結果が同じになること、`no-partial-snapshot` は失敗時に不完全なSnapshotを返さない
-ことを確認します。`zero-family` は特定のForm Familyが組み込まれていないことを確認します。
-この検証も、ネットワーク接続、Host上の操作、リソースの変更、実行コードの起動は行いません。
-
-## 3. Host APIの要求・応答例を読む
-
-ここからは [Host API v1](/spec/host-api/v1) の通信例です。実行するコマンドではありません。
-架空の接続先と応答を使って、要求・応答の形式を示します。
-
-まず接続先の情報を取得します。対応APIバージョンは `api_versions`、APIの接続先は
-`endpoints.api` に返ります。
+Formは作者が公開する版固定URLの仕様で、Hostはその仕様を実装するサービスです。Form URLが存在するだけではHostで実行できません。まずHostのoriginから接続先と認証方式を取得し、そのHostへ正確なForm URLを問い合わせます。
 
 ```http
-GET /.well-known/takoform/v1
+GET /.well-known/takoform/v2 HTTP/1.1
+Host: host.example
 
 HTTP/1.1 200 OK
 Content-Type: application/json
 
 {
-  "api_versions": ["forms.takoform.com/v1"],
-  "features": {
-    "service_forms": true,
-    "exact_form_ref": true,
-    "optimistic_concurrency": true,
-    "idempotent_lifecycle": true,
-    "operations": true,
-    "artifact_upload": true,
-    "support_profiles": true
+  "api": "forms.takoform.com/v2",
+  "baseUrl": "https://host.example/apis/forms.takoform.com/v2",
+  "documentation": "https://host.example/docs",
+  "authentication": {
+    "schemes": ["Bearer"],
+    "documentation": "https://host.example/docs/auth"
   },
-  "endpoints": {
-    "api": "https://host.example/apis/forms.takoform.com/v1"
-  }
+  "capabilities": { "offerings": false, "previews": false, "privateInputs": false },
+  "limits": { "maxRequestBytes": 1048576, "maxPageSize": 100, "replayWindowSeconds": 86400 }
 }
-```
 
-`https://host.example` は説明用の仮のURLです。実際には取得したAPI接続先をそのまま使い、
-Form Familyの名前空間、kind、リソース名を加えて操作先のURLを組み立てます。
-Form Familyの名前空間にはバージョンを含めません。
-
-この例では、同じspaceに参照先の `RangeSequence` が既にあり、呼び出し元が作成を許可されているものとします。まず正確なFormRefへの対応と許可を確認します。
-
-```http
-GET https://host.example/apis/forms.takoform.com/v1/forms?group=resources.publisher.example&kind=CounterReservation&definitionVersion=0.1.0&schemaDigest=sha256%3A9981fb7988d13844b8e22ab2428407aa90e7e368df876086e0e456151ff61116&space=demo
+GET /apis/forms.takoform.com/v2/support?form=https%3A%2F%2Fforms.publisher.example%2Fkey-value-entry%2F1.0.0 HTTP/1.1
+Host: host.example
+Authorization: Bearer <host-credential>
 
 HTTP/1.1 200 OK
 Content-Type: application/json
+Cache-Control: no-store
 
 {
-  "forms": [
-    {
-      "identity": {
-        "formRef": {
-          "apiVersion": "resources.publisher.example",
-          "kind": "CounterReservation",
-          "definitionVersion": "0.1.0",
-          "schemaDigest": "sha256:9981fb7988d13844b8e22ab2428407aa90e7e368df876086e0e456151ff61116"
-        }
-      },
-      "definitionKnown": true,
-      "installed": true,
-      "executable": true,
-      "activated": true,
-      "availableToPrincipal": true,
-      "operations": [
-        "create",
-        "read",
-        "delete",
-        "import",
-        "observe"
-      ]
-    }
-  ]
+  "form": "https://forms.publisher.example/key-value-entry/1.0.0",
+  "supported": true,
+  "operations": ["create", "read", "update", "delete"],
+  "privateInputs": false
 }
 ```
 
-次に、作成する内容を `prepare` に送ります。Hostは内容を事前確認し、同じ内容のResourceと `review` を返します。この要求だけではリソースを作成しません。
+Discoveryの`baseUrl`をAPI接続先にし、認証案内に従います。`support`はこのHostの技術的な対応を示します。利用権限や容量を予約する応答ではありません。
+
+## 2. Createを受理し、OperationとResourceを読む {#create-read}
+
+クライアントが選ぶのはForm URL、利用権限のあるSpace、name、Formに沿った`spec`、そして新しい操作ごとのIdempotency-Keyです。UIDとOperation IDはHostが発行します。
 
 ```http
-POST https://host.example/apis/forms.takoform.com/v1/resources/prepare
+POST /apis/forms.takoform.com/v2/resources HTTP/1.1
+Host: host.example
+Authorization: Bearer <host-credential>
 Content-Type: application/json
+Idempotency-Key: 946eec36-4a6a-41de-8f3c-e83d2c58c246
 
 {
-  "apiVersion": "resources.publisher.example",
-  "kind": "CounterReservation",
-  "form": {
-    "formRef": {
-      "apiVersion": "resources.publisher.example",
-      "kind": "CounterReservation",
-      "definitionVersion": "0.1.0",
-      "schemaDigest": "sha256:9981fb7988d13844b8e22ab2428407aa90e7e368df876086e0e456151ff61116"
-    }
-  },
-  "metadata": {
-    "name": "counter-reservation",
-    "space": "demo"
-  },
-  "spec": {
-    "target": {
-      "apiVersion": "resources.publisher.example",
-      "kind": "RangeSequence",
-      "name": "range-sequence"
-    }
-  }
+  "form": "https://forms.publisher.example/key-value-entry/1.0.0",
+  "space": "default",
+  "name": "greeting",
+  "spec": { "key": "greeting", "value": "hello" }
 }
 
-HTTP/1.1 200 OK
-Content-Type: application/json
-
-{
-  "resource": {
-    "apiVersion": "resources.publisher.example",
-    "kind": "CounterReservation",
-    "form": {
-      "formRef": {
-        "apiVersion": "resources.publisher.example",
-        "kind": "CounterReservation",
-        "definitionVersion": "0.1.0",
-        "schemaDigest": "sha256:9981fb7988d13844b8e22ab2428407aa90e7e368df876086e0e456151ff61116"
-      }
-    },
-    "metadata": {
-      "name": "counter-reservation",
-      "space": "demo"
-    },
-    "spec": {
-      "target": {
-        "apiVersion": "resources.publisher.example",
-        "kind": "RangeSequence",
-        "name": "range-sequence"
-      }
-    }
-  },
-  "review": {
-    "prepareDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "specDigest": "sha256:2bf6bf2dbd6249a80082f45aebf696ebcf93c52a457a4a9234f18a29ed219e25"
-  }
-}
-```
-
-応答の `review.prepareDigest` を、内容を変えずにapplyへ渡します。以下の `a` の列は説明用の仮の値です。実Hostでは応答をそのまま使い、クライアントで生成しません。新規作成は `If-None-Match: *` で既存リソースの上書きを防ぎます。同期で完了すると、作成済みResource全体が返ります。
-
-```http
-PUT https://host.example/apis/forms.takoform.com/v1/resources/resources.publisher.example/CounterReservation/counter-reservation
-If-None-Match: *
-Idempotency-Key: create-counter-reservation-20260907
-Content-Type: application/json
-
-{
-  "apiVersion": "resources.publisher.example",
-  "kind": "CounterReservation",
-  "form": {
-    "formRef": {
-      "apiVersion": "resources.publisher.example",
-      "kind": "CounterReservation",
-      "definitionVersion": "0.1.0",
-      "schemaDigest": "sha256:9981fb7988d13844b8e22ab2428407aa90e7e368df876086e0e456151ff61116"
-    }
-  },
-  "metadata": {
-    "name": "counter-reservation",
-    "space": "demo"
-  },
-  "spec": {
-    "target": {
-      "apiVersion": "resources.publisher.example",
-      "kind": "RangeSequence",
-      "name": "range-sequence"
-    }
-  },
-  "review": {
-    "prepareDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-  }
-}
-
-HTTP/1.1 201 Created
-Content-Type: application/json
-ETag: "1"
-
-{
-  "apiVersion": "resources.publisher.example",
-  "kind": "CounterReservation",
-  "form": {
-    "formRef": {
-      "apiVersion": "resources.publisher.example",
-      "kind": "CounterReservation",
-      "definitionVersion": "0.1.0",
-      "schemaDigest": "sha256:9981fb7988d13844b8e22ab2428407aa90e7e368df876086e0e456151ff61116"
-    }
-  },
-  "metadata": {
-    "name": "counter-reservation",
-    "space": "demo",
-    "uid": "res_counter_reservation_1",
-    "generation": "1",
-    "revision": "1"
-  },
-  "spec": {
-    "target": {
-      "apiVersion": "resources.publisher.example",
-      "kind": "RangeSequence",
-      "name": "range-sequence"
-    }
-  },
-  "status": {
-    "observedGeneration": "1",
-    "conditions": [
-      {
-        "type": "Ready",
-        "status": "True",
-        "reason": "Available",
-        "lastTransitionTime": "2026-09-07T00:00:00Z"
-      }
-    ]
-  }
-}
-```
-
-時間のかかる処理では、上の `201 Created` の代わりに、次の `202 Accepted` が返ります。これは別の処理分岐であり、201の後に202が返るわけではありません。
-
-```http
 HTTP/1.1 202 Accepted
 Content-Type: application/json
+Cache-Control: no-store
+Location: https://host.example/apis/forms.takoform.com/v2/operations/op_create_1
+Retry-After: 1
 
 {
-  "operation": {
-    "apiVersion": "operations.takoform.com/v1alpha1",
-    "kind": "Operation",
-    "id": "op_counter_reservation_create",
-    "done": false
-  }
+  "id": "op_create_1", "resourceUid": "r_1", "action": "create", "generation": 1,
+  "status": "queued", "effect": "none",
+  "createdAt": "2026-10-04T12:00:00Z", "updatedAt": "2026-10-04T12:00:00Z",
+  "retainUntil": "2026-10-05T12:00:00Z"
 }
 ```
 
-返されたOperationのIDで結果を取得します。`done: false` の間はHostの再試行案内に従って確認し、完了後は成功したResourceまたはエラーを読み取ります。下は成功して完了した応答です。
+`202 Accepted`は「受理済み、未完了」です。`Retry-After`の後に`Location`または`op_create_1`からOperationを取得し、成功を確認してからResourceを読みます。
 
 ```http
-GET https://host.example/apis/forms.takoform.com/v1/operations/op_counter_reservation_create
+GET /apis/forms.takoform.com/v2/operations/op_create_1 HTTP/1.1
+Host: host.example
+Authorization: Bearer <host-credential>
 
 HTTP/1.1 200 OK
 Content-Type: application/json
+Cache-Control: no-store
 
 {
-  "apiVersion": "operations.takoform.com/v1alpha1",
-  "kind": "Operation",
-  "id": "op_counter_reservation_create",
-  "done": true,
-  "result": {
-    "resource": {
-      "apiVersion": "resources.publisher.example",
-      "kind": "CounterReservation",
-      "form": {
-        "formRef": {
-          "apiVersion": "resources.publisher.example",
-          "kind": "CounterReservation",
-          "definitionVersion": "0.1.0",
-          "schemaDigest": "sha256:9981fb7988d13844b8e22ab2428407aa90e7e368df876086e0e456151ff61116"
-        }
-      },
-      "metadata": {
-        "name": "counter-reservation",
-        "space": "demo",
-        "uid": "res_counter_reservation_1",
-        "generation": "1",
-        "revision": "1"
-      },
-      "spec": {
-        "target": {
-          "apiVersion": "resources.publisher.example",
-          "kind": "RangeSequence",
-          "name": "range-sequence"
-        }
-      },
-      "status": {
-        "observedGeneration": "1",
-        "conditions": [
-          {
-            "type": "Ready",
-            "status": "True",
-            "reason": "Available",
-            "lastTransitionTime": "2026-09-07T00:00:00Z"
-          }
-        ]
-      }
-    }
-  }
+  "id": "op_create_1", "resourceUid": "r_1", "action": "create", "generation": 1,
+  "status": "succeeded", "effect": "complete",
+  "createdAt": "2026-10-04T12:00:00Z", "updatedAt": "2026-10-04T12:00:01Z",
+  "retainUntil": "2026-10-05T12:00:01Z"
+}
+
+GET /apis/forms.takoform.com/v2/resources/r_1 HTTP/1.1
+Host: host.example
+Authorization: Bearer <host-credential>
+
+HTTP/1.1 200 OK
+Content-Type: application/json
+Cache-Control: no-store
+
+{
+  "uid": "r_1", "form": "https://forms.publisher.example/key-value-entry/1.0.0",
+  "space": "default", "name": "greeting",
+  "generation": 1, "observedGeneration": 1,
+  "observedAt": "2026-10-04T12:00:01Z", "phase": "idle",
+  "spec": { "key": "greeting", "value": "hello" },
+  "observed": { "entryExists": true, "key": "greeting", "value": "hello" },
+  "output": {}, "lastOperation": "op_create_1"
 }
 ```
 
-更新では、読み取ったUIDとgenerationを使って同時更新を制御します。ただし、この `CounterReservation` の定義は更新操作を持ちません。更新可能かどうかもFormの定義とHostの対応情報で確認してください。Goで実際の呼び出し順を試す例は [GoからHostを使う](/client/) にあります。
+`spec`は受理された希望値、`observed`はHostが最後に確認した状態です。`generation`と`observedGeneration`が同じなら、この例ではその世代が観測済みです。Operation成功や`phase: idle`だけで、アプリケーションの稼働までは判断できません。
 
-各フィールド、ステータスコード、同時更新の制御、エラーコードの詳細は
-[Host API v1の仕様](/spec/host-api/v1) と
-[操作の一覧](/spec/host-api/v1#artifacts-and-operations) を参照してください。
+## 3. 世代を条件に全specを更新する {#update}
 
-## 次に進む
+更新は差分patchではなく、新しい`spec`文書全体を送ります。読み取った世代を条件にし、別の操作なので新しいキーを使います。
 
-- [実装ガイド](/guides/) — 作りたいものに応じた関連仕様。
-- [共通モデル](/model/) — 識別子、パッケージ、Snapshotの関係。
-- [Host APIの概要](/host-api/) — 接続先と主な操作。
-- [仕様一覧](/reference/) — 実装の基準となる仕様と日本語の解説。
+```http
+PUT /apis/forms.takoform.com/v2/resources/r_1 HTTP/1.1
+Host: host.example
+Authorization: Bearer <host-credential>
+Content-Type: application/json
+Idempotency-Key: 3908a7cc-5083-439f-9966-b3db7e405859
+Takoform-Expected-Generation: 1
+
+{ "spec": { "key": "greeting", "value": "welcome" } }
+
+HTTP/1.1 202 Accepted
+Content-Type: application/json
+Cache-Control: no-store
+Location: https://host.example/apis/forms.takoform.com/v2/operations/op_update_1
+Retry-After: 1
+
+{
+  "id": "op_update_1", "resourceUid": "r_1", "action": "update", "generation": 2,
+  "status": "queued", "effect": "none",
+  "createdAt": "2026-10-04T12:01:00Z", "updatedAt": "2026-10-04T12:01:00Z",
+  "retainUntil": "2026-10-05T12:01:00Z"
+}
+```
+
+Operation `op_update_1`が完了状態になるまで確認し、Resource `r_1`を再取得します。更新が完了した例では`generation`と`observedGeneration`がともに2、`spec.value`と観測した`observed.value`が`welcome`です。最新世代が1でなければ、この古い要求を新世代へ付け替えず、Resourceを読み直して変更意図を組み立て直します。
+
+## 4. 世代2を条件に削除する {#delete}
+
+Resourceの最新generationを確認した後、その値でDeleteを要求します。削除もOperationで追跡します。
+
+```http
+DELETE /apis/forms.takoform.com/v2/resources/r_1 HTTP/1.1
+Host: host.example
+Authorization: Bearer <host-credential>
+Idempotency-Key: e1a20f10-0ac6-491d-b665-04de19f965f4
+Takoform-Expected-Generation: 2
+
+HTTP/1.1 202 Accepted
+Content-Type: application/json
+Cache-Control: no-store
+Location: https://host.example/apis/forms.takoform.com/v2/operations/op_delete_1
+Retry-After: 1
+
+{
+  "id": "op_delete_1", "resourceUid": "r_1", "action": "delete", "generation": 3,
+  "status": "queued", "effect": "none",
+  "createdAt": "2026-10-04T12:02:00Z", "updatedAt": "2026-10-04T12:02:00Z",
+  "retainUntil": "2026-10-05T12:02:00Z"
+}
+```
+
+`op_delete_1`を読み、成功を確認します。その後のResourceのGETは、Hostが削除記録を保持する場合は`410 Gone`、保持しない場合は`404 Not Found`になり得ます。削除結果の根拠にはOperationを使い、404/410だけから実行先への効果を推測しません。要求・応答の全項目と失敗時の復旧経路は[HTTP API](/spec/host-api/v2/http)と[完全な例](/spec/host-api/v2/examples)を参照してください。
+
+## Host実装者が持つべき耐久性 {#host-implementers}
+
+受理済みOperation、Idempotency-Keyとの対応、Resource UIDとgeneration、最後に確認したobserved状態を、プロセス再起動後も追跡できる必要があります。HTTP処理が終わった後にworkerが進行する場合も、未処理・実行中・結果不明を区別して再開します。詳細は[Host実装ガイド](/host-api/)を参照してください。

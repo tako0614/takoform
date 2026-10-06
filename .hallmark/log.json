@@ -7,5 +7,14 @@
     "brief": "Reader-first Takoform documentation home and learning routes",
     "slopTest": "pass 58/58",
     "viewports": [320, 375, 414, 768, 1280]
+  },
+  {
+    "date": "2026-10-04",
+    "macrostructure": "Index-First",
+    "theme": "VitePress light/dark tokens with home-local spacing",
+    "enrichment": "none; the v2 request example is content",
+    "brief": "Purpose-first Takoform home with canonical v2 specification links, a request example, and a separate frozen-v1 reference",
+    "slopTest": "Parent reviewed JP/EN mobile and JP light/dark desktop screenshots. No synthetic full-checklist score claimed. Browser geometry and interaction checks passed separately.",
+    "viewports": [320, 375, 414, 768, 1280]
   }
 ]

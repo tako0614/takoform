@@ -1,142 +1,86 @@
 # Takoform
 
-Takoform は、portable な resource contract を定義・検証する project です。
-publisher が data-only の desired state を一度定義し、Core、client、Host が
-同じ exact な bytes と identity を扱います。ここでいう Core は、Form Package
-の検証、immutable Snapshot の compile、Host API client、offline trust 検証、
-generic conformance を含む Go module です。
+Takoformは、資源の仕様を作者がHTTPSで公開し、その仕様を実装するHostを共通のHTTP APIで
+操作するためのプロトコルです。データベースやストレージなど、何を作り、どの入力を受け付け、
+更新・削除で何が起きるかは、**Form**という資源ごとの仕様で定義します。
 
-最初に押さえる事実は三つです。
+現在の文書はHost API v2を中心に構成しています。**v2の規範本文は英語**で、
+日本語の入口・解説はその理解を助ける資料です。仕様を読むためにGoライブラリや
+特定のProviderを導入する必要はありません。
 
-- 現在の wire lane は `forms.takoform.com/v1` です。
-- 現在の Core module artifact は `github.com/tako0614/takoform@v1.1.0` です。
-- FormRef に `official` bit はなく、Takoform は中央の Form catalog を持ちません。
+## 読み始める
 
-## 最短 quickstart
+| 目的 | 入口 |
+| --- | --- |
+| Takoformの仕組みを知る | [概要と用語](spec/host-api/v2/README.md) / [日本語の概念ガイド](website/model/index.md) |
+| 資源を操作する流れを知る | [日本語の入門](website/start/index.md) / [HTTPの往復例](spec/host-api/v2/examples.md) |
+| クライアントを作る | [クライアントガイド](website/client/index.md) / [HTTP API](spec/host-api/v2/http.md) |
+| 自分のFormを定義する | [Form作者向けガイド](website/authoring/index.md) / [Formの要件と完成例](spec/host-api/v2/forms.md) |
+| Hostを実装する | [Host実装ガイド](website/host-api/index.md) / [HTTPの適合条件](spec/host-api/v2/http.md#conformance) |
+| 既存v1の資源・実装を引き継ぐ | [Migration](spec/host-api/v2/migration.md) / [固定済みv1仕様](spec/host-api/v1.md) |
 
-repository root から、synthetic な conformance fixture を検証できます。clone 直後や
-Go module cache が空の場合は、最初に依存を取得します。
+公開サイトは [takoform.com](https://takoform.com/) です。
+英語の説明は [English documentation](website/en/v2/index.md) から読めます。
+
+## 仕様の構成
+
+規範文書は、[共通モデル](spec/host-api/v2/README.md)、
+[HTTP API](spec/host-api/v2/http.md)、[Formの要件](spec/host-api/v2/forms.md)です。
+英語本文が実装の基準です。例、ガイド、翻訳は独立した適合条件を追加しません。
+
+- Formは版固定のHTTPS URLで識別します。HostのAPI接続先とは別です。
+- Hostは明示的に実装したFormへの対応を返します。仕様が存在するだけで自動対応しません。
+- Resourceは管理対象と希望状態・観測状態を、Operationは受理した変更と結果を表します。
+- 競合する更新、応答喪失、再起動、結果不明・部分失敗の復旧もHTTP契約に含まれます。
+- Offering、事前確認、秘密入力は独立した任意機能です。
+
+v2の規範本文は英語で、現在は改訂可能です。別の文書バージョンや固定済みの最終版を意味しません。
+公開版は[takoform.com](https://takoform.com/v2/)で確認できます。ローカル版やプレビューは公開版と異なる場合があります。
+公開文書の改訂と、各Hostの実装対応は別の状態です。
+
+個別Formの定義・利用例は、その作者のサイトが所有します。ここには中央カタログや
+Hostの稼働状況を置きません。SDKや各Providerは独立した実装であり、仕様そのものではありません。
+
+## 保持するv1の資料とコード
+
+v1の規範本文と公開スキーマは変更せず保持します。v2の改訂はその意味を変えません。
+
+- [v1 HTTP API](spec/host-api/v1.md)と[固定範囲](spec/host-api/v1.freeze.json)
+- [v1の契約・スキーマ一覧](spec/README.md#published-host-api-v1-reference)
+- 既存Goライブラリ: [formpackage](formpackage/)、[snapshot](snapshot/)、
+  [hostclient](hostclient/)、[trust](trust/)
+
+これらのGoコードはv1向けです。v2のSDKや導入要件として扱いません。
+既存のローカル検査は次のとおりです。架空の検査用データを使い、実際のHostに資源を作りません。
 
 ```console
 go mod download
-```
-
-依存が取得済みなら、以下の verifier command は network access を必要とせず、local の
-fixture と module cache だけを読みます。これは実在の Form の公開や catalog の例では
-ありません。
-
-```console
 go run ./cmd/form-package verify conformance/takoform-v1/generic-host/external-family/counter-reservation
-```
-
-次に、package と Interface / Binding の bytes を集めて immutable Snapshot へ
-compile する generic corpus を実行します。
-
-```console
 go run ./cmd/generic-conformance verify --manifest conformance/takoform-v1/generic.json
 ```
 
-前者は package digest、exact な FormRef、payload の数とサイズを JSON で返します。
-後者は `status: "passed"`、`hostApiLane: "forms.takoform.com/v1"`、
-`snapshot-compilation`、`permutation-stable`、`no-partial-snapshot` などを含む
-machine-readable report を返します。依存が取得済みなら、どちらの command も network
-を使わず、Resource を変更しません。入力と出力の読み方は [Start](website/start/index.md)
-にあります。
+`go mod download`以降は、取得済みの依存とローカルデータで検査します。
+v1とv2の契約差は[Migration](spec/host-api/v2/migration.md)にまとめています。
 
-## 読む順番
-
-1. [Start](website/start/index.md) — package verify から Snapshot、概念上の
-   Host API request までを一続きで確認します。
-2. [Guides](website/guides/index.md) — 読者の役割ごとの入口です。
-3. [共通モデル](website/model/index.md) — FormRef、Definition、Package、Snapshot の
-   関係を先に読みます。
-4. [Host API v1](website/host-api/index.md) — discovery、lifecycle、Operation、fence を
-   wire の観点から読みます。
-5. [Reference](website/reference/index.md) — 英語の normative source と日本語の案内を
-   区別します。
-
-機械的な入口は [spec/README.md](spec/README.md)、語彙の揺れを避けるには
-[glossary](website/glossary.md) を使ってください。
-
-## 何がこの repository にあるか
-
-normative な common model と Core の実装は、次の層に分かれています。
-
-- [`spec/form-definition/`](spec/form-definition/) — exact な FormRef と desired /
-  observed / output の形。
-- [`spec/form-package/`](spec/form-package/) — 一つの exact な Form を閉じ込める
-  data-only package。
-- [`spec/core/`](spec/core/) — 検証済み contract を順序非依存の immutable Snapshot に
-  compile する規則。
-- [`spec/host-api/`](spec/host-api/) — discovery、lifecycle、非同期 Operation、identity
-  fence、portable error。
-- [`spec/interface-contract/`](spec/interface-contract/)、
-  [`spec/binding-contract/`](spec/binding-contract/)、
-  [`spec/artifact-transport/`](spec/artifact-transport/)、
-  [`spec/standard-services/`](spec/standard-services/) — digest-bound な data contract。
-- [`spec/trust/`](spec/trust/) — caller が渡す provenance と offline verification の入力。
-
-実装の入口は [`formpackage/`](formpackage/)、[`snapshot/`](snapshot/)、
-[`hostclient/`](hostclient/)、[`trust/`](trust/) です。CLI はこれらと同じ検証経路を
-使い、invalid input では安全側に停止します。
-
-## version の読み方
-
-Takoform には名前付きの **4つの version stream** があります。ただし、domain の
-互換性を表す **version axis は2つだけ** です。
-
-| stream | identity | 何の互換性か |
-| --- | --- | --- |
-| Host API lane | `forms.takoform.com/v1` | discovery と wire contract |
-| Form definition | 各 FormRef の `definitionVersion` | その Form の desired-state contract |
-| Core module | `v1.1.0` | SDK、CLI、verifier、compiler、client の artifact |
-| Provider | 独立した SemVer | Terraform / OpenTofu client artifact |
-
-Host API lane と Form definition が二つの domain axis です。Core と Provider の
-release number、package / schema の `$id`、package digest、Interface / Binding ref、
-trust record は、それぞれの artifact や reader、bytes を識別します。これらは Host
-API や Form の version へ暗黙に変換されません。`/v1.1` という Host route もありません。
-
-## publisher と所有境界
-
-すべての publisher が同じ FormRef、package 検証、canonical digest、trust、revocation、
-Snapshot、installation、Host support、activation の経路を通ります。provenance と policy
-を選ぶのは operator で、Core に privileged publisher allowlist はありません。検証済み
-であること、installation、Host support、activation、commercial Offering は別々の事実です。
-
-この repository が所有するのは、neutral な contract、Core 実装、generic conformance、
-公開 schema とその identity です。ここには次のものはありません。
-
-- 個別 Form の source、definition、example、publisher catalog
-- Host implementation、backend state、target、credential、activation、billing
-- Terraform / OpenTofu の mapping、state、import、診断、release の仕様
-
-OpenTofu / Provider の利用者は、[terraform-provider-takoform](https://github.com/tako0614/terraform-provider-takoform)
-を参照してください。Takoform Core はその client artifact の内容を複製しません。
-
-## takoform.com の範囲
-
-この repository は API と common model の site source、build、deploy entrypoint を
-持ちます。site が配信するのは Host API v1、publisher 中立な common model、exact な公開
-schema bytes、conformance の語彙と案内、Core 自身のライブラリを使う実行例です。
-publisher が公開する Form definition、family 固有の example、publisher catalog、
-Host support/status、第三者の client adapter page、realized な DNS / CDN / account /
-credential 状態は配信しません。架空の定義を使う Core の入門例と、publisher が配布する
-Form は区別します。詳しくは [この site について](website/site.md) を読んでください。
-
-## 開発
+## 文書とサイトの開発
 
 ```console
 bun install --frozen-lockfile
 bun run check
 ```
 
-この gate は format、source boundary、record と schema の検査、Go の static analysis、
-portable tests、generic conformance、standalone build、site build を行います。公開や
-Resource の mutation は行いません。
+`check`は文書の境界、固定済みv1、生成元との一致、リンク、既存Goコード、サイトbuildを
+確認します。公開サイトや実資源は変更しません。生成ページを直接編集せず、
+規範は`spec/host-api/v2/`、日英の解説は`website/`の対応する元ファイルを編集します。
 
-この repository の provenance を記録した extraction receipt と byte map は
-[docs/extraction/](docs/extraction/) にあります。
+```console
+bun scripts/site.mjs --write
+bun run build:site
+bun run site:preview
+```
+
+プレビューはローカルの候補です。公開・固定・実装の対応を同じ完了状態にまとめません。
+サイトの範囲は[このサイトについて](website/site.md)、公開の運用は[サイト開発文書](docs/site.md)を参照してください。
 
 ## License
 

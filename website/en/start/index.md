@@ -1,382 +1,181 @@
 ---
-title: Getting started
+title: Getting started with v2
+description: Follow one fictional KeyValueEntry through Discovery, support, create, update, and delete.
 ---
 
-# Getting started {#はじめる}
+# Getting started with v2 {#start}
 
-Verify a fixture package and build a Snapshot, then read Host API request/response
-examples. This guide is non-normative. These are fictional Form fixtures:
-the commands do not connect to a Host or create resources.
+Host API v2 separates the Form that defines a Resource's meaning, the Host that implements supported Forms, and the client that manages Resources. The HTTP walkthrough below uses the fictional Host `host.example` and Form URL `https://forms.publisher.example/key-value-entry/1.0.0`. It does not identify a reachable service or published Form. See the [full request/response transcript](/en/spec/host-api/v2/examples) for all fields and failure branches.
 
-## 0. Prepare {#_0-準備}
+## 1. Discover the Host and check Form support {#discover-support}
 
-Work at the Takoform repository root. Fetch Go dependencies first. Once they are
-available, the verification commands below can run without network access.
-
-```console
-go mod download
-```
-
-This preparation may need network access. Bun and a Host connection are not required.
-
-## 1. Verify a package {#_1-パッケージを検証する}
-
-A Form Package contains one FormRef, its definition and declared files. This
-command checks required files, content digests and FormRef consistency, then
-prints a JSON result to standard output.
-
-```console
-go run ./cmd/form-package verify conformance/takoform-v1/generic-host/external-family/counter-reservation
-```
-
-Output excerpt:
-
-```json
-{
-  "packageDigest": "sha256:3af4d09e2939b533a800fba945a85fb7a168ca8fae3454727a028505e38981d7",
-  "formRef": {
-    "apiVersion": "resources.publisher.example",
-    "kind": "CounterReservation",
-    "definitionVersion": "0.1.0",
-    "schemaDigest": "sha256:9981fb7988d13844b8e22ab2428407aa90e7e368df876086e0e456151ff61116"
-  },
-  "fileCount": 1,
-  "payloadBytes": 1689
-}
-```
-
-`packageDigest` identifies the canonical package index; `schemaDigest` identifies
-the canonical definition. The namespace and kind are test-only. Successful
-verification does not prove publication or availability on a Host.
-
-## 2. Build and verify a Snapshot {#_2-snapshotを作成して検証する}
-
-The next command verifies the packages, Interfaces and Bindings named in the
-manifest, then constructs an immutable Snapshot independently of input order.
-
-```console
-go run ./cmd/generic-conformance verify --manifest conformance/takoform-v1/generic.json
-```
-
-Report excerpt:
-
-```json
-{
-  "format": "takoform.generic-conformance-report@v1",
-  "status": "passed",
-  "hostApiLane": "forms.takoform.com/v1",
-  "manifestDigest": "sha256:7caed449cd40068c0ac940a20e6c5d1fe8555ce4a16812416ea5962d2a243e38",
-  "snapshots": [
-    { "name": "external-family", "snapshotDigest": "sha256:54f0d997aa1660b07a70dd694713bdd322a9e51774020f70f3d980c8800c360c" },
-    { "name": "zero-family", "snapshotDigest": "sha256:591e5ca6da361ba9dc3ca8f091a601ae90ae3cc362b959e37ee23a634a2b2e50" }
-  ],
-  "checks": [
-    { "name": "snapshot-compilation", "status": "passed" },
-    { "name": "permutation-stable", "status": "passed" },
-    { "name": "no-partial-snapshot", "status": "passed" }
-  ]
-}
-```
-
-`snapshot-compilation` checks references and digests. `permutation-stable` checks
-that input order does not change the result. `no-partial-snapshot` checks that
-failure does not return an incomplete Snapshot. `zero-family` checks that no
-particular Form Family is built in. These checks do not access the network,
-perform Host operations, change resources or start executable code.
-
-## 3. Read Host API examples {#_3-host-apiの要求・応答例を読む}
-
-The following [Host API v1](/en/spec/host-api/v1) exchanges illustrate the wire
-format. They are not commands to execute and use fictional endpoints and responses.
-
-First obtain connection information. `api_versions` lists the supported API
-version and `endpoints.api` gives the API endpoint.
+A Form is a versioned specification URL published by its author; a Host is the service that implements it. The presence of a Form URL does not mean that a Host can execute it. First discover the Host's endpoint and authentication scheme, then ask that Host about the exact Form URL.
 
 ```http
-GET /.well-known/takoform/v1
+GET /.well-known/takoform/v2 HTTP/1.1
+Host: host.example
 
 HTTP/1.1 200 OK
 Content-Type: application/json
 
 {
-  "api_versions": ["forms.takoform.com/v1"],
-  "features": {
-    "service_forms": true,
-    "exact_form_ref": true,
-    "optimistic_concurrency": true,
-    "idempotent_lifecycle": true,
-    "operations": true,
-    "artifact_upload": true,
-    "support_profiles": true
+  "api": "forms.takoform.com/v2",
+  "baseUrl": "https://host.example/apis/forms.takoform.com/v2",
+  "documentation": "https://host.example/docs",
+  "authentication": {
+    "schemes": ["Bearer"],
+    "documentation": "https://host.example/docs/auth"
   },
-  "endpoints": {
-    "api": "https://host.example/apis/forms.takoform.com/v1"
-  }
+  "capabilities": { "offerings": false, "previews": false, "privateInputs": false },
+  "limits": { "maxRequestBytes": 1048576, "maxPageSize": 100, "replayWindowSeconds": 86400 }
 }
-```
 
-`https://host.example` is illustrative. Use the returned API endpoint as-is,
-then add the Form Family namespace, kind and resource name to construct the
-operation URL. The Form Family namespace does not include a version.
-
-This example assumes the referenced `RangeSequence` already exists in the same space and the caller may create the reservation. First check support and admission for the exact FormRef.
-
-```http
-GET https://host.example/apis/forms.takoform.com/v1/forms?group=resources.publisher.example&kind=CounterReservation&definitionVersion=0.1.0&schemaDigest=sha256%3A9981fb7988d13844b8e22ab2428407aa90e7e368df876086e0e456151ff61116&space=demo
+GET /apis/forms.takoform.com/v2/support?form=https%3A%2F%2Fforms.publisher.example%2Fkey-value-entry%2F1.0.0 HTTP/1.1
+Host: host.example
+Authorization: Bearer <host-credential>
 
 HTTP/1.1 200 OK
 Content-Type: application/json
+Cache-Control: no-store
 
 {
-  "forms": [
-    {
-      "identity": {
-        "formRef": {
-          "apiVersion": "resources.publisher.example",
-          "kind": "CounterReservation",
-          "definitionVersion": "0.1.0",
-          "schemaDigest": "sha256:9981fb7988d13844b8e22ab2428407aa90e7e368df876086e0e456151ff61116"
-        }
-      },
-      "definitionKnown": true,
-      "installed": true,
-      "executable": true,
-      "activated": true,
-      "availableToPrincipal": true,
-      "operations": [
-        "create",
-        "read",
-        "delete",
-        "import",
-        "observe"
-      ]
-    }
-  ]
+  "form": "https://forms.publisher.example/key-value-entry/1.0.0",
+  "supported": true,
+  "operations": ["create", "read", "update", "delete"],
+  "privateInputs": false
 }
 ```
 
-Next, send the desired resource to `prepare`. The Host checks it and returns the same resource content with a `review`. Preparation does not create the resource.
+Use Discovery's `baseUrl` and follow its authentication documentation. `support` reports this Host's technical support; it does not authorize the caller or reserve capacity.
+
+## 2. Create, then read the Operation and Resource {#create-read}
+
+The client chooses the Form URL, an authorized Space, name, a Form-conforming `spec`, and a fresh Idempotency-Key for each new operation. The Host issues the Resource UID and Operation ID.
 
 ```http
-POST https://host.example/apis/forms.takoform.com/v1/resources/prepare
+POST /apis/forms.takoform.com/v2/resources HTTP/1.1
+Host: host.example
+Authorization: Bearer <host-credential>
 Content-Type: application/json
+Idempotency-Key: 946eec36-4a6a-41de-8f3c-e83d2c58c246
 
 {
-  "apiVersion": "resources.publisher.example",
-  "kind": "CounterReservation",
-  "form": {
-    "formRef": {
-      "apiVersion": "resources.publisher.example",
-      "kind": "CounterReservation",
-      "definitionVersion": "0.1.0",
-      "schemaDigest": "sha256:9981fb7988d13844b8e22ab2428407aa90e7e368df876086e0e456151ff61116"
-    }
-  },
-  "metadata": {
-    "name": "counter-reservation",
-    "space": "demo"
-  },
-  "spec": {
-    "target": {
-      "apiVersion": "resources.publisher.example",
-      "kind": "RangeSequence",
-      "name": "range-sequence"
-    }
-  }
+  "form": "https://forms.publisher.example/key-value-entry/1.0.0",
+  "space": "default",
+  "name": "greeting",
+  "spec": { "key": "greeting", "value": "hello" }
 }
 
-HTTP/1.1 200 OK
-Content-Type: application/json
-
-{
-  "resource": {
-    "apiVersion": "resources.publisher.example",
-    "kind": "CounterReservation",
-    "form": {
-      "formRef": {
-        "apiVersion": "resources.publisher.example",
-        "kind": "CounterReservation",
-        "definitionVersion": "0.1.0",
-        "schemaDigest": "sha256:9981fb7988d13844b8e22ab2428407aa90e7e368df876086e0e456151ff61116"
-      }
-    },
-    "metadata": {
-      "name": "counter-reservation",
-      "space": "demo"
-    },
-    "spec": {
-      "target": {
-        "apiVersion": "resources.publisher.example",
-        "kind": "RangeSequence",
-        "name": "range-sequence"
-      }
-    }
-  },
-  "review": {
-    "prepareDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "specDigest": "sha256:2bf6bf2dbd6249a80082f45aebf696ebcf93c52a457a4a9234f18a29ed219e25"
-  }
-}
-```
-
-Pass the returned `review.prepareDigest` to apply without changing the resource. The repeated `a` value below is illustrative: use the real Host response, never a client-generated value. `If-None-Match: *` prevents creation from overwriting an existing resource. Synchronous completion returns the full created Resource.
-
-```http
-PUT https://host.example/apis/forms.takoform.com/v1/resources/resources.publisher.example/CounterReservation/counter-reservation
-If-None-Match: *
-Idempotency-Key: create-counter-reservation-20260907
-Content-Type: application/json
-
-{
-  "apiVersion": "resources.publisher.example",
-  "kind": "CounterReservation",
-  "form": {
-    "formRef": {
-      "apiVersion": "resources.publisher.example",
-      "kind": "CounterReservation",
-      "definitionVersion": "0.1.0",
-      "schemaDigest": "sha256:9981fb7988d13844b8e22ab2428407aa90e7e368df876086e0e456151ff61116"
-    }
-  },
-  "metadata": {
-    "name": "counter-reservation",
-    "space": "demo"
-  },
-  "spec": {
-    "target": {
-      "apiVersion": "resources.publisher.example",
-      "kind": "RangeSequence",
-      "name": "range-sequence"
-    }
-  },
-  "review": {
-    "prepareDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-  }
-}
-
-HTTP/1.1 201 Created
-Content-Type: application/json
-ETag: "1"
-
-{
-  "apiVersion": "resources.publisher.example",
-  "kind": "CounterReservation",
-  "form": {
-    "formRef": {
-      "apiVersion": "resources.publisher.example",
-      "kind": "CounterReservation",
-      "definitionVersion": "0.1.0",
-      "schemaDigest": "sha256:9981fb7988d13844b8e22ab2428407aa90e7e368df876086e0e456151ff61116"
-    }
-  },
-  "metadata": {
-    "name": "counter-reservation",
-    "space": "demo",
-    "uid": "res_counter_reservation_1",
-    "generation": "1",
-    "revision": "1"
-  },
-  "spec": {
-    "target": {
-      "apiVersion": "resources.publisher.example",
-      "kind": "RangeSequence",
-      "name": "range-sequence"
-    }
-  },
-  "status": {
-    "observedGeneration": "1",
-    "conditions": [
-      {
-        "type": "Ready",
-        "status": "True",
-        "reason": "Available",
-        "lastTransitionTime": "2026-09-07T00:00:00Z"
-      }
-    ]
-  }
-}
-```
-
-For asynchronous work, the Host returns the following `202 Accepted` instead of the `201 Created` above. These are alternative outcomes, not consecutive responses.
-
-```http
 HTTP/1.1 202 Accepted
 Content-Type: application/json
+Cache-Control: no-store
+Location: https://host.example/apis/forms.takoform.com/v2/operations/op_create_1
+Retry-After: 1
 
 {
-  "operation": {
-    "apiVersion": "operations.takoform.com/v1alpha1",
-    "kind": "Operation",
-    "id": "op_counter_reservation_create",
-    "done": false
-  }
+  "id": "op_create_1", "resourceUid": "r_1", "action": "create", "generation": 1,
+  "status": "queued", "effect": "none",
+  "createdAt": "2026-10-04T12:00:00Z", "updatedAt": "2026-10-04T12:00:00Z",
+  "retainUntil": "2026-10-05T12:00:00Z"
 }
 ```
 
-Retrieve the result using the returned Operation ID. While `done` is false, follow the Host retry guidance; after completion, inspect the resulting Resource or error. The response below shows successful completion.
+`202 Accepted` means “accepted, not finished.” After `Retry-After`, read the Operation from `Location` or `op_create_1`. Once it succeeds, fetch the Resource.
 
 ```http
-GET https://host.example/apis/forms.takoform.com/v1/operations/op_counter_reservation_create
+GET /apis/forms.takoform.com/v2/operations/op_create_1 HTTP/1.1
+Host: host.example
+Authorization: Bearer <host-credential>
 
 HTTP/1.1 200 OK
 Content-Type: application/json
+Cache-Control: no-store
 
 {
-  "apiVersion": "operations.takoform.com/v1alpha1",
-  "kind": "Operation",
-  "id": "op_counter_reservation_create",
-  "done": true,
-  "result": {
-    "resource": {
-      "apiVersion": "resources.publisher.example",
-      "kind": "CounterReservation",
-      "form": {
-        "formRef": {
-          "apiVersion": "resources.publisher.example",
-          "kind": "CounterReservation",
-          "definitionVersion": "0.1.0",
-          "schemaDigest": "sha256:9981fb7988d13844b8e22ab2428407aa90e7e368df876086e0e456151ff61116"
-        }
-      },
-      "metadata": {
-        "name": "counter-reservation",
-        "space": "demo",
-        "uid": "res_counter_reservation_1",
-        "generation": "1",
-        "revision": "1"
-      },
-      "spec": {
-        "target": {
-          "apiVersion": "resources.publisher.example",
-          "kind": "RangeSequence",
-          "name": "range-sequence"
-        }
-      },
-      "status": {
-        "observedGeneration": "1",
-        "conditions": [
-          {
-            "type": "Ready",
-            "status": "True",
-            "reason": "Available",
-            "lastTransitionTime": "2026-09-07T00:00:00Z"
-          }
-        ]
-      }
-    }
-  }
+  "id": "op_create_1", "resourceUid": "r_1", "action": "create", "generation": 1,
+  "status": "succeeded", "effect": "complete",
+  "createdAt": "2026-10-04T12:00:00Z", "updatedAt": "2026-10-04T12:00:01Z",
+  "retainUntil": "2026-10-05T12:00:01Z"
+}
+
+GET /apis/forms.takoform.com/v2/resources/r_1 HTTP/1.1
+Host: host.example
+Authorization: Bearer <host-credential>
+
+HTTP/1.1 200 OK
+Content-Type: application/json
+Cache-Control: no-store
+
+{
+  "uid": "r_1", "form": "https://forms.publisher.example/key-value-entry/1.0.0",
+  "space": "default", "name": "greeting",
+  "generation": 1, "observedGeneration": 1,
+  "observedAt": "2026-10-04T12:00:01Z", "phase": "idle",
+  "spec": { "key": "greeting", "value": "hello" },
+  "observed": { "entryExists": true, "key": "greeting", "value": "hello" },
+  "output": {}, "lastOperation": "op_create_1"
 }
 ```
 
-Updates use the retrieved UID and generation to guard against concurrent changes. This particular `CounterReservation` definition does not support updates: check the definition and Host availability before choosing an operation. For an executable call sequence in Go, see [Use a Host from Go](/en/client/).
+`spec` is the accepted desired value; `observed` is what the Host last checked. Matching `generation` and `observedGeneration` means this generation is observed in the example. Operation success or `phase: idle` alone does not establish application health.
 
-For fields, statuses, concurrency checks and errors, read the
-[Host API v1 specification](/en/spec/host-api/v1) and its
-[operation overview](/en/spec/host-api/v1#artifacts-and-operations).
+## 3. Update the full spec with a generation condition {#update}
 
-## Next steps {#次に進む}
+Update replaces the complete `spec` document; it is not a patch. Send the generation you read and use a new key because this is a new operation.
 
-- [Implementation guides](/en/guides/) — relevant specifications for your implementation.
-- [Common model](/en/model/) — identities, packages and Snapshots.
-- [Host API overview](/en/host-api/) — discovery and main operations.
-- [Reference](/en/reference/) — specifications and explanatory guides.
+```http
+PUT /apis/forms.takoform.com/v2/resources/r_1 HTTP/1.1
+Host: host.example
+Authorization: Bearer <host-credential>
+Content-Type: application/json
+Idempotency-Key: 3908a7cc-5083-439f-9966-b3db7e405859
+Takoform-Expected-Generation: 1
+
+{ "spec": { "key": "greeting", "value": "welcome" } }
+
+HTTP/1.1 202 Accepted
+Content-Type: application/json
+Cache-Control: no-store
+Location: https://host.example/apis/forms.takoform.com/v2/operations/op_update_1
+Retry-After: 1
+
+{
+  "id": "op_update_1", "resourceUid": "r_1", "action": "update", "generation": 2,
+  "status": "queued", "effect": "none",
+  "createdAt": "2026-10-04T12:01:00Z", "updatedAt": "2026-10-04T12:01:00Z",
+  "retainUntil": "2026-10-05T12:01:00Z"
+}
+```
+
+Follow `op_update_1` to a terminal state and fetch Resource `r_1` again. In the successful example, both generations are 2 and the desired `spec.value` and observed `observed.value` are `welcome`. If the current generation is no longer 1, do not attach this stale request to the newer generation: reread the Resource and reconstruct the intended change.
+
+## 4. Delete with generation 2 {#delete}
+
+After confirming the current Resource generation, use that value for Delete. Deletion is also tracked by an Operation.
+
+```http
+DELETE /apis/forms.takoform.com/v2/resources/r_1 HTTP/1.1
+Host: host.example
+Authorization: Bearer <host-credential>
+Idempotency-Key: e1a20f10-0ac6-491d-b665-04de19f965f4
+Takoform-Expected-Generation: 2
+
+HTTP/1.1 202 Accepted
+Content-Type: application/json
+Cache-Control: no-store
+Location: https://host.example/apis/forms.takoform.com/v2/operations/op_delete_1
+Retry-After: 1
+
+{
+  "id": "op_delete_1", "resourceUid": "r_1", "action": "delete", "generation": 3,
+  "status": "queued", "effect": "none",
+  "createdAt": "2026-10-04T12:02:00Z", "updatedAt": "2026-10-04T12:02:00Z",
+  "retainUntil": "2026-10-05T12:02:00Z"
+}
+```
+
+Read `op_delete_1` and confirm success. A later Resource GET may return `410 Gone` if this Host retains a deletion marker or `404 Not Found` otherwise. Use the Operation as the evidence of the deletion result; do not infer backend effects from 404/410 alone. For the complete message shapes and recovery alternatives, see the [HTTP API](/en/spec/host-api/v2/http) and [full examples](/en/spec/host-api/v2/examples).
+
+## Host implementers {#host-implementers}
+
+An accepted Operation, its Idempotency-Key mapping, Resource UID and generation, and last verified observation must remain traceable across process restart. If a worker continues work after the HTTP handler returns, it must distinguish queued, running, and unknown outcomes on recovery. See the [Host implementation guide](/en/host-api/).

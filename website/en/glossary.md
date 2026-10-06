@@ -1,40 +1,50 @@
 ---
 title: Glossary
+description: Key Host API v2 terms, organized around the distinction between Form and Host responsibilities.
 ---
 
-# Glossary {#用語集}
+# Glossary {#glossary}
 
-This guide is non-normative. For precise definitions and verification conditions,
-use the [reference](/en/reference/).
+## Form {#form}
 
-| Term | Meaning |
-| --- | --- |
-| `Form` | Service or resource settings and behavior defined independently of an implementation. |
-| `Form Definition` | Data describing a Form's identity, desired/observed/output schemas, operations and resource relationships. |
-| `FormRef` | An exact definition identified by `apiVersion`, `kind`, `definitionVersion` and `schemaDigest`. |
-| `Form Family` | A publisher-owned namespace for Forms, written in reverse-DNS form without a version. |
-| `Form Package` | A distribution unit containing one Form definition and its declared files; it contains no executable code. |
-| `Core` | Go libraries for package verification, Snapshot construction, Host API clients and trust verification. |
-| `Snapshot` | Immutable verified packages, Interfaces, Bindings and references, constructed independently of input order. |
-| `Host API` | HTTP discovery, resource management, asynchronous operations, concurrency control and errors. Its API version is `forms.takoform.com/v1`. |
-| `Host` | An implementation that serves Host API and creates and manages resources for supported Forms. |
-| `Operation` | A record of acceptance and eventual completion of a long-running action. |
-| `Interface` | Digest-bound operations, inputs, outputs, errors and consistency semantics. |
-| `Binding` | Digest-bound capabilities and roles needed at the source and target of a connection. |
-| `Artifact` | Manifests and binary data identified by content digest. A digest is not a credential. |
-| `Standard Service` | A defined reference to an external protocol; the Host implements its delivery. |
-| `publisher` | The party publishing Form/package sources, provenance and distribution artifacts. |
-| `client adapter` | An implementation mapping Snapshot and Host API to client-specific schemas and state management. |
-| `Conformance` | Verification that specified data or an implementation satisfies the stated requirements. |
-| `trust / revocation` | Offline verification of signatures, provenance and revocation data under caller-supplied policy. |
-| `desired` | The state a user requests for a resource. |
-| `observed` | The current state observed and returned by the Host. |
-| `output` | Results following the Form's declared types, not Host secrets or internal configuration. |
-| `schemaDigest` | SHA-256 digest of the canonically encoded Form Definition; part of FormRef. |
-| `packageDigest` | SHA-256 digest of the canonically encoded package index; not part of FormRef. |
-| `uid` | Immutable Host-issued resource identity. Deleting and recreating the same name changes it. |
-| `generation` | A number that advances with desired-state changes and participates in concurrency control. |
-| `revision` | A number that advances with response-data changes, including status/output, and participates in concurrency control. |
+A versioned specification URL published by its author. It defines Resource meaning and operation requirements; it is not itself a Host or execution environment.
 
-Verification, publication, Host installation, support, activation and commercial
-availability are separate states. Evidence for one does not establish the others.
+## Host {#host}
+
+A service that implements Forms and exposes a Resource API to authenticated clients. Support for a particular Form varies by Host.
+
+## Resource {#resource}
+
+An object managed by a Host. It has a UID, Form URL, Space, name, generation, `spec`, `observed`, `output`, and other fields defined by the contract.
+
+## spec {#spec}
+
+The accepted desired state of a Resource. Update replaces the complete document.
+
+## observed {#observed}
+
+The latest state checked by the Host. It can lag behind the desired generation.
+
+## output {#output}
+
+Operation results or connection information whose meaning is defined by the Form. It may be empty.
+
+## generation / observedGeneration {#generation-observedgeneration}
+
+`generation` identifies an accepted desired-state version. `observedGeneration` identifies the version reflected by `observed`.
+
+## Operation {#operation}
+
+A record of progress and outcome for Create, Update, or Delete. A client reads it and may fetch the Resource again.
+
+## Idempotency-Key {#idempotency-key}
+
+A client-provided key that identifies retries of the same request. A retry using the key must preserve the original request contents.
+
+## Space {#space}
+
+A Resource scope within a Host. Naming a Space does not grant permission to use it.
+
+## v1-only terms {#v1-terms}
+
+FormRef, Form Package, Snapshot, revision, and `schemaDigest` belong to the frozen v1 contract. They are not synonyms for a v2 Form URL or Resource generation. See the [frozen v1 specification](/en/spec/host-api/v1).

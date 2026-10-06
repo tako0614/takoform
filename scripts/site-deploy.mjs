@@ -27,8 +27,11 @@ import {
   SCHEMA_IDENTITY_ORIGIN,
   SCHEMA_LEDGER_PATH,
   SITE_DIST,
+  V2_SPEC_DOCUMENTS,
   distDigest,
   inspectDist,
+  siteRouteForV2SpecDocument,
+  v2NormativeSourceRoute,
 } from "./site.mjs";
 
 export const SITE_SURFACE = "takoform-site";
@@ -80,6 +83,22 @@ export const PRODUCTION_READBACK_DEADLINE_MS = 30_000;
 export const PAGE_READBACK_ROUTES = Object.freeze([
   "/",
   "/sitemap.xml",
+]);
+export const V1_RETENTION_ROUTES = Object.freeze([
+  "/spec/host-api/v1", "/en/spec/host-api/v1",
+]);
+export const V2_NORMATIVE_ROUTES = Object.freeze(
+  V2_SPEC_DOCUMENTS.filter((document) => document.normative).flatMap((document) => [
+    siteRouteForV2SpecDocument(document.path, "ja"),
+    siteRouteForV2SpecDocument(document.path, "en"),
+  ]),
+);
+export const V2_RAW_SOURCE_ROUTES = Object.freeze(
+  V2_SPEC_DOCUMENTS.filter((document) => document.normative).map((document) =>
+    v2NormativeSourceRoute(document.path)),
+);
+export const SITE_CONTRACT_READBACK_ROUTES = Object.freeze([
+  ...PAGE_READBACK_ROUTES, ...V1_RETENTION_ROUTES, ...V2_NORMATIVE_ROUTES,
 ]);
 // Kept as an import-compatible name for callers that used the original page
 // sample. It deliberately contains no schema routes now.
@@ -136,7 +155,6 @@ export const USAGE = [
   `usage: bun run deploy -- ${SITE_SURFACE} --status`,
   `       bun run deploy -- ${SITE_SURFACE} --apply --environment <${SITE_ENVIRONMENTS.join("|")}> [--branch <name>] [--execute]`,
   `usage: bun run deploy -- ${API_CUTOVER_SURFACE} --status`,
-  `       bun run deploy -- ${API_CUTOVER_SURFACE} --apply --environment production --review <non-secret-reference> [--execute]`,
   `       bun run deploy -- ${API_CUTOVER_SURFACE} --verify-cutover --deployment-url <exact-immutable-url>`,
 ].join("\n");
 
@@ -504,6 +522,16 @@ function localDigests(root, routes) {
   return digests;
 }
 
+function localPageDigests(root, routes) {
+  const digests = {};
+  for (const route of routes) {
+    const fileRoute = route === "/" ? "/index.html" : route === "/sitemap.xml" ? route :
+      route.endsWith("/") ? `${route}index.html` : `${route}.html`;
+    digests[route] = sha256(readFileSync(resolve(root, `${SITE_DIST}${fileRoute}`)));
+  }
+  return digests;
+}
+
 function localSchemaDigests(root, entries) {
   const digests = localDigests(root, entries.map(({ route }) => route));
   const mismatched = entries.filter(({ route, sha256: expected }) => digests[route] !== expected);
@@ -530,6 +558,75 @@ async function verifyExactRoutes(fetchImpl, origin, expected, where, options) {
   return actual;
 }
 
+async function readV2Projection(fetchImpl, origin, signal) {
+  const pages = {};
+  const sources = {};
+  const releaseStates = new Set();
+  for (const route of [...V2_NORMATIVE_ROUTES, ...V1_RETENTION_ROUTES, ...V2_RAW_SOURCE_ROUTES]) {
+    const response = await fetchImpl(`${origin}${route}`, {
+      headers: { "cache-control": "no-cache", pragma: "no-cache" },
+      redirect: "manual",
+      signal,
+    });
+    if (response.status !== 200) {
+      throw new Error(`${origin}${route} returned HTTP ${response.status}`);
+    }
+    const body = Buffer.from(await response.arrayBuffer());
+    if (V2_NORMATIVE_ROUTES.includes(route)) {
+      const states = [...body.toString("utf8").matchAll(/\bdata-release-state="([^"]+)"/gu)];
+      if (states.length !== 1 || !["published", "revision-open"].includes(states[0][1])) {
+        throw new Error(`${origin}${route} lacks one published or revision-open v2 marker`);
+      }
+      releaseStates.add(states[0][1]);
+    }
+    (V2_RAW_SOURCE_ROUTES.includes(route) ? sources : pages)[route] = sha256(body);
+  }
+  if (releaseStates.size !== 1) {
+    throw new Error(`${origin} mixes v2 release states across normative pages`);
+  }
+  return { pages, sources, releaseState: [...releaseStates][0] };
+}
+
+function sameProjection(left, right) {
+  return left.releaseState === right.releaseState &&
+    JSON.stringify(left.pages) === JSON.stringify(right.pages) &&
+    JSON.stringify(left.sources) === JSON.stringify(right.sources);
+}
+
+async function requirePriorV2Projection(fetchImpl, candidate, schemas) {
+  return await withReadbackDeadline("prior v2 projection preflight", PRODUCTION_READBACK_DEADLINE_MS,
+    async (signal) => {
+      const apex = await readV2Projection(fetchImpl, SITE_PUBLIC_ORIGIN, signal);
+      const www = await readV2Projection(fetchImpl, SITE_WWW_ORIGIN, signal);
+      const immutable = await readV2Projection(fetchImpl, candidate.url, signal);
+      if (!sameProjection(apex, www) || !sameProjection(apex, immutable)) {
+        throw new Error("refused before touching the target: public aliases and the current immutable deployment disagree on the prior v2 source or page bytes");
+      }
+      await verifyExactRoutes(fetchImpl, candidate.url, schemas,
+        `the prior immutable deployment ${candidate.url}`, { redirect: "manual", signal });
+      return immutable;
+    });
+}
+
+async function safeV2RollbackCandidate(fetchImpl, candidate, prior, schemas) {
+  if (candidate === null) return null;
+  try {
+    await withReadbackDeadline("v2 rollback candidate", PRODUCTION_READBACK_DEADLINE_MS,
+      async (signal) => {
+        const found = await readV2Projection(fetchImpl, candidate.url, signal);
+        if (!sameProjection(found, prior)) {
+          throw new Error(`rollback candidate ${candidate.url} changed from its prior public revision`);
+        }
+        await verifyExactRoutes(fetchImpl, candidate.url, schemas,
+          `the rollback candidate ${candidate.url}`, { redirect: "manual", signal });
+      });
+    return candidate;
+  } catch {
+    // Pages itself can promote an unqualified prior deployment. Do not offer it.
+    return null;
+  }
+}
+
 async function verifyFullDeployment(fetchImpl, origin, expected, options = {}) {
   const pages = await verifyExactRoutes(
     fetchImpl,
@@ -545,8 +642,10 @@ async function verifyFullDeployment(fetchImpl, origin, expected, options = {}) {
     `the deployment ${origin}`,
     options,
   );
+  const sources = expected.sources === undefined ? undefined : await verifyExactRoutes(
+    fetchImpl, origin, expected.sources, `the deployment ${origin}`, { ...options, redirect: "manual" });
   await requireAbsentRoutes(fetchImpl, origin, ABSENT_ROUTES, options);
-  return { pages, schemas, absent: ABSENT_ROUTES };
+  return { pages, schemas, ...(sources === undefined ? {} : { sources }), absent: ABSENT_ROUTES };
 }
 
 async function verifyApex(fetchImpl, expectedPages, options = {}) {
@@ -557,8 +656,11 @@ async function verifyApex(fetchImpl, expectedPages, options = {}) {
     `the public alias ${SITE_PUBLIC_ORIGIN}`,
     { ...options, redirect: "manual" },
   );
+  const sources = options.sources === undefined ? undefined : await verifyExactRoutes(
+    fetchImpl, SITE_PUBLIC_ORIGIN, options.sources, `the public alias ${SITE_PUBLIC_ORIGIN}`,
+    { ...options, redirect: "manual" });
   await requireAbsentRoutes(fetchImpl, SITE_PUBLIC_ORIGIN, ABSENT_ROUTES, options);
-  return { pages, absent: ABSENT_ROUTES };
+  return { pages, ...(sources === undefined ? {} : { sources }), absent: ABSENT_ROUTES };
 }
 
 async function verifyWww(fetchImpl, expectedPages, options = {}) {
@@ -569,8 +671,11 @@ async function verifyWww(fetchImpl, expectedPages, options = {}) {
     `the public alias ${SITE_WWW_ORIGIN}`,
     { ...options, redirect: "manual" },
   );
+  const sources = options.sources === undefined ? undefined : await verifyExactRoutes(
+    fetchImpl, SITE_WWW_ORIGIN, options.sources, `the public alias ${SITE_WWW_ORIGIN}`,
+    { ...options, redirect: "manual" });
   await requireAbsentRoutes(fetchImpl, SITE_WWW_ORIGIN, ABSENT_ROUTES, options);
-  return { pages, absent: ABSENT_ROUTES };
+  return { pages, ...(sources === undefined ? {} : { sources }), absent: ABSENT_ROUTES };
 }
 
 async function verifySchemaOrigin(fetchImpl, expectedSchemas, options = {}) {
@@ -1097,8 +1202,8 @@ async function pollReadbacks(checks, config, label) {
 async function pollProductionAliases(fetchImpl, expected, config) {
   return await pollReadbacks(
     [
-      ["apex", (signal) => verifyApex(fetchImpl, expected.pages, { signal })],
-      ["www", (signal) => verifyWww(fetchImpl, expected.pages, { signal })],
+      ["apex", (signal) => verifyApex(fetchImpl, expected.pages, { signal, sources: expected.sources })],
+      ["www", (signal) => verifyWww(fetchImpl, expected.pages, { signal, sources: expected.sources })],
       ["forms", (signal) => verifySchemaOrigin(fetchImpl, expected.schemas, { signal })],
     ],
     config,
@@ -1112,6 +1217,8 @@ export async function runSiteDeploy(parsed, options = {}) {
   const env = options.env ?? process.env;
   const fetchImpl = options.fetch ?? globalThis.fetch;
   const surface = options.surface ?? SITE_SURFACE;
+  const v2SiteSurface = surface === SITE_SURFACE && !parsed.initialCutover && parsed.mode !== "verify-cutover";
+  const pageReadbackRoutes = v2SiteSurface ? SITE_CONTRACT_READBACK_ROUTES : PAGE_READBACK_ROUTES;
 
   const source = readSourceState(run, { root, env });
   const site = {
@@ -1136,6 +1243,10 @@ export async function runSiteDeploy(parsed, options = {}) {
     };
   }
 
+  if (parsed.mode === "apply" && parsed.initialCutover && parsed.execute && V2_SPEC_DOCUMENTS.length !== 0) {
+    throw new Error("the historical v1 initial cutover cannot upload the current v2 projection; use routine takoform-site publication");
+  }
+
   const schemaEntries = loadSchemaReadbackEntries(root);
 
   if (parsed.mode === "verify-cutover") {
@@ -1149,7 +1260,7 @@ export async function runSiteDeploy(parsed, options = {}) {
     runScoped(run, root, "build:site");
     const built = distDigest(root);
     const expected = {
-      pages: localDigests(root, PAGE_READBACK_ROUTES),
+      pages: localPageDigests(root, PAGE_READBACK_ROUTES),
       schemas: localSchemaDigests(root, schemaEntries),
     };
     const readback = {
@@ -1193,7 +1304,8 @@ export async function runSiteDeploy(parsed, options = {}) {
     upload: ["wrangler", "pages", "deploy", SITE_DIST, "--project-name", SITE_PROJECT, "--branch", parsed.branch],
     readbackPlan: {
       immutable: {
-        exact: [...PAGE_READBACK_ROUTES, ...schemaEntries.map(({ route }) => route)],
+        exact: [...pageReadbackRoutes, ...(v2SiteSurface ? V2_RAW_SOURCE_ROUTES : []),
+          ...schemaEntries.map(({ route }) => route)],
         absent: ABSENT_ROUTES,
       },
       production: parsed.initialCutover
@@ -1203,8 +1315,9 @@ export async function runSiteDeploy(parsed, options = {}) {
           customDomainsRequiredBeforeUpload: false,
         }
         : {
-          apexPages: PAGE_READBACK_ROUTES,
-          wwwPages: PAGE_READBACK_ROUTES,
+          apexPages: pageReadbackRoutes,
+          wwwPages: pageReadbackRoutes,
+          ...(v2SiteSurface ? { v2RawSources: V2_RAW_SOURCE_ROUTES } : {}),
           apexAbsent: ABSENT_ROUTES,
           wwwAbsent: ABSENT_ROUTES,
           schemas: schemaEntries.map(({ route }) => route),
@@ -1236,6 +1349,8 @@ export async function runSiteDeploy(parsed, options = {}) {
   const initialTopology = parsed.initialCutover ? requireInitialCutoverTopology(target) : null;
   let deploymentsBeforeUpload = null;
   let rollbackCandidate = null;
+  let priorProductionUrl = null;
+  let priorV2Projection = null;
   if (parsed.environment === "production") {
     deploymentsBeforeUpload = runWranglerProductionDeploymentList(run, { root, env });
     if (parsed.initialCutover && deploymentsBeforeUpload.length !== 0) {
@@ -1255,7 +1370,13 @@ export async function runSiteDeploy(parsed, options = {}) {
           `refused before touching the target: Pages project ${SITE_PROJECT} has no successful production/main deployment that can serve as the prior rollback candidate`,
         );
       }
+      priorProductionUrl = rollbackCandidate.url;
     }
+  }
+
+  if (v2SiteSurface && parsed.environment === "production") {
+    const ledgerDigests = Object.fromEntries(schemaEntries.map(({ route, sha256: digest }) => [route, digest]));
+    priorV2Projection = await requirePriorV2Projection(fetchImpl, rollbackCandidate, ledgerDigests);
   }
 
   // One scoped gate, over the bytes about to be published, before the one
@@ -1266,9 +1387,25 @@ export async function runSiteDeploy(parsed, options = {}) {
   runScoped(run, root, "build:site");
   const built = distDigest(root);
   const expected = {
-    pages: localDigests(root, PAGE_READBACK_ROUTES),
+    pages: localPageDigests(root, pageReadbackRoutes),
     schemas: localSchemaDigests(root, schemaEntries),
+    ...(v2SiteSurface ? { sources: localDigests(root, V2_RAW_SOURCE_ROUTES) } : {}),
   };
+
+  if (v2SiteSurface && parsed.environment === "production") {
+    const confirmedPrior = await requirePriorV2Projection(fetchImpl, rollbackCandidate, expected.schemas);
+    if (!sameProjection(confirmedPrior, priorV2Projection)) {
+      throw new Error("refused before touching the target: prior v2 source or page bytes changed during the site gate");
+    }
+    const immediatelyBefore = runWranglerProductionDeploymentList(run, { root, env });
+    if (findCurrentRollbackCandidate(immediatelyBefore)?.url !== priorProductionUrl) {
+      throw new Error("refused before touching the target: production deployment history changed during the site gate");
+    }
+    rollbackCandidate = await safeV2RollbackCandidate(fetchImpl, rollbackCandidate, priorV2Projection, expected.schemas);
+    if (rollbackCandidate === null) {
+      throw new Error("refused before touching the target: the prior immutable deployment no longer qualifies as a rollback candidate");
+    }
+  }
 
   if (parsed.initialCutover) {
     await auditInitialCutoverPredecessor(fetchImpl, schemaPartition);
@@ -1339,11 +1476,14 @@ export async function runSiteDeploy(parsed, options = {}) {
       try {
         const deploymentsAfterFailure = runWranglerProductionDeploymentList(run, { root, env });
         requireKnownProductionDeploymentUrl(deploymentsAfterFailure, deploymentUrl);
-        rollbackCandidate =
-          findRollbackCandidate(deploymentsAfterFailure, deploymentUrl) ?? rollbackCandidate;
+        const found = findRollbackCandidate(deploymentsAfterFailure, deploymentUrl);
+        rollbackCandidate = priorV2Projection === null || found?.url !== priorProductionUrl
+          ? null
+          : await safeV2RollbackCandidate(fetchImpl, found, priorV2Projection, expected.schemas);
       } catch {
-        // Retain the exact pre-upload predecessor if provider history cannot
-        // yet expose the completed upload.
+        // Without fresh provider history, the old immutable URL is evidence,
+        // but no longer an automatically qualified rollback recommendation.
+        rollbackCandidate = null;
       }
     }
     throw postUploadFailure({
@@ -1359,11 +1499,15 @@ export async function runSiteDeploy(parsed, options = {}) {
     try {
       deploymentsAfterUpload = runWranglerProductionDeploymentList(run, { root, env });
       requireKnownProductionDeploymentUrl(deploymentsAfterUpload, deploymentUrl);
-      rollbackCandidate =
-        findRollbackCandidate(deploymentsAfterUpload, deploymentUrl) ?? rollbackCandidate;
+      const found = findRollbackCandidate(deploymentsAfterUpload, deploymentUrl);
+      rollbackCandidate = priorV2Projection === null
+        ? found ?? rollbackCandidate
+        : found?.url === priorProductionUrl
+          ? await safeV2RollbackCandidate(fetchImpl, found, priorV2Projection, expected.schemas)
+          : null;
       if (!parsed.initialCutover && rollbackCandidate === null) {
         throw new Error(
-          "the refreshed production history did not identify the exact predecessor after the uploaded deployment",
+          "the refreshed production history did not retain the qualified exact predecessor after the uploaded deployment",
         );
       }
     } catch (error) {

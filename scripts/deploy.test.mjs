@@ -124,7 +124,8 @@ describe("Takoform deploy entrypoint", () => {
     expect(site.obligations.provenance).toContain("check:site");
     expect(site.obligations.provenance).toContain("check:host-api-freeze");
     expect(site.obligations.provenance).toContain("credential-free read of the public refs/heads/main");
-    expect(site.obligations.provenance).toContain("does not change the fixed Host API v1");
+    expect(site.obligations.provenance).toContain("Host API v1 and ledgered schema bytes remain fixed");
+    expect(site.obligations.provenance).toContain("revision-open");
     expect(site.obligations["post-conditions"]).toContain("immutable per-deployment URL");
     expect(site.obligations["post-conditions"]).toContain("https://takoform.com");
     expect(site.obligations["post-conditions"]).toContain("https://www.takoform.com");
@@ -132,7 +133,7 @@ describe("Takoform deploy entrypoint", () => {
     expect(site.obligations["post-conditions"]).toContain("production deployment history");
     expect(site.obligations.reversal).toContain("forward repair");
     expect(site.obligations["failure-handling"]).toContain("never retries");
-    expect(site.obligations["no-overwrite"]).toContain("names no ledger identity");
+    expect(site.obligations["no-overwrite"]).toContain("raw v2 source path");
     const cutover = DEPLOY_CONTRACT.surfaces.find((surface) => surface.surface === API_CUTOVER_SURFACE);
     expect(cutover).toMatchObject({
       surface: API_CUTOVER_SURFACE,
@@ -161,6 +162,15 @@ describe("Takoform deploy entrypoint", () => {
     });
     expect(calls).toEqual([{ mode: "status" }]);
     expect(result).toEqual({ delegated: "site" });
+  });
+
+  test("publishes revised v2 documentation through routine site only", () => {
+    expect(DEPLOY_CONTRACT.surfaces.find((entry) => entry.surface === SITE_SURFACE).triggers).toEqual([]);
+    expect(parseDeployArgs([SITE_SURFACE, "--apply", "--environment", "production"]))
+      .toMatchObject({ mode: "site", surface: SITE_SURFACE,
+        site: { mode: "apply", environment: "production", execute: false } });
+    expect(() => parseDeployArgs(["takoform-api-v2-publication", "--apply", "--environment", "production"]))
+      .toThrow("usage:");
   });
 
   test("delegates the upload-free API cutover verifier", async () => {

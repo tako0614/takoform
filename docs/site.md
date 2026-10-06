@@ -5,24 +5,27 @@
 用途と操作を直接説明し、宣伝的なコピーや不要な内部用語を増やしません。正確なAPI名や
 フィールド名、固定済みの仕様本文は変更せず、解説と区別します。
 
-左の目次はトップページ・ガイド・仕様で共通です。公開中の全ページと関連サイトへの
-リンクを載せ、閲覧中のページによって別の目次へ切り替えません。
+トップは短い用途説明、要求例、読む目的別の入口に絞り、sidebarを表示しません。
+v2仕様は専用の目次を使い、一般ガイドの目次もv2の読み始め方を先頭に置きます。
+保持するv1仕様・共通モデルは旧版の資料として分けます。
+新しい設計を読むために、v1のpackageやSnapshotの項目を先に読ませません。
 
 日本語は既存のルート、英語は`/en/`で公開します。VitePressの言語メニューは同じページの
-対応言語へ移動し、ページ内の位置も維持します。目次は選択した言語の全ページを含みます。
-ガイドは翻訳しますが、仕様本文は両言語とも英語の原文です。文書全体は選択言語を宣言し、
-仕様本文の範囲だけ`lang="en"`を指定します。公開JSONのパスとバイト列は複製・変更しません。
+対応言語へ移動し、ページ内の位置も維持します。目次は選択した言語とAPI版に合わせます。
+ガイドは翻訳します。v1・v2仕様はいずれも英語の原文を両言語のページに表示し、
+その範囲に原文のlangを指定します。翻訳済みとは表示しません。
+公開JSONのパスとバイト列は複製・変更しません。
 
-`takoform.com` は Host API v1 と publisher 中立な共通モデルだけを配信する site です。
+`takoform.com` はTakoformの概念とAPIを扱うsiteです。
+固定されたv1規範と、公開中で改訂可能な英語v2規範本文を区別します。v2 sourceの
+生成、public aliasでの配信確認、Host実装の適合確認は別の事実です。
 この repository がその source、build、deploy entrypoint を所有します。realized な CDN、
 DNS、account / zone / route、credential、operator の状態は所有しません。それらは公開を
 行う operator の authority です。
 
-site の見た目や案内文は Host API v1 とは独立して配信できます。この deploy は固定された
-Host API v1 を変更せず、新しい API version や、それとは別の文書セットのバージョン軸も
-作りません。
-一方、schema の exact bytes（および将来 freeze される normative API bytes）は consumer が
-参照する identity なので、presentation と同じ rollback 条件では扱いません。
+v2の本文と案内文は通常のsite更新で公開できます。v1の固定済み本文とschemaのexact bytesは
+変更できません。v2の改訂には文書セットの追加version軸や一度限りの公開surfaceを設けず、
+各deploymentの原文と描画結果をexact readbackします。
 
 ## 現在の repository 配置と local 開発
 
@@ -32,10 +35,12 @@ website/
 ├── index.md               landing（手書き）
 ├── start/  guides/  reference/  glossary.md
 │                          読み方・参照・用語の入口（手書き）
-├── authoring/  client/     Core所有の実行例を読むガイド（手書き）
+├── authoring/  client/     v2のForm作成・クライアント設計ガイド（手書き）
 ├── host-api/  model/  conformance/  site.md
 │                          読み方の案内（手書き）
-├── spec/                  freeze に含まれる source の mirror（生成）
+├── spec/                  v1 freeze に含まれる source の mirror（生成）
+├── v2/                    v2仕様の入口（手書き）
+├── spec/host-api/v2/       v2の規範本文・解説のmirror（生成）
 ├── schemas/               schema 索引 page（生成・non-normative）
 ├── en/                    英語ガイド（手書き）とspec/schema索引（生成）
 └── public/
@@ -49,6 +54,14 @@ website/
 - [`scripts/site.mjs`](../scripts/site.mjs) — mirror page、索引 page、公開 schema bytes、
   build 出力の検査
 
+v2仕様は `spec/host-api/v2/` のうち `V2_SPEC_DOCUMENTS` で明示した文書だけを生成します。
+README、HTTP、Form仕様は規範、examplesとmigrationは非規範です。任意のproposalを自動公開せず、
+v1の凍結対象にも加えません。本文は原文から生成し、web側に別の仕様を手書きしません。
+
+v2の規範原文は英語で、公開中も改訂可能です。`revision-open`は未公開や非規範という意味では
+ありません。v1の固定検査と48件のschema ledgerはそのまま維持します。生成・build・previewと
+production公開は別の操作です。
+
 ```console
 bun scripts/site.mjs --write        # 生成物を書き直す
 bun run check:site                  # 生成物が導出と一致するか
@@ -58,10 +71,12 @@ bun run site:dev                    # 手元で見る
 
 `bun run check` はこれらの検査を含みます。生成物が古いまま commit されることはありません。
 
-`authoring/` と `client/` のコードは、GoのExampleテストからVitePressのsource snippetとして
-読み込みます。架空の定義とloopbackテスト環境を使い、実Hostの提供や配備手順とは区別します。
-`hostclient/documentation_test.go` はStartのHTTP例を実クライアントで同期・非同期とも再生し、
-要求・応答本文だけでなく、接続先・クエリ・必須ヘッダーも検査します。
+`start/`は架空のHostとFormによるv2のHTTP往復例、`authoring/`はFormの設計例、
+`client/`は操作意図・再送・保持期限の設計を扱います。日英のコード片とリンクの対応、
+描画したHTMLを検査しますが、実Hostでの成功を示す例ではありません。
+既存Goテストはv1ライブラリの検査として残り、v2ガイドの実行証拠として扱いません。
+v1の六つのHTTP往復例は`hostclient/testdata/v1-http-exchange.md`へ元のbytesを保って移し、
+既存のclient実行・固定schema照合を継続します。v2入門をv1 clientで検証しません。
 
 `site:dev` は VitePress の local search を含む手元の確認用です。dependency の開発時
 optimizer だけを `esnext` に合わせています。release build の target と schema の bytes は
@@ -82,10 +97,10 @@ Chrome / Chromium を headless で動かします。browser が見つからな�
 標準 path にない場合は `TAKOFORM_BROWSER=/absolute/path/to/chrome` を設定してください。
 browser の自動 download や、既存 browser profile の利用はしません。
 
-- `/`、`/start/`、`/guides/`、`/authoring/`、`/client/`、`/reference/`、`/glossary`、`/host-api/` の日英を
+- `/`、v2入口・仕様4ページ、`/start/`、`/guides/`、`/authoring/`、`/client/`、`/reference/`、`/glossary`、`/host-api/` の日英を
   320 / 375 / 414 / 768 px で開き、横 overflow と切れた操作要素がないことを確認します。
-- 上記のページと `/spec/host-api/v1` で、左の目次が公開ページの一覧と一致し、
-  全グループが最初から開いていることを確認します。
+- トップにはsidebarがなく、v2仕様には専用の目次、一般ページにはv2を先頭にした目次と旧版資料への経路があることを確認します。
+  目次の全グループは最初から開きます。
 - mobile navigation と sidebar を keyboard で開き、Escape で閉じたあと trigger へ focus が
   戻ることを確認します。
 - 1280 px の light / dark 両方で first viewport の主要 CTA と keyboard focus indicator を確認します。
@@ -107,8 +122,9 @@ portable な `bun run check` へ browser binary を暗黙に要求しません�
 | --- | --- |
 | `/`、`/start/`、`/guides/`、`/authoring/`、`/client/`、`/reference/`、`/host-api/`、`/model/`、`/conformance/`、`/glossary`、`/site` | 手書きの案内 |
 | `/spec/**` | freeze-listed source は normative mirror。それ以外の overview/index mirror は non-normative。正本は `spec/**` |
+| `/v2/`、`/spec/host-api/v2/**` | v2仕様の入口と原文mirror。規範か解説か、公開済みかを別々に表示する |
 | `/schemas/` | identity の non-normative 索引 page |
-| `/en/`と上記ページの`/en/**`版 | 英語の案内・索引と同じ英語の仕様原文 |
+| `/en/`と上記ページの`/en/**`版 | 英語の案内・索引と、v1・v2の英語原文 |
 | `/schemas/<$id と同じ path>` | 公開 schema の exact な bytes |
 | `/sitemap.xml`、`/robots.txt`、`/404.html` | site の付随物 |
 
@@ -155,12 +171,17 @@ credential を持ちません。
    から landing page、sitemap、ledger にある current 33件と retired 15件の schema を
    byte 単位で読み戻し、撤去した catalog/status/release/decision route も不在であることを
    確認します。schema の sample 2件だけで成功にはしません。
+
+   integration/rehearsalのpreviewは、public apexに変更を送らずに確認できます。
+   preview URLの成功をproduction公開とは扱いません。
 ## 一度限りの historical runbook（initial cutover の記録）
 
 以下の手順4〜6は、Host API v1 の identity/domain を最初に切り替えるための一度限りの
 historical runbook です。現在の routine production deploy と混同しないでください。手順、
 receipt、旧 owner の識別子は cutover evidence として保持しますが、通常の deploy path で
-再利用するものではありません。
+再利用するものではありません。現在のv2公開済みprojectionでは、この旧v1 cutoverの
+`--execute`はprovider変更前に拒否されます。以下のapply例は当時の記録であり、現在の
+公開手順ではありません。
 
 4. **最初の production deployment を作る。** domain を動かす前に、clean な public
    `main` で次を順に実行します。これは `takoform-api-v1-cutover` が一度だけ所有する
@@ -249,16 +270,30 @@ receipt、旧 owner の識別子は cutover evidence として保持しますが
    bun run deploy -- takoform-site --apply --environment production --execute
    ```
 
-   通常 production も clean な exact public `main`、一回のupload、immutable URLの全schema
-   readback、apex と www の page/negative readback、`forms.takoform.com` の全schema readbackを
-   要求します。通常の `takoform-site` surface は `--initial-cutover` と `--verify-cutover` を
-   受け付けず、Host API v1 の identity/domain 操作は上の cutover surface に分離されています。
+   production は clean な exact public `main`、一回のupload、immutable URLの全schema
+   とv1/v2仕様page、v2英語原文3件のexact readback、apex と www のpage/原文/negative
+   readback、`forms.takoform.com` の全schema readbackを要求します。公開前には現在の
+   public alias二つと現行のimmutable Pages deploymentが示す**旧版それ自身**のv2原文・
+   描画pageのbytesを照合し、v1 pageと48 schemaを維持していることを確認します。これを
+   新候補の原文digestと同じであることにはしません。build後も旧版のbytesとproduction
+   historyが変わっていないことを再確認します。Pages uploadはatomicな排他ではないため、
+   operatorは同じprojectのwriterを直列化してください。`takoform-site`は旧v1 cutoverの
+   `--initial-cutover`と`--verify-cutover`を受け付けません。
 
-presentation だけの不具合は、全48 schemaが同じbytesであることを確認できる以前の Pages
-deployment へ戻せます。しかし initial domain cutover 後に旧 Worker へ戻すと、新しく公開した
-17件が消えます。schema、domain cutover、または readback が失敗した場合は provider history を
-読み、全48件を保持する Pages deployment へ forward repair します。自動 rollback や blind retry
-は行いません。
+Cloudflare Pages自体は以前の成功deploymentへ戻せますが、このrepositoryの安全条件を
+代わりに判定しません。全48 schemaと旧版それ自身のraw原文3件・v2規範文書の日英6 page・
+保持するv1 pageを旧public aliasとのexact readbackで確認できるimmutable deploymentだけを
+rollback候補として提示します。旧版のv2 pageは`published`または`revision-open`を示す必要が
+あります。新候補のv2本文と異なっていても、それだけでは候補から除外しません。新候補の
+HTML・原文・schemaはupload後にそのbuildのbytesに対してexact readbackします。
+`website/public/_headers` は日英の仕様path (`/spec/*`、`/en/spec/*`) に `no-transform` を付け、
+CDNが仕様例の本文を書き換えないようにします。Cloudflareのメールアドレス難読化も抑止されます。
+Pages既定のHTML再検証 (`public, max-age=0, must-revalidate`) と、別pathの `/schemas/*` の
+既存cache/CORS指定は保持します。これはsite自身の応答headerであり、zone全体の
+設定変更ではありません（[Cloudflareの説明](https://developers.cloudflare.com/waf/tools/scrape-shield/email-address-obfuscation/)）。
+候補がなければv2を落とすrollbackは行わず、provider historyからforward repairします。
+旧Workerへ戻すと公開済みschema17件が消えるため候補ではありません。自動rollbackやblind retryは
+行いません。
 
 ## 以前の site を superseded にする
 

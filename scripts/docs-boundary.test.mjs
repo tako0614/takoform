@@ -11,6 +11,37 @@ function baseEntries() {
 }
 
 describe("current documentation boundary", () => {
+  test("allows the v2 identity only in explicitly owned source, mirrors, and reader guides", () => {
+    const entries = baseEntries();
+    for (const path of ["spec/host-api/v2/README.md", "spec/host-api/v2/http.md", "spec/host-api/v2/forms.md", "spec/host-api/v2/examples.md", "spec/host-api/v2/migration.md", "website/spec/host-api/v2/http.md", "website/en/spec/host-api/v2/http.md", "website/spec/host-api/v2/migration.md", "website/en/spec/host-api/v2/migration.md"]) {
+      entries.set(path, "API identity: forms.takoform.com/v2.\n");
+    }
+    for (const locale of ["", "en/"]) {
+      for (const guide of ["start", "model", "client", "authoring", "use", "host-api", "guides", "reference"]) {
+        entries.set(`website/${locale}${guide}/index.md`, "API identity: forms.takoform.com/v2.\n");
+      }
+    }
+    expect(inspectDocs(entries)).toEqual([]);
+    entries.set("spec/host-api/v2/unowned.md", "API identity: forms.takoform.com/v2.\n");
+    entries.set("spec/host-api/v1.md", "API identity: forms.takoform.com/v2.\n");
+    entries.set("website/en/other/index.md", "API identity: forms.takoform.com/v2.\n");
+    expect(inspectDocs(entries)).toEqual([
+      "spec/host-api/v1.md:1 claims a positive Host API v2 identity: forms.takoform.com/v2.",
+      "spec/host-api/v2/unowned.md:1 claims a positive Host API v2 identity: forms.takoform.com/v2.",
+      "website/en/other/index.md:1 claims a positive Host API v2 identity: forms.takoform.com/v2.",
+    ]);
+  });
+
+  test.each([
+    "Specification 2.1 is the current release.",
+    "Core owns the Provider projection.",
+  ])("v2 ownership still rejects %s", (claim) => {
+    const entries = baseEntries();
+    entries.set("spec/host-api/v2/http.md", `${claim}\n`);
+    entries.set("website/start/index.md", `${claim}\n`);
+    expect(inspectDocs(entries)).not.toEqual([]);
+  });
+
   test("accepts neutral docs and existing local links", () => {
     expect(inspectDocs(baseEntries())).toEqual([]);
   });

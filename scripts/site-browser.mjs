@@ -12,7 +12,8 @@ import {
 } from "./site.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const routes = ["", "/en"].flatMap((prefix) => ["/", "/start/", "/guides/", "/authoring/", "/client/", "/reference/", "/glossary", "/host-api/"].map((route) => `${prefix}${route}`));
+const v2Routes = ["/v2/", "/spec/host-api/v2/", "/spec/host-api/v2/http", "/spec/host-api/v2/forms", "/spec/host-api/v2/examples", "/spec/host-api/v2/migration"];
+const routes = ["", "/en"].flatMap((prefix) => ["/", "/start/", "/model/", "/client/", "/authoring/", "/use/", "/host-api/", "/guides/", "/reference/", "/glossary", ...v2Routes].map((route) => `${prefix}${route}`));
 const widths = [320, 375, 414, 768];
 const sidebarRoutes = [...new Set([
   ...HAND_AUTHORED_PAGE_SOURCES.map(siteRouteForPageSource),
@@ -169,9 +170,15 @@ async function run() {
     const visit = async (route) => {
       await page.goto(origin + route, { waitUntil: "networkidle" });
       await page.evaluate(() => document.fonts.ready);
+      const path = new URL(page.url()).pathname;
+      const prefix = path.startsWith("/en/") ? "/en" : "";
+      const localPath = prefix ? path.slice(3) : path;
+      const expectedSidebar = localPath === "/" ? [] : v2Routes.includes(localPath)
+        ? [...v2Routes, "/start/", "/model/", "/client/", "/authoring/", "/use/", "/host-api/", "/guides/", "/reference/", "/spec/host-api/v1"].map((entry) => prefix + entry).sort()
+        : sidebarRoutes.filter((entry) => entry.startsWith("/en/") === !!prefix);
       assert.deepEqual(await page.locator('.VPSidebar a[href^="/"]').evaluateAll(
         (links) => links.map((link) => link.getAttribute("href")).sort(),
-      ), sidebarRoutes.filter((entry) => entry.startsWith("/en/") === route.startsWith("/en/")), `${route}: shared sidebar must contain every locale page`);
+      ), expectedSidebar, `${route}: sidebar must contain the correct version and locale pages`);
       assert.equal(await page.locator(".VPSidebarItem.collapsed").count(), 0, `${route}: sidebar groups start expanded`);
     };
     for (const width of widths) {
@@ -179,13 +186,17 @@ async function run() {
       for (const route of routes) {
         await visit(route);
         assert.deepEqual(await page.evaluate(inspectGeometry), [], `${width}px ${route}`);
+        if (width === 375 && ["/", "/en/", "/spec/host-api/v2/http"].includes(route)) {
+          const name = route === "/" ? "home-ja" : route === "/en/" ? "home-en" : "http-v2";
+          await page.screenshot({ path: `/tmp/takoform-docs-${name}-375.png`, fullPage: true });
+        }
       }
       await visit("/spec/host-api/v1");
       await visit("/en/spec/host-api/v1");
     }
     for (const width of [375, 1024, 1280]) {
       await page.setViewportSize({ width, height: 900 });
-      for (const [path, fragment] of [["/", ""], ["/start/", "#_0-準備"], ["/spec/host-api/v1", "#artifacts-and-operations"]]) {
+      for (const [path, fragment] of [["/", ""], ["/v2/", ""], ["/spec/host-api/v2/http", ""], ["/start/", ""], ["/spec/host-api/v1", "#artifacts-and-operations"]]) {
         await visit(path + fragment);
         await switchLanguage(page, width, "English", `/en${path}`, "en");
         await switchLanguage(page, width, "日本語", path, "ja-JP");
@@ -196,7 +207,7 @@ async function run() {
     for (const prefix of ["", "/en"]) {
       await visit(`${prefix}/start/`);
       await page.locator(".VPNavBarSearch button").click();
-      await page.locator("#localsearch-input").fill(prefix ? "packageDigest" : "パッケージ");
+      await page.locator("#localsearch-input").fill("Takoform-Expected-Generation");
       const results = page.locator(".VPLocalSearchBox a.result");
       await results.first().waitFor();
       const links = await results.evaluateAll((nodes) => nodes.map((node) => node.getAttribute("href")));
@@ -207,6 +218,8 @@ async function run() {
     await page.setViewportSize({ width: 320, height: 900 });
     await visit("/");
     await checkDisclosure(page, ".VPNavBarHamburger");
+    assert.equal(await page.locator(".VPLocalNav button.menu").count(), 0, "home has no version-specific sidebar");
+    await visit("/v2/");
     await checkDisclosure(page, ".VPLocalNav button.menu");
     await visit("/start/");
     await checkDisclosure(page, ".VPLocalNav button.menu");
@@ -214,10 +227,10 @@ async function run() {
     for (const colorScheme of ["light", "dark"]) {
       await page.emulateMedia({ colorScheme });
       await visit("/");
-      assert.equal(await page.locator(".VPSidebar").isVisible(), true, "homepage sidebar must be visible on desktop");
+      assert.equal(await page.locator(".VPSidebar").isVisible(), false, "homepage is a concise index without the v1 sidebar");
       assert.equal(await page.locator("html").evaluate((element) => element.classList.contains("dark")), colorScheme === "dark");
       assert.deepEqual(await page.evaluate(inspectGeometry), [], `1280px ${colorScheme}`);
-      const primary = page.locator('.VPHero .VPButton[href="/start/"]');
+      const primary = page.locator('.home-index a[href="/v2/"]');
       const bounds = await primary.boundingBox();
       assert.ok(bounds && bounds.y >= 0 && bounds.y + bounds.height <= 800, `${colorScheme}: primary action must fit first viewport`);
       await page.keyboard.press("Tab");
@@ -229,7 +242,7 @@ async function run() {
       await page.screenshot({ path: `/tmp/takoform-docs-home-${colorScheme}.png`, fullPage: true });
     }
     assert.deepEqual(networkFailures, [], "browser runtime and asset requests");
-    console.log(`site-browser: ${widths.length * routes.length} responsive pages, bilingual search, language/fragment round trips, complete shared sidebar, keyboard disclosures and themes passed (${browser.version()})`);
+    console.log(`site-browser: ${widths.length * routes.length} responsive pages, bilingual search, language/fragment round trips, version-specific sidebars, keyboard disclosures and themes passed (${browser.version()})`);
   } finally {
     process.removeListener("SIGINT", interrupted);
     process.removeListener("SIGTERM", interrupted);

@@ -1,15 +1,18 @@
 ---
-title: Conformance checks
+title: V1 conformance checks
 ---
 
-# Conformance checks {#conformance-と参照実装}
+# V1 conformance checks {#conformance-と参照実装}
+
+This non-normative guide explains the retained v1 verification tools and reports. For v2 requirements,
+read the [v2 HTTP API](/en/spec/host-api/v2/http#conformance).
+The package, Snapshot, and signature checks below are not mandatory v2 requirements.
 
 A report describes whether the named data or implementation satisfies the
 requirements under test. A valid package, for example, does not establish that
 its Form is usable on a particular Host.
 
-This guide is non-normative. It explains how to read results; the
-[conformance specification](/en/spec/conformance) defines the requirements.
+The [v1 conformance specification](/en/spec/conformance) defines the retained requirements.
 
 ## What is being verified? {#claim-を分けて読む}
 
@@ -26,9 +29,13 @@ One result does not prove another subject's conformance or production readiness.
 
 ## Run local verification {#repository-から実行できる-harness}
 
-Fetch dependencies using the [preparation steps](/en/start/#_0-準備), then run
-these commands at the repository root. The checks do not access the network or
-modify resources.
+First fetch dependencies at the repository root. This step may access the network.
+
+```console
+go mod download
+```
+
+After dependencies are available, the following checks do not access the network or modify resources.
 
 ```console
 go run ./cmd/form-package verify conformance/takoform-v1/generic-host/external-family/counter-reservation
@@ -61,6 +68,6 @@ For checks of the OpenTofu implementation, see
 
 ## Read next {#次に読む}
 
-- [Getting started](/en/start/) — command output and API examples.
-- [Host API overview](/en/host-api/) — discovery and main operations.
+- [Retained Host API v1](/en/spec/host-api/v1) — v1 discovery and operations.
+- [Migration to v2](/en/spec/host-api/v2/migration) — differences when moving to the separate API.
 - [Reference](/en/reference/) — implementation specifications.

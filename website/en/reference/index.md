@@ -1,66 +1,30 @@
 ---
-title: Reference
+title: Specification reference
+description: Navigate the public v2 normative chapters and explanatory examples, plus retained v1 material.
 ---
 
-# Reference {#仕様一覧}
+# Specification reference {#reference}
 
-Specifications for implementers and guides that explain them. This index is
-non-normative and does not introduce requirements.
+Read v2 requirements from its own normative chapters. This index and the guides do not add to or change the specification text.
 
-## Specifications {#仕様}
+## Host API v2 {#v2-reference}
 
-These specifications are frozen English originals. The notice at the top of each
-page links to its repository source.
+The normative source is English and remains open to revision. See [takoform.com](https://takoform.com/en/v2/) for the published version. Local copies and previews may differ.
 
-| Document | Contents |
-| --- | --- |
-| [Host API v1](/en/spec/host-api/v1) | HTTP endpoints, requests and responses |
-| [Conformance](/en/spec/conformance) | Requirement language and conformance categories |
-| [Versioning](/en/spec/versioning) | Versions, identities and compatibility |
-| [Form Definition](/en/spec/form-definition/) | Resource settings and behavior |
-| [Form Package](/en/spec/form-package/) | Distribution format and verification |
-| [Snapshot](/en/spec/core/) | Verified packages and references |
-| [Interface](/en/spec/interface-contract/) | Operations, inputs, outputs and errors |
-| [Binding](/en/spec/binding-contract/) | Capabilities and roles for resource connections |
-| [Artifact transport](/en/spec/artifact-transport/) | Content identification and transfer |
-| [Standard Services](/en/spec/standard-services/) | References to external protocols |
-| [Trust and revocation](/en/spec/trust/) | Signatures, trust policy and revocation data |
-| [Form families](/en/spec/form-families) | Publisher-owned namespaces |
-| [Portability boundary](/en/spec/portability-boundary) | Form semantics versus operating-environment decisions |
+- [Overview and concepts](/en/spec/host-api/v2/)
+- [HTTP requests and responses](/en/spec/host-api/v2/http)
+- [Form requirements](/en/spec/host-api/v2/forms)
+- [End-to-end examples](/en/spec/host-api/v2/examples) (informative)
+- [Migration from v1](/en/spec/host-api/v2/migration) (informative)
 
-The frozen files and digests are listed in
-[`v1.freeze.json`](https://github.com/tako0614/takoform/blob/main/spec/host-api/v1.freeze.json).
-The site preserves original specification prose and rewrites its link targets for
-navigation. Repository files remain authoritative.
+Use the three normative chapters above for v2 semantics, HTTP behavior, and Form author requirements. Examples are fictional transcripts for understanding the flow.
 
-The [specification overview](/en/spec/), [Host API index](/en/spec/host-api/) and
-[schema identity index](/en/spec/schemas/) are navigation pages, not frozen specifications.
+## Retained v1 and common-model archive {#v1-archive}
 
-## JSON Schema and verification data {#json-schemaと検証データ}
+These documents are retained to understand Host API v1 and its related common-model material. They are not requirements that automatically apply to v2. Use the v2 normative chapters above for v2 conformance, compatibility, and portability questions.
 
-The [schema index](/en/schemas/) links to JSON files at the paths named by their
-`$id`. Documents also need to satisfy the semantic constraints in the prose;
-structural schema validation alone is not sufficient.
-
-- [`operations-v1.json`](https://github.com/tako0614/takoform/blob/main/spec/host-api/operations-v1.json)
-  — operations, concurrency checks, statuses and errors.
-- [`generic.json`](https://github.com/tako0614/takoform/blob/main/conformance/takoform-v1/generic.json)
-  — fixture manifest for package and Snapshot verification.
-
-## Guides {#日本語ガイド}
-
-Guides are available in Japanese and English. They explain the specifications
-without adding requirements.
-
-| Document | Contents |
-| --- | --- |
-| [Getting started](/en/start/) | Local verification and API request/response examples |
-| [Implementation guides](/en/guides/) | Reading paths for different implementations |
-| [Create a Form](/en/authoring/) | A Go example defining, packaging and verifying a Form |
-| [Use a Host from Go](/en/client/) | An executable discovery, prepare and apply sequence |
-| [Use from OpenTofu / Terraform](/en/use/) | Entry point for using Host API v1 from configuration |
-| [Host API overview](/en/host-api/) | Discovery and API structure |
-| [Common model](/en/model/) | Relationships between the main data types |
-| [Conformance checks](/en/conformance/) | Reading verification reports |
-| [Glossary](/en/glossary) | Terms used in the specifications |
-| [About this site](/en/site) | Scope and publication |
+- [Host API v1 wire contract](/en/spec/host-api/v1)
+- [Conformance language and classes](/en/spec/conformance)
+- [v1 versioning and compatibility material](/en/spec/versioning)
+- [v1 portability boundary](/en/spec/portability-boundary)
+- [Repository contract map](/en/spec/) (non-normative index)

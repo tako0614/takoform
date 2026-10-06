@@ -7,16 +7,25 @@ canonicalUrl: https://github.com/tako0614/takoform/blob/main/spec/host-api/READM
 
 <div lang="en" class="specification-source">
 
-# Portable Form Host APIs
+# Takoform Host APIs
 
-This page is non-normative navigation. The immutable contract is
-[`v1.md`](/en/spec/host-api/v1), and its exact closure is named by
-[`v1.freeze.json`](https://github.com/tako0614/takoform/blob/main/spec/host-api/v1.freeze.json). Nothing on this page adds to or reinterprets
-that contract.
+This page is non-normative navigation between the English v2 specification and
+the retained, unchanged v1 contract. It does not add requirements to either API.
 
-## Current Host API v1
+## Host API v2
 
-The current Host lane uses the unchanged literal, provider-neutral Host API v1
+Start with the [v2 model](/en/spec/host-api/v2/), then the [HTTP reference](/en/spec/host-api/v2/http)
+and [Form requirements](/en/spec/host-api/v2/forms). The [examples](/en/spec/host-api/v2/examples) show
+creation through deletion and recovery after failures. The
+[migration guide](/en/spec/host-api/v2/migration) explains the separate v1 and v2 contracts.
+
+The English source defines v2 and remains open to revision. See
+[takoform.com](https://takoform.com/en/v2/) for the published version; local copies
+and previews may differ. Publication does not certify any Host implementation.
+
+## Retained Host API v1
+
+Existing v1 implementations use the unchanged, provider-neutral Host API v1
 contract ([`v1.md`](/en/spec/host-api/v1)). Its endpoints are:
 
 - discovery: `GET /.well-known/takoform/v1`;
@@ -26,10 +35,11 @@ contract ([`v1.md`](/en/spec/host-api/v1)). Its endpoints are:
 
 The lane is a protocol identity, not a Form catalog or publisher allowlist. A
 Host implements the contract and support profile independently. Its normative
-bytes never change. Errata are non-normative and cannot reinterpret v1; a
-normative or behavioral change requires a future Host API v2 proposal.
+bytes remain fixed by [`v1.freeze.json`](https://github.com/tako0614/takoform/blob/main/spec/host-api/v1.freeze.json). Errata are
+non-normative and cannot reinterpret v1. The separately defined v2 contract
+does not modify these retained bytes or require dual-version implementations.
 
-## Conformance
+## V1 conformance material
 
 The current generic artifact corpus is
 [`conformance/takoform-v1/generic.json`](https://github.com/tako0614/takoform/blob/main/conformance/takoform-v1/generic.json).

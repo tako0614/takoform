@@ -1,93 +1,44 @@
 ---
-title: Host API overview
+title: Implementing Host API v2
+description: Design the durability boundary that keeps Resources, Operations, and retry records coherent across restarts.
 ---
 
-# Host API overview {#host-api-v1-とは}
+# Implementing Host API v2 {#host-api}
 
-Host API is the HTTP API for creating, reading, updating and deleting resources defined by Forms.
-A Host is an implementation serving this API. It installs definitions for the
-Forms it supports, accepts settings according to them and returns resource state.
+A v2 Host manages more than HTTP responses: it owns accepted work, Resource generations, and the state verified at its execution target. This guide focuses on the durability boundary. The [HTTP API](/en/spec/host-api/v2/http) is the source for exact paths, statuses, and retention requirements.
 
-This guide is non-normative. The [Host API v1 specification](/en/spec/host-api/v1)
-defines implementation requirements.
+## Make acceptance one durable fact {#acceptance}
 
-## Discover the endpoint {#discovery-と-api-root、lifecycle-root}
+Before dispatching a mutation, validate authentication and authorization, Form support, input, references, and generation conditions. On acceptance, persist the Resource and Operation together with the Idempotency-Key mapping as one durable acceptance. Concurrent requests must converge on one winner; do not allow partial records such as an Operation without its Resource, or a backend change without its replay record.
 
-Request `/.well-known/takoform/v1` to obtain supported API versions and endpoints.
-Use the returned API endpoint to construct resource operation URLs.
+At minimum, retain enough information to identify and resume the original request after restart:
 
-| Purpose | URL |
+- Stable principal, API version, Idempotency-Key, and the method, path/query, generation condition, and JSON value needed to match a retry.
+- Host-issued Resource UID, Form URL, Space, name, accepted desired `spec`, and current generation.
+- Operation ID, action, generation, status/effect, acceptance time, and retention deadline.
+- Execution state bound to that Operation and the backend identity needed to verify its outcome.
+
+The key scope is `(Host, API version, stable principal, key)`. The same key and request return the original Operation; reusing the key for a different request is rejected as a conflict. Do not discard unfinished Operations or unknown effects at an ordinary retention deadline. The common contract does not choose a database, queue, ORM, or encryption scheme. It requires durability and concurrency control that preserve these associations.
+
+## Bind execution to the original Operation {#dispatch}
+
+The HTTP handler and backend work may have different lifetimes. If work continues in a separate worker, provide a durable notification or equivalent recovery path that can resume accepted Operations. Duplicate delivery and restart must continue the original Operation—not create a new UID, Operation, or backend object. While an effect is unresolved, reject another mutation on that UID as `resource_busy`.
+
+`GET /operations/{id}` reads current recorded state. It does not resend Create/Update/Delete or start reconciliation merely because a client polled. Background execution advances work independently. Resource GET returns the last verified `observed`, `observedGeneration`, and `observedAt`. An implementation may perform read-only refresh during GET, but it must not start effectful work or label unverified values as observed.
+
+## Recover at each restart or lost-ack point {#recovery}
+
+| Failure point | Durable state and recovery action |
 | --- | --- |
-| Discovery | `GET /.well-known/takoform/v1` |
-| API root | `/apis/forms.takoform.com/v1` |
-| Resource operations | `{api}/resources/{formGroup}/{kind}/{name}` |
+| Before acceptance is recorded | No Operation or backend effect was accepted. Revalidate the request; if accepted, create the durable record once. Requests arriving with the same key converge on that record. |
+| After acceptance, before dispatch | Restore `queued/effect:none` and the original dispatch data, then advance that Operation. Do not reissue a UID or key. |
+| After dispatch, before recording the backend result | Do not assume execution never happened. Set `reconciling/effect:unknown` and check using the saved backend identity. Block a new mutation until the result is established; a timeout alone cannot mean `failed/effect:none`. |
+| After backend success, before terminal state is recorded | Reconcile or read back the backend, then advance the original Operation when success is verified. Do not create a second Operation to repeat the successful effect. |
 
-Discovery returns one API version. The API endpoint uses the same origin as the
-discovery URL. User information, queries, fragments and percent encoding are not
-allowed in that endpoint. Plain HTTP is limited to loopback development.
+If only the client acknowledgement was lost and the Host's acceptance record remains, replaying the same request with the same key returns the same Operation's current state. If authorization has been revoked, the Host may hide that state with `403` or `404`.
 
-Software release numbers are separate from the API version
-`forms.takoform.com/v1`. Updating a library does not change the API URL.
+## Keep success separate from observation {#observation}
 
-## API operations {#wire-に入るもの、入らないもの}
+An Operation reports progress and effect for one Form-defined management action. `succeeded/effect:complete` means that action completed; it is not a general service-health result. Keep the accepted desired value in Resource `spec` and update `observed` only with values verified at the backend. After failure, preserve the Resource and any known partial-effect mapping so the Form's same-UID Update/Delete recovery remains possible.
 
-The API defines discovery, validation, preparation, create/update/read/delete/import,
-observation, concurrency control, asynchronous operations and errors.
-
-The common API does not define the meaning of an individual Form or which backend
-a Host uses. Resource-specific operations belong to the Interfaces and Bindings
-referenced by the Form.
-
-## Select an exact Form {#四要素の-formref}
-
-All four FormRef fields identify one definition. This illustrates the shape:
-
-```json
-{
-  "apiVersion": "forms.example.com",
-  "kind": "ExampleResource",
-  "definitionVersion": "0.3.0",
-  "schemaDigest": "sha256:<64 lowercase hexadecimal characters>"
-}
-```
-
-All four values need to match. `latest`, an omitted version or a name-only
-reference cannot substitute for them. An unresolved definition produces
-`form_unknown` before the resource is changed.
-
-## Identity and concurrency {#identity-は三つの値で見る}
-
-- `uid`: identity issued on creation. Deleting and recreating the resource changes it.
-- `generation`: advances with user-requested state changes, starting at `1`.
-- `revision`: also advances with Host-returned state/output changes, starting at `1`.
-
-Creation uses `If-None-Match: *`. Updates, observation, preparation of existing
-resources and deletion use the concurrency preconditions specified for each operation.
-
-Missing required preconditions produce `invalid_argument`; stale generations
-produce `generation_conflict`, stale revisions produce `revision_conflict`, and a
-recreated resource produces `uid_mismatch`. Check the operation inventory for details.
-
-## Errors {#閉じた-error-語彙}
-
-[`operations-v1.json`](https://github.com/tako0614/takoform/blob/main/spec/host-api/operations-v1.json)
-defines error codes, HTTP statuses and retryability. Implementations cannot add
-their own common error codes.
-
-## Schemas and operation inventory {#machine-document}
-
-| File | Contents |
-| --- | --- |
-| [`operations-v1.json`](https://github.com/tako0614/takoform/blob/main/spec/host-api/operations-v1.json) | Operations and concurrency checks |
-| [`host-discovery.schema.json`](https://forms.takoform.com/schemas/v1/host-discovery.schema.json) | Discovery |
-| [`form-ref.schema.json`](https://forms.takoform.com/schemas/v1/form-ref.schema.json) | FormRef |
-| [`host-api-wire.schema.json`](https://forms.takoform.com/schemas/v1/host-api-wire.schema.json) | Resources and errors |
-| [`operation.schema.json`](https://forms.takoform.com/schemas/operations/v1/operation.schema.json) | Asynchronous operation records |
-| [`host-support-profile.schema.json`](https://forms.takoform.com/schemas/support/v1/host-support-profile.schema.json) | Host support |
-
-## Read next {#次に読む}
-
-- [Getting started](/en/start/) — package verification and API examples.
-- [Common model](/en/model/) — definitions, packages and Snapshots.
-- [Conformance checks](/en/conformance/) — reading reports.
-- [Versioning and compatibility](/en/spec/versioning) — detailed rules.
+Once these obligations are met, the choice of worker, database, and queue arrangement belongs to the Host. Follow the [HTTP API contract](/en/spec/host-api/v2/http) for normative statuses, retention, `404`/`410`, and problem details.

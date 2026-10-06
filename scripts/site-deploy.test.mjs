@@ -1,4 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -10,11 +11,15 @@ import {
   INITIAL_CUTOVER_ABSENT_SCHEMA_ROUTES,
   INITIAL_CUTOVER_PREDECESSOR,
   PAGE_READBACK_ROUTES,
+  SITE_CONTRACT_READBACK_ROUTES,
+  V2_NORMATIVE_ROUTES,
+  V2_RAW_SOURCE_ROUTES,
   SCHEMA_PUBLIC_ORIGIN,
   SITE_PUBLIC_ORIGINS,
   SITE_PUBLIC_HOSTNAMES,
   SITE_PAGES_ORIGIN,
   SITE_PROJECT,
+  SITE_SURFACE,
   SITE_PUBLIC_ORIGIN,
   SITE_WWW_ORIGIN,
   assertProductionSource,
@@ -81,17 +86,24 @@ function fixtureRoot(pageBodies = {}) {
   const ledgerPath = join(root, SCHEMA_LEDGER_PATH);
   mkdirSync(dirname(ledgerPath), { recursive: true });
   writeFileSync(ledgerPath, `${JSON.stringify(SCHEMA_LEDGER, null, 2)}\n`);
-  for (const route of PAGE_READBACK_ROUTES) {
-    const fileRoute = route === "/" ? "/index.html" : route;
+  for (const route of SITE_CONTRACT_READBACK_ROUTES) {
+    const fileRoute = route === "/" ? "/index.html" : route === "/sitemap.xml" ? route :
+      route.endsWith("/") ? `${route}index.html` : `${route}.html`;
     const file = join(root, `${SITE_DIST}${fileRoute}`);
     mkdirSync(dirname(file), { recursive: true });
-    writeFileSync(file, pageBodies[route] ?? `bytes for ${route}`);
+    writeFileSync(file, pageBodies[route] ?? (V2_NORMATIVE_ROUTES.includes(route)
+      ? `<aside data-release-state="revision-open">v2 source ${route}</aside>` : `bytes for ${route}`));
   }
   for (const entry of SCHEMA_ENTRIES) {
     const route = new URL(entry.id).pathname;
     const file = join(root, `${SITE_DIST}${route}`);
     mkdirSync(dirname(file), { recursive: true });
     writeFileSync(file, readFileSync(join(REPOSITORY_ROOT, entry.source)));
+  }
+  for (const route of V2_RAW_SOURCE_ROUTES) {
+    const file = join(root, `${SITE_DIST}${route}`);
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, readFileSync(join(REPOSITORY_ROOT, "spec/host-api/v2", route.split("/").at(-1).slice(0, -4))));
   }
   return root;
 }
@@ -107,6 +119,15 @@ function gitRunner({
   projectListStatus = 0,
   projectListStderr = "",
   productionDeployments = [
+    JSON.stringify([
+      {
+        Id: "existing-production",
+        Environment: "Production",
+        Branch: "main",
+        Deployment: ROLLBACK_CANDIDATE,
+        Status: "1 hour ago",
+      },
+    ]),
     JSON.stringify([
       {
         Id: "existing-production",
@@ -181,7 +202,10 @@ function gitRunner({
 }
 
 function localBody(root, route) {
-  const fileRoute = route === "/" ? "/index.html" : route;
+  const fileRoute = route === "/" ? "/index.html" :
+    SITE_CONTRACT_READBACK_ROUTES.includes(route) && route !== "/sitemap.xml"
+      ? route.endsWith("/") ? `${route}index.html` : `${route}.html`
+      : route;
   return readFileSync(join(root, `${SITE_DIST}${fileRoute}`));
 }
 
@@ -204,7 +228,7 @@ function servingFetch(root, {
     ) {
       return { ok: false, status: 404 };
     }
-    if (![...PAGE_READBACK_ROUTES, ...SCHEMA_ROUTES].includes(route)) {
+    if (![...SITE_CONTRACT_READBACK_ROUTES, ...V2_RAW_SOURCE_ROUTES, ...SCHEMA_ROUTES].includes(route)) {
       throw new Error(`unexpected readback ${url}`);
     }
     expect(init.redirect).toBe("manual");
@@ -213,6 +237,33 @@ function servingFetch(root, {
       status: 200,
       arrayBuffer: async () => localBody(root, route),
     };
+  };
+}
+
+function priorRevisionRoot() {
+  const root = fixtureRoot();
+  for (const route of V2_RAW_SOURCE_ROUTES) {
+    writeFileSync(join(root, `${SITE_DIST}${route}`), `previous published source for ${route}\n`);
+  }
+  for (const route of V2_NORMATIVE_ROUTES) {
+    const fileRoute = route.endsWith("/") ? `${route}index.html` : `${route}.html`;
+    writeFileSync(join(root, `${SITE_DIST}${fileRoute}`),
+      `<aside data-release-state="published">previous published page for ${route}</aside>`);
+  }
+  return root;
+}
+
+function changedRevisionFetch(currentRoot, priorRoot, run, options = {}) {
+  const current = servingFetch(currentRoot, options);
+  const prior = servingFetch(priorRoot, options);
+  return (url, init) => {
+    const origin = new URL(url).origin;
+    const uploaded = run.calls.some(([command, ...args]) => command === "wrangler" && args.includes("deploy"));
+    if (origin === ROLLBACK_CANDIDATE ||
+      (!uploaded && [SITE_PUBLIC_ORIGIN, SITE_WWW_ORIGIN].includes(origin))) {
+      return prior(url, init);
+    }
+    return current(url, init);
   };
 }
 
@@ -227,7 +278,7 @@ function staleThenConvergingFetch(root, { staleAttempts, events = [] } = {}) {
         attempts.set(parsed.origin, (attempts.get(parsed.origin) ?? 0) + 1);
       }
       const attempt = attempts.get(parsed.origin) ?? 0;
-      if (attempt <= staleAttempts) {
+      if (attempt > 0 && attempt <= staleAttempts) {
         events.push(`fetch:${url}`);
         expect(init.headers["cache-control"]).toBe("no-cache");
         expect(init.headers.pragma).toBe("no-cache");
@@ -556,6 +607,82 @@ describe("takoform-site Pages domain ownership", () => {
 });
 
 describe("takoform-site runs", () => {
+  test("historical v1 cutover cannot upload the current v2 projection", async () => {
+    const root = fixtureRoot();
+    const run = gitRunner({ productionDeployments: "[]" });
+    await expect(runSiteDeploy(
+      parseSiteDeployArgs(["--apply", "--environment", "production", "--initial-cutover", "--review", REVIEW, "--execute"]),
+      { root, run, env: {}, surface: API_CUTOVER_SURFACE, fetch: servingFetch(root) },
+    )).rejects.toThrow("historical v1 initial cutover cannot upload the current v2 projection");
+    expect(run.calls.some(([command]) => command === "wrangler" || command === "bun")).toBe(false);
+  });
+
+  test("routine site refuses an incomplete prior public projection", async () => {
+    const root = fixtureRoot();
+    const run = gitRunner();
+    const normal = servingFetch(root);
+    const fetch = (url, init) => url === `${SITE_PUBLIC_ORIGIN}/spec/host-api/v2/http`
+      ? Promise.resolve({ status: 200, arrayBuffer: async () => Buffer.from("公開準備中です。") })
+      : normal(url, init);
+    await expect(runSiteDeploy(
+      parseSiteDeployArgs(["--apply", "--environment", "production", "--execute"]),
+      { root, run, env: {}, fetch },
+    )).rejects.toThrow("lacks one published or revision-open v2 marker");
+    expect(run.calls.some(([command]) => command === "bun")).toBe(false);
+    expect(run.calls.some(([command, ...args]) => command === "wrangler" && args.includes("deploy"))).toBe(false);
+  });
+
+  test("routine site refuses public aliases that disagree on prior raw v2 bytes", async () => {
+    const root = fixtureRoot();
+    const run = gitRunner();
+    const normal = servingFetch(root);
+    const fetch = (url, init) => url === `${SITE_PUBLIC_ORIGIN}${V2_RAW_SOURCE_ROUTES[0]}`
+      ? Promise.resolve({ status: 200, arrayBuffer: async () => Buffer.from("changed public source") })
+      : normal(url, init);
+    await expect(runSiteDeploy(
+      parseSiteDeployArgs(["--apply", "--environment", "production", "--execute"]),
+      { root, run, env: {}, fetch },
+    )).rejects.toThrow("public aliases and the current immutable deployment disagree");
+    expect(run.calls.some(([command, ...args]) => command === "wrangler" && args.includes("deploy"))).toBe(false);
+  });
+
+  test("a revision-open preview does not sample public aliases", async () => {
+    const root = fixtureRoot();
+    const run = gitRunner({ dirty: true, branch: "feature/v2-preview" });
+    const normal = servingFetch(root);
+    const fetch = (url, init) => {
+      if ([SITE_PUBLIC_ORIGIN, SITE_WWW_ORIGIN].includes(new URL(url).origin)) {
+        throw new Error("preview must not sample a public alias");
+      }
+      return normal(url, init);
+    };
+    const result = await runSiteDeploy(
+      parseSiteDeployArgs(["--apply", "--environment", "integration", "--execute"]),
+      { root, run, env: {}, fetch },
+    );
+    expect(result.readback.immutable.pages).toHaveProperty("/spec/host-api/v2/http");
+    expect(run.calls.filter(([command]) => command === "bun")).toEqual([
+      ["bun", "run", "check:host-api-freeze"],
+      ["bun", "run", "check:site"],
+      ["bun", "run", "build:site"],
+    ]);
+  });
+
+  test("mixed apex and www v2 states cannot authorize routine production", async () => {
+    const root = fixtureRoot();
+    const normal = servingFetch(root);
+    const fetch = (url, init) => new URL(url).origin === SITE_WWW_ORIGIN &&
+      V2_NORMATIVE_ROUTES.includes(new URL(url).pathname)
+      ? Promise.resolve({ status: 200, arrayBuffer: async () => Buffer.from("公開準備中です。") })
+      : normal(url, init);
+    const run = gitRunner();
+    await expect(runSiteDeploy(
+      parseSiteDeployArgs(["--apply", "--environment", "production", "--execute"]),
+      { root, run, env: {}, fetch },
+    )).rejects.toThrow("lacks one published or revision-open v2 marker");
+    expect(run.calls.some(([command, ...args]) => command === "wrangler" && args.includes("deploy"))).toBe(false);
+  });
+
   test("status reads local and the Wrangler project list without mutating anything", async () => {
     const run = gitRunner();
     const result = await runSiteDeploy(parseSiteDeployArgs(["--status"]), {
@@ -717,12 +844,65 @@ describe("takoform-site runs", () => {
     ).toHaveLength(1);
   });
 
+  test("routine production publishes changed English v2 source against a published prior revision", async () => {
+    const root = fixtureRoot();
+    const priorRoot = priorRevisionRoot();
+    const run = gitRunner();
+    const result = await runSiteDeploy(
+      parseSiteDeployArgs(["--apply", "--environment", "production", "--execute"]),
+      { root, run, env: {}, fetch: changedRevisionFetch(root, priorRoot, run) },
+    );
+    expect(result.executed).toBe(true);
+    expect(Object.keys(result.readback.immutable.sources)).toEqual(V2_RAW_SOURCE_ROUTES);
+    expect(result.readback.apex.sources).toEqual(result.readback.immutable.sources);
+    expect(result.readback.www.sources).toEqual(result.readback.immutable.sources);
+    expect(result.readback.immutable.sources).not.toEqual(
+      Object.fromEntries(V2_RAW_SOURCE_ROUTES.map((route) => [route,
+        `sha256:${createHash("sha256").update(localBody(priorRoot, route)).digest("hex")}`])),
+    );
+    expect(run.calls.filter(([command, ...args]) => command === "wrangler" && args.includes("deploy"))).toHaveLength(1);
+  });
+
+  test("post-upload failure may offer the exact prior revision without demanding new v2 bytes", async () => {
+    const root = fixtureRoot();
+    const priorRoot = priorRevisionRoot();
+    const run = gitRunner();
+    const fetch = changedRevisionFetch(root, priorRoot, run, {
+      override: new Map([[`${DEPLOYMENT}${SCHEMA_ROUTES[0]}`,
+        { status: 200, arrayBuffer: async () => Buffer.from("wrong new schema") }]]),
+    });
+    let failure;
+    try {
+      await runSiteDeploy(parseSiteDeployArgs(["--apply", "--environment", "production", "--execute"]),
+        { root, run, env: {}, fetch });
+    } catch (error) { failure = error; }
+    expect(failure).toMatchObject({
+      kind: "takoform.site-post-upload-failure",
+      reason: "immutable deployment readback failed",
+      rollbackCandidate: { url: ROLLBACK_CANDIDATE },
+    });
+  });
+
+  test("prior immutable schema drift refuses before upload even when v2 aliases agree", async () => {
+    const root = fixtureRoot();
+    const priorRoot = priorRevisionRoot();
+    const run = gitRunner();
+    const fetch = changedRevisionFetch(root, priorRoot, run, {
+      override: new Map([[`${ROLLBACK_CANDIDATE}${SCHEMA_ROUTES[0]}`,
+        { status: 200, arrayBuffer: async () => Buffer.from("changed prior schema") }]]),
+    });
+    await expect(runSiteDeploy(parseSiteDeployArgs(["--apply", "--environment", "production", "--execute"]),
+      { root, run, env: {}, fetch })).rejects.toThrow("the prior immutable deployment");
+    expect(run.calls.some(([command, ...args]) => command === "wrangler" && args.includes("deploy"))).toBe(false);
+  });
+
   test("retains immutable and rollback identities when immutable post-upload readback fails", async () => {
     const root = fixtureRoot();
     const route = SCHEMA_ROUTES[0];
     const history = JSON.stringify([{ Id: "rollback", Deployment: ROLLBACK_CANDIDATE }]);
     const run = gitRunner({
       productionDeployments: [
+        history,
         history,
         JSON.stringify([
           { Id: "new-production", Environment: "Production", Branch: "main", Deployment: DEPLOYMENT },
@@ -955,7 +1135,7 @@ describe("takoform-site runs", () => {
         ([command, ...args]) =>
           command === "wrangler" && args.includes("deployment") && args.includes("list"),
       ),
-    ).toHaveLength(2);
+    ).toHaveLength(3);
   });
 
   test("reports an explicit post-upload convergence failure with immutable and rollback URLs", async () => {
@@ -964,7 +1144,7 @@ describe("takoform-site runs", () => {
     const history = JSON.stringify([{ Id: "rollback", Deployment: ROLLBACK_CANDIDATE }]);
     const run = gitRunner({
       events,
-      productionDeployments: [history, JSON.stringify([
+      productionDeployments: [history, history, JSON.stringify([
         { Id: "new-production", Deployment: DEPLOYMENT },
         { Id: "rollback", Deployment: ROLLBACK_CANDIDATE },
       ])],
@@ -1023,7 +1203,7 @@ describe("takoform-site runs", () => {
         ([command, ...args]) =>
           command === "wrangler" && args.includes("deployment") && args.includes("list"),
       ),
-    ).toHaveLength(2);
+    ).toHaveLength(3);
   });
 
   test("normal production cannot consume the project's first deployment", async () => {
@@ -1042,277 +1222,18 @@ describe("takoform-site runs", () => {
     ).toHaveLength(0);
   });
 
-  test("the initial cutover audits the exact predecessor partition before its one upload", async () => {
-    const root = fixtureRoot();
-    const events = [];
-    const run = gitRunner({
-      events,
-      productionDeployments: [
-        "[]",
-        "[]",
-        JSON.stringify([{ Id: "new-production", Deployment: DEPLOYMENT }]),
-      ],
-    });
-    const result = await runSiteDeploy(
-      parseSiteDeployArgs([
-        "--apply",
-        "--environment",
-        "production",
-        "--initial-cutover",
-        "--review",
-        REVIEW,
-        "--execute",
-      ]),
-      {
-        root,
-        run,
-        env: {},
-        fetch: servingFetch(root, { events, oldFormsPartition: true }),
-      },
-    );
-    const uploadIndex = events.findIndex((event) =>
-      event.startsWith(`command:wrangler:pages deploy ${SITE_DIST} `)
-    );
-    const oldHostFetchIndexes = events
-      .map((event, index) => [event, index])
-      .filter(([event]) => event.startsWith(`fetch:${SCHEMA_PUBLIC_ORIGIN}/schemas/`))
-      .map(([, index]) => index);
-    expect(oldHostFetchIndexes).toHaveLength(48);
-    expect(Math.max(...oldHostFetchIndexes)).toBeLessThan(uploadIndex);
-    expect(
-      run.calls.filter(
-        ([command, ...args]) => command === "wrangler" && args.includes("deploy"),
-      ),
-    ).toHaveLength(1);
-    expect(
-      run.calls.filter(
-        ([command, ...args]) => command === "wrangler" && args.includes("deployment") && args.includes("list"),
-      ),
-    ).toHaveLength(3);
-    expect(result).toMatchObject({
-      kind: "takoform.site-initial-cutover-pending",
-      status: "pending-domain-cutover",
-      surface: "takoform-site",
-      environment: "production",
-      review: REVIEW,
-      predecessor: INITIAL_CUTOVER_PREDECESSOR,
-      deploymentUrl: DEPLOYMENT,
-      pagesCanonicalVerified: SITE_PAGES_ORIGIN,
-      productionDeploymentVerified: true,
-      reversal: "forward-repair-only-after-domain-cutover",
-    });
-    expect(result.schemaPartition.exact).toHaveLength(31);
-    expect(result.schemaPartition.absent).toHaveLength(17);
-    expect(result.schemaPartition.absent.map(({ route }) => route)).toEqual(
-      EXPECTED_INITIAL_ABSENT_ROUTES,
-    );
-    expect(Object.keys(result.readback.immutable.schemas)).toHaveLength(48);
-    expect(Object.keys(result.readback.pagesCanonical.schemas)).toHaveLength(48);
-    expect(JSON.stringify(result)).not.toContain("accountId");
-    expect(JSON.stringify(result)).not.toContain("account_id");
-  });
-
-  test("the initial cutover waits for the canonical Pages alias to converge", async () => {
-    const root = fixtureRoot();
-    const events = [];
-    const run = gitRunner({
-      events,
-      productionDeployments: [
-        "[]",
-        "[]",
-        JSON.stringify([{ Id: "new-production", Deployment: DEPLOYMENT }]),
-      ],
-    });
-    const baseFetch = servingFetch(root, { events, oldFormsPartition: true });
-    let canonicalAttempts = 0;
-    const fetch = async (url, init = {}) => {
-      if (url === `${SITE_PAGES_ORIGIN}/`) {
-        canonicalAttempts += 1;
-        if (canonicalAttempts === 1) {
-          events.push(`fetch:${url}`);
-          return {
-            ok: true,
-            status: 200,
-            arrayBuffer: async () => Buffer.from("stale canonical page"),
-          };
-        }
-      }
-      return baseFetch(url, init);
-    };
-    const result = await runSiteDeploy(
-      parseSiteDeployArgs([
-        "--apply",
-        "--environment",
-        "production",
-        "--initial-cutover",
-        "--review",
-        REVIEW,
-        "--execute",
-      ]),
-      {
-        root,
-        run,
-        env: {},
-        fetch,
-        postUploadReadback: { attempts: 2, intervalMs: 0, deadlineMs: 1000 },
-      },
-    );
-    expect(result.readbackAttempts).toBe(2);
-    expect(result.pagesCanonicalVerified).toBe(SITE_PAGES_ORIGIN);
-    expect(
-      run.calls.filter(
-        ([command, ...args]) => command === "wrangler" && args.includes("deploy"),
-      ),
-    ).toHaveLength(1);
-  });
-
-  test("the initial cutover fails before upload on a redirect, other status, or partition drift", async () => {
-    const cases = [
-      {
-        name: "redirect",
-        route: EXPECTED_INITIAL_ABSENT_ROUTES[0],
-        response: { ok: false, status: 302 },
-      },
-      {
-        name: "known absence became present",
-        route: EXPECTED_INITIAL_ABSENT_ROUTES[1],
-        response: { ok: true, status: 200, arrayBuffer: async () => Buffer.from("unexpected") },
-      },
-      {
-        name: "known presence disappeared",
-        route: SCHEMA_ROUTES.find(
-          (route) => !EXPECTED_INITIAL_ABSENT_ROUTES.includes(route),
-        ),
-        response: { ok: false, status: 404 },
-      },
-    ];
-    for (const item of cases) {
+  test("every historical initial-cutover apply is refused before provider access", async () => {
+    for (const surface of [SITE_SURFACE, API_CUTOVER_SURFACE]) {
       const root = fixtureRoot();
-      const run = gitRunner({ productionDeployments: ["[]", "[]"] });
-      const override = new Map([[`${SCHEMA_PUBLIC_ORIGIN}${item.route}`, item.response]]);
-      await expect(
-        runSiteDeploy(
-          parseSiteDeployArgs([
-            "--apply",
-            "--environment",
-            "production",
-            "--initial-cutover",
-            "--review",
-            REVIEW,
-            "--execute",
-          ]),
-          {
-            root,
-            run,
-            env: {},
-            fetch: servingFetch(root, { oldFormsPartition: true, override }),
-          },
-        ),
-        item.name,
-      ).rejects.toThrow("initial cutover pre-mutation proof");
-      expect(
-        run.calls.filter(
-          ([command, ...args]) => command === "wrangler" && args.includes("deploy"),
-        ),
-      ).toHaveLength(0);
+      const run = gitRunner({ productionDeployments: "[]" });
+      await expect(runSiteDeploy(
+        parseSiteDeployArgs(["--apply", "--environment", "production", "--initial-cutover", "--review", REVIEW, "--execute"]),
+        { root, run, env: {}, surface, fetch: servingFetch(root) },
+      )).rejects.toThrow("historical v1 initial cutover cannot upload the current v2 projection");
+      expect(run.calls.some(([command]) => command === "wrangler" || command === "bun")).toBe(false);
     }
   });
 
-  test("the initial acknowledgement cannot be reused after a production deployment exists", async () => {
-    const root = fixtureRoot();
-    const run = gitRunner({
-      productionDeployments: JSON.stringify([{ id: "already-deployed" }]),
-    });
-    await expect(
-      runSiteDeploy(
-        parseSiteDeployArgs([
-          "--apply",
-          "--environment",
-          "production",
-          "--initial-cutover",
-          "--review",
-          REVIEW,
-          "--execute",
-        ]),
-        { root, run, env: {}, fetch: servingFetch(root, { oldFormsPartition: true }) },
-      ),
-    ).rejects.toThrow("already has a production deployment");
-    expect(run.calls.filter(([command]) => command === "bun")).toHaveLength(0);
-    expect(
-      run.calls.filter(
-        ([command, ...args]) => command === "wrangler" && args.includes("deploy"),
-      ),
-    ).toHaveLength(0);
-  });
-
-  test("the initial cutover refuses custom domains or a reported non-main production branch before the gate", async () => {
-    for (const projectList of [
-      JSON.stringify([
-        {
-          "Project Name": SITE_PROJECT,
-          "Project Domains": "www.takoform.com",
-        },
-      ]),
-      JSON.stringify([
-        {
-          "Project Name": SITE_PROJECT,
-          "Project Domains": "",
-          "Production Branch": "preview",
-        },
-      ]),
-    ]) {
-      const run = gitRunner({ projectList });
-      await expect(
-        runSiteDeploy(
-          parseSiteDeployArgs([
-            "--apply",
-            "--environment",
-            "production",
-            "--initial-cutover",
-            "--review",
-            REVIEW,
-            "--execute",
-          ]),
-          { root: fixtureRoot(), run, env: {}, fetch: async () => ({}) },
-        ),
-      ).rejects.toThrow("refused before touching the target");
-      expect(run.calls.filter(([command]) => command === "bun")).toHaveLength(0);
-      expect(
-        run.calls.filter(
-          ([command, ...args]) => command === "wrangler" && args.includes("deploy"),
-        ),
-      ).toHaveLength(0);
-    }
-  });
-
-  test("the initial cutover rechecks empty production history immediately before upload", async () => {
-    const root = fixtureRoot();
-    const run = gitRunner({
-      productionDeployments: [
-        "[]",
-        JSON.stringify([{ Id: "competing-deployment", Deployment: DEPLOYMENT }]),
-      ],
-    });
-    await expect(
-      runSiteDeploy(
-        parseSiteDeployArgs([
-          "--apply",
-          "--environment",
-          "production",
-          "--initial-cutover",
-          "--review",
-          REVIEW,
-          "--execute",
-        ]),
-        { root, run, env: {}, fetch: servingFetch(root, { oldFormsPartition: true }) },
-      ),
-    ).rejects.toThrow("production history changed during the initial-cutover proof");
-    expect(
-      run.calls.filter(
-        ([command, ...args]) => command === "wrangler" && args.includes("deploy"),
-      ),
-    ).toHaveLength(0);
-  });
 
   test("the post-domain verifier requires clean public main and uploads nothing", async () => {
     const root = fixtureRoot();

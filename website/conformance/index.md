@@ -1,8 +1,12 @@
 ---
-title: 適合性の検証
+title: v1の適合性検証
 ---
 
-# 適合性の検証 {#conformance-と参照実装}
+# v1の適合性検証 {#conformance-と参照実装}
+
+このページは保持するv1の検証ツールと結果の読み方を説明します。v2の適合条件は
+[v2 HTTP API](/spec/host-api/v2/http#conformance)を参照してください。
+以下のパッケージ・Snapshot・署名の検査は、v2の必須条件ではありません。
 
 検証レポートは、対象として記載されたデータや実装について、決められた要件を満たすかを
 示します。たとえばパッケージの検証に成功しても、そのFormが特定のHostで使えるとは限りません。
@@ -25,8 +29,13 @@ title: 適合性の検証
 
 ## 手元で検証する {#repository-から実行できる-harness}
 
-[準備手順](/start/#_0-準備) に従って依存モジュールを取得した後、リポジトリのルートで
-実行してください。以下の検証はネットワークに接続せず、リソースも変更しません。
+最初にリポジトリのルートで依存モジュールを取得します。この取得にはネットワークを使うことがあります。
+
+```console
+go mod download
+```
+
+依存取得後、以下の検証はネットワークに接続せず、リソースも変更しません。
 
 ```console
 go run ./cmd/form-package verify conformance/takoform-v1/generic-host/external-family/counter-reservation
@@ -59,6 +68,6 @@ OpenTofu向け実装の検証は
 
 ## 次に読む
 
-- [はじめる](/start/) — コマンドの出力とAPIの要求・応答例。
-- [Host APIの概要](/host-api/) — 接続先と主な操作。
+- [保持するHost API v1](/spec/host-api/v1) — v1の接続先と操作。
+- [v2への移行](/spec/host-api/v2/migration) — 別のAPIとして移行するときの違い。
 - [仕様一覧](/reference/) — 実装の基準となる仕様。

@@ -4,26 +4,29 @@ title: このサイトについて
 
 # このサイトについて {#この-site-について}
 
-Formに共通するデータモデルとHost API、Goライブラリ、検証ツールを説明するサイトです。
-日本語のページは解説です。実装の基準となる仕様は、各ページからリンクしている
-リポジトリ内の原文を参照してください。
+Takoformの概念とHTTP API、Form仕様の書き方を説明するサイトです。
+v2の規範原文は英語で、日本語のガイドはその案内です。各仕様ページは英語原文を表示し、権威と公開状態を示します。
+v2原文は改訂可能です。公開版は[takoform.com](https://takoform.com/v2/)で確認できます。ローカル版やプレビューは公開版と異なる場合があります。
+案内・具体例と、実装の基準となる規範は区別しています。
 
 ## 掲載内容 {#この-repository-が扱う範囲}
 
-- Host API v1と、その要求・応答に使うデータ形式。
-- Formの定義、配布、検証に共通する仕組み。
-- 公開JSON Schemaと検証ツールの使い方。
-- 架空のFormを使ったパッケージ作成と、ローカルHTTPテスト環境でのGoクライアントの実行例。
+- [Host API v2](/v2/)の設計、要求・応答、再試行と復旧。
+- Formの識別と公開、入力・出力・挙動の記述方法。
+- 変更せず保持するv1の仕様、公開JSON Schema、および既存ソフトウェアのv1利用資料。
+- 架空のFormを使ったAPIの具体例。例は稼働中のHostや公開Formを示しません。
 
 公開する個別Formの設定項目や利用例は、そのFormの公開元が提供します。
 Hostやクライアントの対応状況、認証情報、料金等は、利用する製品や運用環境で確認してください。
-OpenTofuやTerraformでHostを使う場合は、Providerの
+OpenTofuやTerraformで既存のv1 Hostを使う場合は、Providerのv1
 [HCLクイックスタート](https://github.com/tako0614/terraform-provider-takoform/blob/main/README.md#quick-start)
-を参照してください。Formの公開元はそれぞれのサイトで定義や利用例を案内します。
+を参照してください。これはv2対応を示しません。Formの公開元はそれぞれのサイトで定義や利用例を案内します。
 
 ## 仕様とスキーマ {#identity-と配信}
 
-固定された仕様の範囲は
+v2の規範本文と解説は改訂可能な英語の原文から生成しています。原文と規範・解説の区別は、
+各v2仕様ページの表示と[概要](/v2/)で確認できます。
+v1の固定された仕様の範囲は
 [`v1.freeze.json`](https://github.com/tako0614/takoform/blob/main/spec/host-api/v1.freeze.json)、
 公開スキーマの識別子とダイジェストは
 [`public-schema-identities.json`](https://github.com/tako0614/takoform/blob/main/release/public-schema-identities.json)
@@ -39,7 +42,8 @@ OpenTofuやTerraformでHostを使う場合は、Providerの
 
 ## 関連ページ {#source-を読む}
 
-- [はじめる](/start/)
+- [v2を読む](/v2/)
+- [凍結されたHost API v1仕様](/spec/host-api/v1)
 - [仕様一覧](/reference/)
 - [スキーマ一覧](/schemas/)
 - [ソースコード](https://github.com/tako0614/takoform)

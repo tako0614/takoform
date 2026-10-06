@@ -1,76 +1,44 @@
 ---
-title: GoからHostを使う
+title: v2クライアントを実装する
+description: 操作意図と再送期限を保存し、Operation・generation・認証変化に応じて再開するクライアントの設計を説明します。
 ---
 
-# GoからHostを使う {#client}
+# v2クライアントを実装する {#client}
 
-Coreの `hostclient` は、Hostの接続先を確認し、Formへの対応確認、変更の事前確認、
-リソースの作成・更新を行うGoクライアントです。非同期の応答ではOperationの完了を待ちます。
-まずローカルのHTTPテスト環境で、一連の呼び出しを試します。
+クライアントはHostのDiscoveryから`baseUrl`（APIの接続先）、認証案内、`replayWindowSeconds`を読み、Form URLで指定された仕様に従って要求を作ります。Formへの`support`確認、Spaceの利用権限、操作の成功はそれぞれ別に確かめます。
 
-## ローカルで動かす {#run}
+## 送信前に操作意図を記録する {#intent}
 
-GoとGit、初回のソース・依存取得にはネットワーク接続が必要です。
-既にこのリポジトリを取得している場合は、そのルートで最後の2行を実行してください。
+クライアントが再起動や応答喪失を越えて同じ操作を識別するには、要求を送る前に一つの操作意図（intent）の記録を保存します。最低限、次を一緒に保持します。
 
-```sh
-git clone https://github.com/tako0614/takoform.git
-cd takoform
-go mod download
-go test -v ./hostclient -run '^ExampleClient_ApplyResource$' -count=1
-```
+- Hostの接続元（origin）とAPI version、Form URL、Space、Resource nameまたはUID。
+- HTTP method、API rootからの相対pathとquery、要求全体（Updateなら世代条件と完全な`spec`を含む）。
+- この操作意図専用に生成したIdempotency-Keyと初回送信時刻。
+- Discoveryから読んだ再送可能期間（replay window）。再送のたびに初回送信時刻を更新しません。
+- 応答後に得たOperation ID、Resource UID、受理generation、`Location`、`retainUntil`。
 
-テストは次の出力を検証し、`PASS` で終了します。
+認証情報そのものは操作意図の記録へ複製せず、クライアントの認証管理に委ねます。Formが`privateInputs`（秘匿入力）を使う場合、その値を通常ログや公開状態へ書かず、HTTP契約の秘密情報の取扱いに従ってください。
 
-```text
-greeting example-uid true
-discovery -> availability -> prepare -> apply
-```
+Idempotency-Keyは「要求本文が同じなら再利用してよいキー」ではなく、「同じ操作意図を再送する間だけ使うキー」です。新しい希望値や別の変更には、同じResourceでも別のキーを発行します。
 
-ループバック接続のテストサーバーに、架空のFormと固定の応答を用意しています。
-認証情報、外部サービス、永続データは使いません。これは呼び出しを学ぶためのテストであり、
-配備して使えるHost実装ではありません。
+## 結果ごとの次の判断 {#decisions}
 
-## クライアントの呼び出し {#call}
-
-<<< @/../hostclient/example_test.go#client{go}
-
-1. `New` にHostのoriginと認証用トークンを渡します。このテストではトークンは空です。
-2. `Discover` がAPIの接続先と必要な機能を確認します。
-3. `ApplyResource` が正確なFormRefへの対応・許可を確認し、`prepare` の結果を使って作成します。
-4. この例は同期の `201 Created` で完了します。実Hostが `202 Accepted` を返した場合、
-   同じメソッドがOperationを取得して完了を待ちます。
-
-テストサーバーを含むコード全体は
-[`hostclient/example_test.go`](https://github.com/tako0614/takoform/blob/main/hostclient/example_test.go)
-で読めます。通信形式だけを読みたい場合は [Host APIの要求・応答例](/start/#_3-host-apiの要求・応答例を読む) を参照してください。
-
-## 実際のHostを使う前に {#real-host}
-
-| 用意するもの | 確認する内容 |
+| 結果 | クライアントの処理 |
 | --- | --- |
-| Hostのoriginと認証方法 | 利用するHostのドキュメントから取得する。Form Familyの名前空間は接続先ではない |
-| FormRefと設定 | 検証した定義の正確なバージョン・ダイジェストと、その定義に合う入力を使う |
-| spaceとリソース名 | 操作対象の範囲と名前を決める |
-| 利用権限 | 対象HostがそのFormと操作を、現在の呼び出し元に許可していることを確認する |
+| `202 Accepted` | `Retry-After`を待ち、`Location`またはOperation IDをGETします。Operationが完了状態になるまで同じOperationを追跡し、その後Resourceを読みます。新しい変更要求は作りません。 |
+| 応答喪失・期限内 | 初回に保存したmethod、path/query、本文、keyをそのまま再送します。変更した本文や新しいkeyは使いません。再送への応答では元のOperationが返ります。 |
+| Operationが`reconciling` / `effect: unknown` | UIDとOperation IDを未解決として保持し、Operationの状態を照合します。Hostが元の実行先を特定して結果を解決するまで、そのUIDへ別の変更要求を送りません。GETは復旧処理の起動にはなりません。 |
+| `409 generation_conflict` | この要求は未受理でOperationはありません。最新ResourceをGETし、他の変更を踏まえて次の操作を判断します。続ける場合は最新generationと新しいkeyで別の操作意図を作ります。 |
+| 再送期限が近い / 経過した | `初回送信時刻 + replayWindowSeconds`より前に自動再送を止めます。既知のOperation IDをGETし、Resourceやlistの結果を照合します。受理の有無が分からない状態で、同じkeyにも別keyにも盲目的に再送しません。 |
 
-現在の `hostclient` では、prepareの応答で省略した既定値が追加されるとエラーになります。
-既定値を持つFormは、信頼ポリシーに従って受け入れた正確なパッケージからSnapshotを作り、
-`Snapshot.Materialize` で既定値を補完してから、その結果を `Resource.Spec` に渡してください。
-結果のJSONは `formpackage.DecodeStrictIJSON` で `map[string]any` に読み込めます。
-これはスキーマの既定値に対する対処です。Hostが行うホスト名などの正規化によって設定が
-変わる場合も、現在のクライアントはそのprepare応答を拒否します。Host API v1が要求する
-Host側の補完・正規化と、その応答の受け入れには、まだ実装の差があります。
-このページのテスト用Formには既定値も正規化もありません。
+Resourceの`generation`、`observedGeneration`、`observedAt`を記録し、Operationの状態と混同しません。Operationの成功はFormが定めた管理操作の完了を示しますが、サービス全体の稼働状態を保証するものではありません。
 
-これらを用意してから `server.URL`、トークン、`desired` を置き換えます。
-実Hostへのapplyはリソースを変更します。認証情報はソースやログに書かないでください。
+## 認証が変わったとき {#auth-change}
 
-## 更新・失敗を扱う {#changes}
+Hostは各要求を認証・認可します。認証情報の更新後も同じ認証主体（principal。権限や再送記録を適用する単位）として扱われるか、権限が維持されたかはHostの認証文書に従います。別の認証主体の認証情報は、異なるIdempotency-Keyの適用範囲になります。以前の認証主体で受理された要求を、新しい認証主体のkeyで「再送」してはいけません。
 
-空の `Fence` は新規作成用です。更新する場合は、取得したResourceのUIDとgenerationを
-`Fence` に渡し、他の変更を上書きしないようにします。generationを手で増やして指定しません。
+権限を失った場合、Hostは既存Operationを明かさず`403`または`404`を返せます。アクセスを回復して元の認証主体で照会できるまで、結果不明の操作意図を破棄したり別keyで作り直したりせず、利用者またはHost運営者と結果の照合方法を決めます。
 
-タイムアウトは「何も変更されなかった」という意味ではありません。対象ResourceやOperationの
-状態を確認してから再試行してください。詳細は [Host API v1](/spec/host-api/v1)、
-実装側の概要は [Host API](/host-api/)、検証範囲は [適合性の検証](/conformance/) を参照してください。
+## HTTP契約へ戻る {#http-contract}
+
+status、再送の適用範囲と保持期間は[HTTP APIの再送契約](/spec/host-api/v2/http#retry)、世代競合は[Update](/spec/host-api/v2/http#update)と[エラー](/spec/host-api/v2/http#errors)を参照してください。要求から応答までの値と流れは[説明用例](/spec/host-api/v2/examples)にあります。
