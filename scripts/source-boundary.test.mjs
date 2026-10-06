@@ -36,6 +36,18 @@ describe("Core source boundary", () => {
     expect(inspectSource(entries)).toEqual([]);
   });
 
+  test("allows only the v2 conformance runner and freeze guard to name the v2 API", () => {
+    const allowed = validEntries();
+    allowed.set("conformance/v2/host-api.mjs", 'const api = "forms.takoform.com/v2";');
+    allowed.set("scripts/host-api-v2-freeze.mjs", 'const api = "forms.takoform.com/v2";');
+    expect(inspectSource(allowed)).toEqual([]);
+    for (const path of ["conformance/v2/alternate.mjs", "conformance/v2/runtime.go", "scripts/v2-client.mjs"]) {
+      const entries = validEntries();
+      entries.set(path, 'const api = "forms.takoform.com/v2";');
+      expect(inspectSource(entries)).not.toEqual([]);
+    }
+  });
+
   test("rejects Provider dependencies and sibling replacement", () => {
     const entries = validEntries();
     entries.set(

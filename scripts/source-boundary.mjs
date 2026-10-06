@@ -101,6 +101,11 @@ const retiredPublicHostClientTokens = [
   /\bSplitGroupPath\b/u,
 ];
 
+const v2ContractToolPaths = new Set([
+  "conformance/v2/host-api.mjs",
+  "scripts/host-api-v2-freeze.mjs",
+]);
+
 function isRuntimeGoSource(path) {
   return path.endsWith(".go") && !path.endsWith("_test.go");
 }
@@ -120,6 +125,7 @@ function isReleaseAuthoritySource(path) {
   }
   if (path.startsWith(".github/workflows/") && /\.ya?ml$/u.test(path)) return true;
   if (path.startsWith("conformance/") && path.endsWith(".json")) return true;
+  if (path.startsWith("conformance/") && path.endsWith(".mjs") && !path.endsWith(".test.mjs")) return true;
   return false;
 }
 
@@ -183,7 +189,7 @@ export function inspectSource(entries) {
     if (content.includes("edge.forms.takoform.com")) {
       problems.push(`${path} hard-codes the historical Edge publisher group`);
     }
-    if (content.includes("forms.takoform.com/v2")) {
+    if (content.includes("forms.takoform.com/v2") && !v2ContractToolPaths.has(path)) {
       problems.push(`${path} creates or consumes the forbidden Host API v2 identity`);
     }
     for (const token of retiredSpecificationAuthorityTokens) {
