@@ -84,6 +84,18 @@ describe("takoform.com site derivation", () => {
       }
     }
   }, 30_000);
+  test("uses English page titles in both locales, including generated indexes", () => {
+    const derived = buildSiteFiles(".");
+    const japanese = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/u;
+    for (const path of [...HAND_AUTHORED_PAGE_SOURCES, ...GENERATED_INDEX_PAGES]) {
+      const source = derived.get(path)?.toString("utf8") ?? readFileSync(path, "utf8");
+      const title = source.match(/^title: (.+)$/mu)?.[1];
+      const heading = source.match(/^# (.+)$/mu)?.[1]?.replace(/\s*\{#[^}]+\}/u, "");
+      expect(title, `${path}: browser title`).toBeDefined();
+      expect(japanese.test(title), `${path}: browser title must be English`).toBe(false);
+      if (heading) expect(japanese.test(heading), `${path}: page heading must be English`).toBe(false);
+    }
+  });
   test("tokenizes Japanese prose without splitting API identifiers", () => {
     expect(tokenize("パッケージを検証します。packageDigest schemaDigest"))
       .toEqual(expect.arrayContaining(["パッケージ", "検証", "packageDigest", "schemaDigest"]));
@@ -393,6 +405,10 @@ describe("takoform.com site derivation", () => {
       },
     ];
     expect(inspectRenderedSitePages(pages)).toEqual([]);
+    expect(inspectRenderedSitePages([{ ...pages[0], html: home.replace("<title>Takoform</title>", "<title>概要</title>") }, pages[1]]))
+      .toContain("dist/index.html must render an English page title");
+    expect(inspectRenderedSitePages([pages[0], { ...pages[1], html: guide.replace('<h1 id="guide">Guide</h1>', '<h1 id="guide">ガイド</h1>') }]))
+      .toContain("dist/guide.html must render an English page heading");
     pages[0] = { ...pages[0], html: home.replace('href="/guide"', 'href="/guide#missing"') };
     expect(inspectRenderedSitePages(pages)).toContain(
       "dist/index.html links to missing fragment /guide#missing",
@@ -771,7 +787,7 @@ describe("takoform.com site derivation", () => {
       expect(head).toContainEqual(["meta", { property: "og:title", content: "Page | Takoform" }]);
     }
     expect(config.themeConfig?.nav).toEqual([
-      { text: "概要", link: "/" },
+      { text: "Overview", link: "/" },
     ]);
     expect(config.locales.en.themeConfig.nav).toEqual([
       { text: "Overview", link: "/en/" },

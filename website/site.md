@@ -1,8 +1,8 @@
 ---
-title: このサイトについて
+title: About this site
 ---
 
-# このサイトについて {#この-site-について}
+# About this site {#この-site-について}
 
 Takoformは、Formが定義するリソースをHostが提供するための共通APIとモデルです。このサイトではAPI仕様、Formの説明方法、実装ガイドを扱います。
 

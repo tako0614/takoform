@@ -1,9 +1,9 @@
 ---
-title: v2のモデル
+title: The v2 model
 description: Form、Host、Resource、Operation、世代がどの責任を表すかを説明します。
 ---
 
-# v2のモデル {#model}
+# The v2 model {#model}
 
 v2では、仕様を定義するForm、仕様を実行するHost、Hostが管理するResource、変更の進行を示すOperationを区別します。この分離により、Formの意味と、あるHostが実際に提供する機能を混同せずに扱えます。
 

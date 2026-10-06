@@ -1,9 +1,9 @@
 ---
-title: v2を使い始める
+title: Getting started with v2
 description: 架空のKeyValueEntryを例に、DiscoveryからResourceの削除確認までを一続きでたどります。
 ---
 
-# v2を使い始める {#start}
+# Getting started with v2 {#start}
 
 Host API v2では、FormがResourceの意味を定義し、Hostが対応するFormを実装し、クライアントがResourceを管理します。下の一連のHTTP例は架空のHost `host.example` とForm URL `https://forms.publisher.example/key-value-entry/1.0.0` を使った説明です。接続可能なサービスや実在する公開Formを示すものではありません。完全な要求・応答の記録と失敗時の分岐は[要求・応答例](/spec/host-api/v2/examples)にあります。
 

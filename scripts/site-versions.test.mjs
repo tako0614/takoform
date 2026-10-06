@@ -89,7 +89,15 @@ describe("version-separated documentation navigation", () => {
     expect(getSidebar(rootSidebar, "/spec/core/index.html")).toEqual(rootSidebar["/spec/host-api/v1"]);
     expect(getSidebar(rootSidebar, "/spec/host-api/v2/http.html")).toEqual(rootSidebar["/spec/host-api/v2"]);
     expect(config.themeConfig.nav.map((item) => item.link)).toEqual(["/"]);
-    expect(config.themeConfig.nav.map((item) => item.text)).toEqual(["概要"]);
+    expect(config.themeConfig.nav.map((item) => item.text)).toEqual(["Overview"]);
+    const checkEnglishLabels = (items) => {
+      for (const item of items) {
+        expect(item.text ?? "").not.toMatch(/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/u);
+        if (item.items) checkEnglishLabels(item.items);
+      }
+    };
+    checkEnglishLabels(rootSidebar["/v1/"]);
+    checkEnglishLabels(rootSidebar["/v2/"]);
     expect(rootSidebar["/v1/"][0].text).toBe("Host API v1");
     expect(rootSidebar["/reference/"]).toBeUndefined();
     const englishSidebar = config.locales.en.themeConfig.sidebar;

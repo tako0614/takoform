@@ -1,9 +1,9 @@
 ---
-title: v2クライアントを実装する
+title: Implementing a v2 client
 description: 操作意図と再送期限を保存し、Operation・generation・認証変化に応じて再開するクライアントの設計を説明します。
 ---
 
-# v2クライアントを実装する {#client}
+# Implementing a v2 client {#client}
 
 クライアントはHostのDiscoveryから`baseUrl`（APIの接続先）、認証案内、`replayWindowSeconds`を読み、Form URLで指定された仕様に従って要求を作ります。Formへの`support`確認、Spaceの利用権限、操作の成功はそれぞれ別に確かめます。
 
