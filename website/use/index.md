@@ -1,9 +1,9 @@
 ---
-title: v2を利用する
+title: Using v2
 description: APIクライアントやInfrastructure as CodeからHost API v2を利用するときの境界を説明します。
 ---
 
-# v2を利用する {#use}
+# Using v2 {#use}
 
 Host API v2はHTTP契約です。CLI、SDK、Infrastructure as Code providerなど、どの種類のクライアントからでも利用できますが、そのソフトウェアがv2を実装していることが前提です。このサイトは特定のHost、Provider、公開Formの利用可能性を保証しません。
 

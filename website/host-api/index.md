@@ -1,9 +1,9 @@
 ---
-title: Host API v2を実装する
+title: Implementing Host API v2
 description: Resource、Operation、再送記録を再起動後も保つための実装上の責任を説明します。
 ---
 
-# Host API v2を実装する {#host-api}
+# Implementing Host API v2 {#host-api}
 
 Host API v2のHostは、HTTP応答を返すだけでなく、受理した操作、Resourceの世代、実行先で確認した状態を管理します。ここでは再起動後も保つべき記録と回復方法を説明します。path、status、保持期間の正確な契約は[HTTP API](/spec/host-api/v2/http)を参照してください。
 

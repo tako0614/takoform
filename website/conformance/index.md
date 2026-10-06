@@ -1,8 +1,8 @@
 ---
-title: v1の適合性検証
+title: V1 conformance checks
 ---
 
-# v1の適合性検証 {#conformance-と参照実装}
+# V1 conformance checks {#conformance-と参照実装}
 
 このページは保持するv1の検証ツールと結果の読み方を説明します。v2の適合条件は
 [v2 HTTP API](/spec/host-api/v2/http#conformance)を参照してください。

@@ -1,9 +1,9 @@
 ---
-title: ガイド
+title: Guides
 description: 利用者、Form作者、クライアント実装者、Host実装者ごとにv2の学習順序を案内します。
 ---
 
-# ガイド {#guides}
+# Guides {#guides}
 
 目的に合わせてv2の契約を読み進めてください。ここで示す例は説明用であり、共通API仕様は公開Hostや実装の提供状況を表しません。
 

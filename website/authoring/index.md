@@ -1,8 +1,8 @@
 ---
-title: Formを作る
+title: Create a Form
 ---
 
-# Formを作る {#authoring}
+# Create a Form {#authoring}
 
 Takoform v2のFormは、Hostが管理する一種類のResourceについて、設定と振る舞いを定義する仕様です。まず「このResourceが何を所有するか」を一文で決め、その後に入力、観測、操作、失敗時の回復を具体化します。公開したURLからHostがコードを取得する仕組みではありません。Hostは実装済みのFormだけを明示的にサポートします。
 

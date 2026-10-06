@@ -26,7 +26,9 @@ The root is the actual Takoform overview, not a catalogue or secondary index. Pr
 navigation contains Overview and a separate API version selector. Keep publication
 status chatter out of the reading interface; the normative source and its language
 remain identified on specification pages. The home title, subtitle and section
-headings are English in both locales, with localized explanatory prose.
+headings are English in both locales, with localized explanatory prose. All page
+titles (frontmatter/browser title and H1), navigation page names and generated
+index titles are also English; this rule is not limited to the homepage.
 
 `/v1/` and `/v2/` are the documentation entries. Existing guide and specification
 URLs remain reachable; a single route classifier assigns their version. v1 pages

@@ -1,9 +1,9 @@
 ---
-title: 用語集
+title: Glossary
 description: Host API v2の主要語を、FormとHostの責任分担に沿って説明します。
 ---
 
-# 用語集 {#glossary}
+# Glossary {#glossary}
 
 ## Form {#form}
 

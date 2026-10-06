@@ -73,7 +73,7 @@ const contractSidebar = [
     ],
   },
   {
-    text: "API仕様",
+    text: "API specification",
     items: [
       { text: "Wire contract", link: "/spec/host-api/v1" },
     ],
@@ -105,55 +105,39 @@ const v2Sidebar = [
   {
     text: "Host API v2",
     items: [
-      { text: "概要", link: "/spec/host-api/v2/" },
+      { text: "Overview", link: "/spec/host-api/v2/" },
       { text: "HTTP API", link: "/spec/host-api/v2/http" },
-      { text: "Form 仕様", link: "/spec/host-api/v2/forms" },
-      { text: "具体例", link: "/spec/host-api/v2/examples" },
-      { text: "v1からの移行", link: "/spec/host-api/v2/migration" },
+      { text: "Form requirements", link: "/spec/host-api/v2/forms" },
+      { text: "Examples", link: "/spec/host-api/v2/examples" },
+      { text: "Migration from v1", link: "/spec/host-api/v2/migration" },
     ],
   },
   {
-    text: "使い方と参照",
+    text: "Guides",
     items: [
-      { text: "はじめる", link: "/start/" },
-      { text: "共通モデル", link: "/model/" },
-      { text: "クライアント設計", link: "/client/" },
-      { text: "Formを作る", link: "/authoring/" },
-      { text: "OpenTofu / Terraform から使う", link: "/use/" },
-      { text: "Host API の案内", link: "/host-api/" },
-      { text: "実装ガイド", link: "/guides/" },
-      { text: "用語集", link: "/glossary" },
+      { text: "Getting started", link: "/start/" },
+      { text: "Common model", link: "/model/" },
+      { text: "Client design", link: "/client/" },
+      { text: "Create a Form", link: "/authoring/" },
+      { text: "Using v2", link: "/use/" },
+      { text: "Implementing a Host", link: "/host-api/" },
+      { text: "Implementation guides", link: "/guides/" },
+      { text: "Glossary", link: "/glossary" },
     ],
   },
 ];
 
 const v1Sidebar = [
   { text: "Host API v1", link: "/v1/" },
-  { text: "適合性の検証", link: "/conformance/" },
-  { text: "スキーマ一覧", link: "/schemas/" },
+  { text: "Conformance checks", link: "/conformance/" },
+  { text: "Public schemas", link: "/schemas/" },
   ...contractSidebar,
 ];
 
-const englishLabels: Record<string, string> = {
-  トップ: "Home", ドキュメント: "Documentation", はじめる: "Getting started",
-  実装ガイド: "Implementation guides", 仕様一覧: "Reference", 用語集: "Glossary",
-  Formを作る: "Create a Form", クライアント設計: "Client design",
-  "OpenTofu / Terraform から使う": "Use from OpenTofu / Terraform",
-  "Host API の案内": "Host API guide", 共通モデル: "Common model",
-  適合性の検証: "Conformance checks", スキーマ一覧: "Schema index",
-  サイト情報: "Site information", このサイトについて: "About this site",
-  "Host API v2": "Host API v2",
-  API仕様: "API specification",
-  "HTTP wire format": "HTTP API", 概要: "Overview", "Form 仕様": "Form requirements",
-  具体例: "Examples", "v1からの移行": "Migration from v1", "使い方と参照": "Use and reference",
-  "履歴として残す v1 仕様": "Historical v1 specification",
-  "Host API v1": "Host API v1",
-};
-
+// Page names stay English in both locales; only their content routes differ.
 function englishSidebar(items: DefaultTheme.SidebarItem[]): DefaultTheme.SidebarItem[] {
   return items.map((item) => ({
     ...item,
-    text: englishLabels[item.text ?? ""] ?? item.text,
     ...(item.link ? { link: `/en${item.link}` } : {}),
     ...(item.items ? { items: englishSidebar(item.items) } : {}),
   }));
@@ -344,7 +328,7 @@ export default defineConfig({
       },
     } } } } },
     nav: [
-      { text: "概要", link: "/" },
+      { text: "Overview", link: "/" },
     ],
     sidebar: {
       ...rootSpecSidebars,
