@@ -50,15 +50,15 @@ export function documentVersion(input) {
 /**
  * Switch versions without implying that unrelated pages are semantic peers.
  * Preserve the current page only when it already belongs to the destination
- * version; otherwise use that locale's version entry. Fragments and queries
+ * version; otherwise use the version entry. Fragments and queries
  * are intentionally discarded because heading IDs are not shared contracts.
  */
 export function versionTarget(input, targetVersion) {
   if (targetVersion !== "v1" && targetVersion !== "v2") {
     throw new TypeError(`Unsupported documentation version: ${targetVersion}`);
   }
-  const { locale, localPath } = localeAndRoute(input);
+  const { localPath } = localeAndRoute(input);
   return documentVersion(input) === targetVersion
-    ? `${locale}${localPath}`
-    : `${locale}/${targetVersion}/`;
+    ? localPath
+    : `/${targetVersion}/`;
 }

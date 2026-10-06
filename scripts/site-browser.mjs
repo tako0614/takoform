@@ -14,13 +14,13 @@ import {
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const v2Routes = ["/v2/", "/spec/host-api/v2/", "/spec/host-api/v2/http", "/spec/host-api/v2/forms", "/spec/host-api/v2/examples", "/spec/host-api/v2/migration"];
-const routes = ["", "/en"].flatMap((prefix) => ["/", "/v1/", "/spec/host-api/v1", "/schemas/", "/site", "/start/", "/model/", "/client/", "/authoring/", "/use/", "/host-api/", "/guides/", "/glossary", ...v2Routes].map((route) => `${prefix}${route}`));
+const routes = ["/", "/v1/", "/spec/host-api/v1", "/schemas/", "/site", "/start/", "/model/", "/client/", "/authoring/", "/use/", "/host-api/", "/guides/", "/glossary", ...v2Routes];
 const widths = [320, 375, 414, 768];
 const sidebarRoutes = [...new Set([
-  ...["", "/en"].flatMap((prefix) => v2Routes.map((route) => prefix + route)),
+  ...v2Routes,
   ...HAND_AUTHORED_PAGE_SOURCES.map(siteRouteForPageSource),
   ...GENERATED_INDEX_PAGES.map(siteRouteForPageSource),
-  ...MIRRORED_SPEC_DOCUMENTS.flatMap((source) => [siteRouteForSpecDocument(source), `/en${siteRouteForSpecDocument(source)}`]),
+  ...MIRRORED_SPEC_DOCUMENTS.map(siteRouteForSpecDocument),
 ])].sort();
 
 function browserExecutable() {
@@ -45,6 +45,19 @@ async function startPreview(directory) {
     }
   };
   collect(directory);
+  const redirectBytes = files.get("/_redirects");
+  assert.ok(redirectBytes, "built Pages output contains the declared _redirects file");
+  const redirects = redirectBytes.toString("utf8").split(/\r?\n/u).flatMap((line, index) => {
+    const value = line.trim();
+    if (value === "" || value.startsWith("#")) return [];
+    const fields = value.split(/\s+/u);
+    assert.equal(fields.length, 3, `_redirects line ${index + 1} uses from, to, and status`);
+    const [from, to, statusText] = fields;
+    assert.ok(from.startsWith("/") && to.startsWith("/"), `_redirects line ${index + 1} is same-origin`);
+    assert.ok(!from.includes("*") && !to.includes(":splat"), `_redirects line ${index + 1} is an explicit route`);
+    assert.ok(statusText === "301" || statusText === "302" || statusText === "307" || statusText === "308", `_redirects line ${index + 1} uses a supported status`);
+    return [{ from, to, status: Number(statusText) }];
+  });
   const types = {
     ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8",
     ".css": "text/css; charset=utf-8", ".json": "application/json", ".svg": "image/svg+xml",
@@ -55,9 +68,21 @@ async function startPreview(directory) {
       response.writeHead(405).end();
       return;
     }
+    let url;
+    try {
+      url = new URL(request.url, "http://localhost");
+    } catch {
+      response.writeHead(400).end();
+      return;
+    }
+    const redirect = redirects.find((rule) => url.pathname === rule.from);
+    if (redirect) {
+      response.writeHead(redirect.status, { Location: `${redirect.to}${url.search}` }).end();
+      return;
+    }
     let path;
     try {
-      path = decodeURIComponent(new URL(request.url, "http://localhost").pathname);
+      path = decodeURIComponent(url.pathname);
     } catch {
       response.writeHead(400).end();
       return;
@@ -81,7 +106,7 @@ function inspectGeometry() {
   const issues = [];
   if (document.documentElement.scrollWidth > documentWidth + 1 || document.body.scrollWidth > documentWidth + 1) issues.push("horizontal document overflow");
   if (document.querySelectorAll("main").length !== 1) issues.push("expected one main landmark");
-  const expectedLang = location.pathname.startsWith("/en/") ? "en" : "ja-JP";
+  const expectedLang = "en";
   if (document.documentElement.lang !== expectedLang) issues.push(`expected ${expectedLang} document language`);
   if (document.title.trim() === "") issues.push("missing document title");
   for (const element of document.querySelectorAll("a[href], button, input, select, summary")) {
@@ -110,33 +135,32 @@ async function checkDisclosure(page, selector) {
   }, selector);
 }
 
-async function switchLanguage(page, width, label, expectedPath, expectedLang) {
-  let menu;
-  if (width < 768) {
-    await page.locator(".VPNavBarHamburger").click();
-    menu = page.locator(".VPNavScreenTranslations");
-    await menu.locator("button.title").click();
-  } else {
-    menu = page.locator(width < 1280 ? ".VPNavBarExtra" : ".VPNavBarTranslations");
-    await menu.locator("button.button").focus();
-    await page.keyboard.press("Enter");
-  }
-  const fragment = new URL(page.url()).hash;
-  await menu.getByRole("link", { name: label, exact: true }).click();
-  await page.waitForURL((url) => url.pathname === expectedPath && url.hash === fragment);
-  await page.waitForFunction((lang) => document.documentElement.lang === lang, expectedLang);
-  if (fragment) assert.ok(await page.evaluate((hash) => !!document.getElementById(decodeURIComponent(hash.slice(1))), fragment), "translated fragment must resolve");
+async function assertDeclaredRedirect(origin, sourcePath, destinationPath) {
+  const sourceUrl = new URL(sourcePath, origin);
+  const expectedUrl = new URL(destinationPath, origin);
+  if (expectedUrl.search === "") expectedUrl.search = sourceUrl.search;
+  const response = await fetch(sourceUrl, { redirect: "manual" });
+  assert.equal(response.status, 301, `${sourcePath}: legacy URL uses its declared permanent redirect`);
+  assert.equal(response.headers.get("location"), `${expectedUrl.pathname}${expectedUrl.search}`, `${sourcePath}: redirect preserves the query string`);
+  assert.equal(await response.text(), "", `${sourcePath}: redirect has no page body`);
+}
+
+async function assertUnlistedLegacyUrl404(origin, path) {
+  const response = await fetch(new URL(path, origin), { redirect: "manual" });
+  assert.equal(response.status, 404, `${path}: unlisted legacy route remains not found`);
+  assert.equal(response.headers.get("location"), null, `${path}: no broad redirect is applied`);
 }
 
 async function run() {
   assert.deepEqual([...inspectSite(root), ...inspectDist(root)], [], "site must pass its source and built-output checks");
   const executablePath = browserExecutable();
-  const { server, origin } = await startPreview(join(root, SITE_DIST));
+  let server;
+  let origin;
   let browser;
   const close = async () => {
     await browser?.close();
-    server.closeAllConnections();
-    if (server.listening) await new Promise((resolveClose) => server.close(resolveClose));
+    server?.closeAllConnections();
+    if (server?.listening) await new Promise((resolveClose) => server.close(resolveClose));
   };
   const interrupted = () => {
     process.exitCode = 130;
@@ -145,6 +169,17 @@ async function run() {
   process.once("SIGINT", interrupted);
   process.once("SIGTERM", interrupted);
   try {
+    const preview = await startPreview(join(root, SITE_DIST));
+    server = preview.server;
+    origin = preview.origin;
+    await assertDeclaredRedirect(origin, "/en?legacy=home", "/?legacy=home");
+    await assertDeclaredRedirect(origin, "/en/?legacy=home", "/?legacy=home");
+    await assertDeclaredRedirect(
+      origin,
+      "/en/spec/host-api/v2/forms?legacy=normative&keep=%2F",
+      "/spec/host-api/v2/forms?legacy=normative&keep=%2F",
+    );
+    await assertUnlistedLegacyUrl404(origin, "/en/spec/");
     browser = await chromium.launch({ executablePath, headless: true });
     const context = await browser.newContext({ reducedMotion: "reduce", colorScheme: "light" });
     const networkFailures = [];
@@ -172,17 +207,18 @@ async function run() {
     const visit = async (route) => {
       await page.goto(origin + route, { waitUntil: "networkidle" });
       await page.evaluate(() => document.fonts.ready);
+      const visibleText = await page.locator("body").innerText();
+      assert.doesNotMatch(visibleText, /[\u3040-\u30ff\u3400-\u9fff]/u, `${route}: visible page content is English`);
+      assert.equal(await page.locator(".VPNavBarTranslations, .VPNavScreenTranslations").count(), 0, `${route}: canonical site has no language switch`);
       const path = new URL(page.url()).pathname;
-      const prefix = path.startsWith("/en/") ? "/en" : "";
       const version = documentVersion(path);
-      const expectedSidebar = version === null ? [] : sidebarRoutes.filter((entry) =>
-        entry.startsWith("/en/") === !!prefix && documentVersion(entry) === version);
+      const expectedSidebar = version === null ? [] : sidebarRoutes.filter((entry) => documentVersion(entry) === version);
       assert.deepEqual(await page.locator('.VPSidebar a[href^="/"]').evaluateAll(
         (links) => links.map((link) => link.getAttribute("href")).sort(),
-      ), expectedSidebar, `${route}: sidebar must contain the correct version and locale pages`);
+      ), expectedSidebar, `${route}: sidebar must contain the correct version pages`);
       assert.equal(await page.locator(".VPSidebarItem.collapsed").count(), 0, `${route}: sidebar groups start expanded`);
       const selector = page.locator(".version-context select");
-      assert.equal(await selector.count(), 1, "one version control, separate from language");
+      assert.equal(await selector.count(), 1, "one visible API-version control");
       assert.ok(await selector.isVisible(), "version control remains visible on mobile");
       assert.equal(await selector.inputValue(), version ?? "shared", `${route}: visible version matches content`);
       const bounds = await selector.boundingBox();
@@ -190,62 +226,64 @@ async function run() {
       const adjacent = await page.locator(".VPDocFooter .prev-next a").evaluateAll((links) => links.map((link) => link.getAttribute("href")));
       assert.ok(adjacent.every((link) => version && documentVersion(link) === version), `${route}: previous/next do not switch version`);
     };
+    await page.goto(`${origin}/en/spec/host-api/v2/forms?legacy=browser&keep=%2F#state`, { waitUntil: "networkidle" });
+    await page.evaluate(() => document.fonts.ready);
+    const redirectedUrl = new URL(page.url());
+    assert.equal(redirectedUrl.pathname, "/spec/host-api/v2/forms", "legacy normative URL redirects to its root canonical route");
+    assert.equal(redirectedUrl.search, "?legacy=browser&keep=%2F", "browser redirect preserves the query string");
+    assert.equal(redirectedUrl.hash, "#state", "browser retains the client-side fragment across the redirect");
+    assert.ok(await page.evaluate((id) => !!document.getElementById(id), "state"), "preserved normative anchor resolves at the root URL");
     for (const width of widths) {
       await page.setViewportSize({ width, height: 900 });
       for (const route of routes) {
         await visit(route);
         assert.deepEqual(await page.evaluate(inspectGeometry), [], `${width}px ${route}`);
-        if (width === 375 && ["/", "/en/", "/spec/host-api/v2/http"].includes(route)) {
-          const name = route === "/" ? "home-ja" : route === "/en/" ? "home-en" : "http-v2";
+        if (width === 375 && ["/", "/spec/host-api/v2/http"].includes(route)) {
+          const name = route === "/" ? "home-en" : "http-v2";
           await page.screenshot({ path: `/tmp/takoform-docs-${name}-375.png`, fullPage: true });
         }
       }
       await visit("/spec/host-api/v1");
-      await visit("/en/spec/host-api/v1");
     }
     for (const width of [375, 1024, 1280]) {
       await page.setViewportSize({ width, height: 900 });
-      for (const [path, fragment] of [["/", ""], ["/v1/", ""], ["/v2/", ""], ["/spec/host-api/v2/http", ""], ["/start/", ""], ["/spec/host-api/v1", "#artifacts-and-operations"]]) {
-        await visit(path + fragment);
-        await switchLanguage(page, width, "English", `/en${path}`, "en");
-        await switchLanguage(page, width, "日本語", path, "ja-JP");
+      for (const path of ["/", "/v1/", "/v2/", "/spec/host-api/v2/http", "/start/", "/spec/host-api/v1#artifacts-and-operations"]) {
+        await visit(path);
         if (path.startsWith("/spec/")) assert.equal(await page.locator(".specification-source").getAttribute("lang"), "en");
       }
-      await visit("/en/spec/host-api/v1#artifacts-and-operations");
+      await visit("/spec/host-api/v1#artifacts-and-operations");
       await page.locator(".version-context select").selectOption("v2");
-      await page.waitForURL((url) => url.pathname === "/en/v2/" && url.hash === "");
+      await page.waitForURL((url) => url.pathname === "/v2/" && url.hash === "");
       await page.locator(".vp-doc h1").filter({ hasText: "Host API v2" }).waitFor();
       await page.locator(".version-context select").selectOption("v1");
-      await page.waitForURL((url) => url.pathname === "/en/v1/" && url.hash === "");
+      await page.waitForURL((url) => url.pathname === "/v1/" && url.hash === "");
     }
     await page.setViewportSize({ width: 375, height: 900 });
-    for (const prefix of ["", "/en"]) {
-      await visit(`${prefix}/start/`);
-      await page.locator(".VPNavBarSearch button").click();
-      assert.equal(await page.locator("#version-search-scope").inputValue(), "v2");
-      await page.locator(".VersionSearch input").fill("Takoform-Expected-Generation");
-      const results = page.locator(".VersionSearch-results a");
-      await results.first().waitFor();
-      const links = await results.evaluateAll((nodes) => nodes.map((node) => node.getAttribute("href")));
-      assert.ok(links.length && links.every((link) => link.startsWith("/en/") === !!prefix), "search results must stay in the selected language");
-      assert.ok(links.every((link) => documentVersion(link) !== "v1"), "v2 search must exclude v1 by default");
-      await results.first().click();
-      await page.waitForFunction(() => !document.querySelector(".VersionSearch"));
-      await visit(`${prefix}/spec/host-api/v1`);
-      await page.locator(".VPNavBarSearch button").click();
-      assert.equal(await page.locator("#version-search-scope").inputValue(), "v1");
-      await page.locator(".VersionSearch input").fill("Snapshot");
-      await results.first().waitFor();
-      assert.ok((await results.evaluateAll((nodes) => nodes.map((node) => node.getAttribute("href")))).every((link) => documentVersion(link) !== "v2"), "v1 search excludes v2 by default");
-      await page.locator("#version-search-scope").selectOption("all");
-      await page.locator(".VersionSearch input").fill("Takoform-Expected-Generation");
-      await results.first().waitFor();
-      assert.ok((await results.evaluateAll((nodes) => nodes.map((node) => node.getAttribute("href")))).some((link) => documentVersion(link) === "v2"), "explicit all-version scope finds v2 from v1");
-      assert.ok((await page.locator(".VersionSearch-tag").allTextContents()).every((label) => ["v1", "v2", "Common", "共通"].includes(label)), "every result labels its version");
-      await page.keyboard.press("Escape");
-      await page.waitForFunction(() => !document.querySelector(".VersionSearch"));
-      assert.ok(await page.locator(".VPNavBarSearch button").evaluate((button) => document.activeElement === button), "closing search returns focus to its trigger");
-    }
+    await visit("/start/");
+    await page.locator(".VPNavBarSearch button").click();
+    assert.equal(await page.locator("#version-search-scope").inputValue(), "v2");
+    await page.locator(".VersionSearch input").fill("Takoform-Expected-Generation");
+    const results = page.locator(".VersionSearch-results a");
+    await results.first().waitFor();
+    const links = await results.evaluateAll((nodes) => nodes.map((node) => node.getAttribute("href")));
+    assert.ok(links.length && links.every((link) => !link.startsWith("/en/")), "search results use root canonical routes");
+    assert.ok(links.every((link) => documentVersion(link) !== "v1"), "v2 search must exclude v1 by default");
+    await results.first().click();
+    await page.waitForFunction(() => !document.querySelector(".VersionSearch"));
+    await visit("/spec/host-api/v1");
+    await page.locator(".VPNavBarSearch button").click();
+    assert.equal(await page.locator("#version-search-scope").inputValue(), "v1");
+    await page.locator(".VersionSearch input").fill("Snapshot");
+    await results.first().waitFor();
+    assert.ok((await results.evaluateAll((nodes) => nodes.map((node) => node.getAttribute("href")))).every((link) => documentVersion(link) !== "v2"), "v1 search excludes v2 by default");
+    await page.locator("#version-search-scope").selectOption("all");
+    await page.locator(".VersionSearch input").fill("Takoform-Expected-Generation");
+    await results.first().waitFor();
+    assert.ok((await results.evaluateAll((nodes) => nodes.map((node) => node.getAttribute("href")))).some((link) => documentVersion(link) === "v2"), "explicit all-version scope finds v2 from v1");
+    assert.ok((await page.locator(".VersionSearch-tag").allTextContents()).every((label) => ["v1", "v2", "Common"].includes(label)), "every result labels its version");
+    await page.keyboard.press("Escape");
+    await page.waitForFunction(() => !document.querySelector(".VersionSearch"));
+    assert.ok(await page.locator(".VPNavBarSearch button").evaluate((button) => document.activeElement === button), "closing search returns focus to its trigger");
     await page.setViewportSize({ width: 320, height: 900 });
     await visit("/");
     await checkDisclosure(page, ".VPNavBarHamburger");
@@ -290,7 +328,7 @@ async function run() {
       await page.keyboard.press("Escape");
     }
     assert.deepEqual(networkFailures, [], "browser runtime and asset requests");
-    console.log(`site-browser: ${widths.length * routes.length} responsive pages, bilingual search, language/fragment round trips, version-specific sidebars, keyboard disclosures and themes passed (${browser.version()})`);
+    console.log(`site-browser: ${widths.length * routes.length} responsive pages, English canonical search, legacy URL redirects, version-specific sidebars, keyboard disclosures and themes passed (${browser.version()})`);
   } finally {
     process.removeListener("SIGINT", interrupted);
     process.removeListener("SIGTERM", interrupted);

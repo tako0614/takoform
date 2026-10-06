@@ -1,9 +1,6 @@
 <script setup lang="ts">
-import { computed } from "vue";
-import { useData } from "vitepress";
-const { lang } = useData();
 // Keep the source language and normative/explanatory distinction visible.
-const props = withDefaults(
+withDefaults(
   defineProps<{
     source: string;
     url?: string;
@@ -13,11 +10,6 @@ const props = withDefaults(
   }>(),
   { normative: false, sourceLanguage: "en", releaseState: "published" },
 );
-const sourceLanguageName = computed(() => {
-  const isJapaneseSource = props.sourceLanguage === "ja-JP";
-  if (lang.value === "ja-JP") return isJapaneseSource ? "日本語" : "英語";
-  return isJapaneseSource ? "Japanese" : "English";
-});
 </script>
 
 <template>
@@ -26,13 +18,8 @@ const sourceLanguageName = computed(() => {
     :data-document-authority="normative ? 'normative' : 'non-normative'"
     :data-release-state="releaseState"
   >
-    <p v-if="lang === 'ja-JP'">
-      {{ normative ? `規範原文（${sourceLanguageName}）:` : `解説原文（${sourceLanguageName}）:` }}
-      <a v-if="url" :href="url"><code>{{ source }}</code></a>
-      <code v-else>{{ source }}</code>{{ normative ? "。" : "。規範要件ではありません。" }}
-    </p>
-    <p v-else>
-      {{ normative ? `Normative source (${sourceLanguageName} original):` : `Explanatory source (${sourceLanguageName} original):` }}
+    <p>
+      {{ normative ? `Normative source (English original):` : `Explanatory source (English original):` }}
       <a v-if="url" :href="url"><code>{{ source }}</code></a>
       <code v-else>{{ source }}</code>
       <template v-if="!normative"> Not a specification requirement.</template>

@@ -1,41 +1,41 @@
 ---
 title: The v2 model
-description: Form、Host、Resource、Operation、世代がどの責任を表すかを説明します。
+description: Understand what Forms, Hosts, Resources, Operations, and generations represent in Host API v2.
 ---
 
 # The v2 model {#model}
 
-v2では、仕様を定義するForm、仕様を実行するHost、Hostが管理するResource、変更の進行を示すOperationを区別します。この分離により、Formの意味と、あるHostが実際に提供する機能を混同せずに扱えます。
+v2 distinguishes a Form that defines meaning, a Host that implements it, a Resource managed by that Host, and an Operation that reports the progress of a change. This separation prevents the meaning of a Form from being mistaken for what a particular Host actually offers.
 
-## FormとHost {#form-host}
+## Form and Host {#form-host}
 
-Formは作者が公開する版固定のHTTPS URLで識別される仕様です。Resourceの`spec`、`observed`、`output`の意味や操作の条件を定義します。Form自体はAPIサーバーや実行環境ではありません。
+A Form is a versioned, immutable HTTPS URL for a specification published by its author. It defines the meaning of a Resource's `spec`, `observed`, and `output`, as well as operation requirements. A Form is not itself an API server or execution environment.
 
-HostはFormを実装し、認証されたクライアントにResource操作を提供します。HostのDiscoveryは接続先や機能を示し、`support`は正確なForm URLへの対応状況を示します。Formの公開、Hostの対応、利用者の権限はそれぞれ別の事実です。
+A Host implements Forms and exposes Resource operations to authenticated clients. Discovery describes the Host's endpoint and capabilities; `support` reports support for an exact Form URL. Form publication, Host support, and a caller's authorization are separate facts.
 
-## Resourceの希望状態と観測状態 {#resource-state}
+## Desired and observed Resource state {#resource-state}
 
-ResourceはHost内で一意なUIDを持ち、Form URL、Space、名前、世代と状態を持ちます。UIDは削除後に再利用されません。
+A Resource has a Host-unique UID, Form URL, Space, name, generation, and state. Its UID is not reused after deletion.
 
-- `spec`: クライアントが望み、Hostが受け付けた状態。Update要求では`spec`文書全体を置き換えます。Resourceの識別情報や他の状態を置き換える意味ではありません。
-- `observed`: Hostが最後に観測した状態。希望値に追いついていないことがあります。
-- `output`: Formが定義する操作結果や接続情報。空であることもあります。
-- `generation`: 受理された希望状態の世代。Create後に始まり、Update/Delete受理で進みます。
-- `observedGeneration`: `observed`がどの世代を反映するかを示します。
-- `observedAt`: Hostが観測結果を記録した時刻です。GET要求時刻とは限りません。
+- `spec`: the desired value accepted from the client. Updates replace the complete document.
+- `observed`: the latest state the Host has checked; it may lag behind desired state.
+- `output`: operation results or connection information defined by the Form; it may be empty.
+- `generation`: the accepted desired-state generation. It begins at creation and advances as updates or deletion are accepted.
+- `observedGeneration`: the generation represented by the current observation.
+- `observedAt`: when the Host recorded that observation, not necessarily when a GET request arrived.
 
-したがって、Operationが成功したこと、Hostがあるgenerationを観測したこと、利用者のアプリケーションが稼働していることは同義ではありません。利用可能性はFormとHostが明示する別の観測情報で判断します。
+An Operation succeeding, a Host observing a generation, and an application being available are not equivalent. Availability requires other evidence explicitly defined by the Form and Host.
 
-## Operationと再送 {#operations-retry}
+## Operations and retries {#operations-retry}
 
-Create、Update、DeleteはOperationを生成します。HostはOperation ID、対象Resource、action、generation、状態、結果を返します。ClientはOperationを読み、必要に応じてResourceを再取得します。GETは読み取りであり、処理を開始しません。
+Create, update, and delete each produce an Operation. The Host reports its ID, Resource, action, generation, status, and result. A client reads the Operation and may then fetch the Resource again. GET is a read and does not start processing.
 
-Clientが同じ操作を再送する場合は、同じIdempotency-Keyと同じ要求内容を使います。新しい操作には新しいキーを使います。再送範囲・保持時間はHostのDiscoveryにある値を確認します。キーの保持期限後に再送を重複防止できるとは限りません。
+To retry the same operation, a client reuses the same Idempotency-Key with the identical request. A new operation uses a new key. Check the Host's Discovery response for replay scope and retention; a key may no longer prevent a duplicate after that period.
 
-## 世代条件と競合 {#generation-conflicts}
+## Generation conditions and conflicts {#generation-conflicts}
 
-Update/Delete要求には読み取ったgenerationを`Takoform-Expected-Generation`として指定します。世代が変わっていればHostは古い意図を暗黙に再適用せず、競合として扱います。Clientは最新Resourceを読み、どの変更を続けるかを決め直します。
+Update and delete requests carry the generation that was read in `Takoform-Expected-Generation`. If the Resource has advanced, the Host does not silently reapply stale intent. The client reads current state and decides which change it still intends to make.
 
-## v1との語彙の違い {#v1-terms}
+## How this differs from v1 {#v1-terms}
 
-FormRef、Form Package、Snapshot、schemaDigestはv1の契約に属する語彙です。v2のForm URLやResource状態と同じものとして置き換えてはいけません。v1を調べる場合は[凍結されたv1仕様](/spec/host-api/v1)を参照してください。v2の規範は[概要](/spec/host-api/v2/)、[HTTP API](/spec/host-api/v2/http)、[Form要件](/spec/host-api/v2/forms)にあります。
+FormRef, Form Package, Snapshot, and `schemaDigest` are v1 contract terms. They are not alternate names for a v2 Form URL or Resource state. Consult the [frozen v1 specification](/spec/host-api/v1) for v1. The v2 normative contract is in the [overview](/spec/host-api/v2/), [HTTP API](/spec/host-api/v2/http), and [Form requirements](/spec/host-api/v2/forms).

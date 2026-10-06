@@ -1,31 +1,31 @@
 ---
 title: Guides
-description: 利用者、Form作者、クライアント実装者、Host実装者ごとにv2の学習順序を案内します。
+description: Choose a v2 learning path for users, Form authors, client implementers, or Host implementers.
 ---
 
 # Guides {#guides}
 
-目的に合わせてv2の契約を読み進めてください。ここで示す例は説明用であり、共通API仕様は公開Hostや実装の提供状況を表しません。
+Follow the v2 contract for the role you have. Examples are illustrative; publication of the common API specification does not indicate that a public Host or implementation is available.
 
-## 利用者 {#users}
+## Users {#users}
 
-1. [v2を使い始める](/start/)でFormとHostを区別します。
-2. 使うHostのDiscovery、認証、Space条件を運営者の案内で確認します。
-3. 正確なForm URLの仕様と、そのHostの`support`を確認します。
-4. [要求・応答例](/spec/host-api/v2/examples)でCreateからDeleteまでのOperation追跡を読みます。
+1. Start with [Getting started](/start/) to distinguish a Form from a Host.
+2. Check the chosen Host operator's guidance for Discovery, authentication, and Space access.
+3. Read the exact Form URL and check that Host's `support` response.
+4. Follow the [request/response examples](/spec/host-api/v2/examples) through Create, Operation tracking, and Delete.
 
-## Form作者 {#form-authors}
+## Form authors {#form-authors}
 
-Form URLを版固定で公開し、`spec`、`observed`、`output`、操作の意味、部分失敗の復旧を記述します。[Form要件](/spec/host-api/v2/forms)はv2の規範で、[例](/spec/host-api/v2/examples)はHTTPの利用を示す架空の説明です。
+Publish a versioned Form URL and describe `spec`, `observed`, `output`, operation semantics, and recovery from partial failure. [Form requirements](/spec/host-api/v2/forms) are normative; the [examples](/spec/host-api/v2/examples) illustrate HTTP use with fictional data.
 
-## クライアント実装者 {#client-implementers}
+## Client implementers {#client-implementers}
 
-[クライアントガイド](/client/)からDiscovery、support、Idempotency-Key、世代条件、Operationの読み方を確認し、[HTTP API](/spec/host-api/v2/http)を要求・応答の正本として参照します。応答喪失や競合は、盲目的な再送ではなくOperationとResourceの照合で扱います。
+Use the [client guide](/client/) to understand Discovery, support, Idempotency-Keys, generation conditions, and Operations. Treat the [HTTP API](/spec/host-api/v2/http) as the source of request and response requirements. Reconcile a lost response or conflict against Operations and Resources rather than blindly retrying.
 
-## Host実装者 {#host-implementers}
+## Host implementers {#host-implementers}
 
-[概要](/spec/host-api/v2/)、[HTTP API](/spec/host-api/v2/http)、[Form要件](/spec/host-api/v2/forms)の順に読みます。認証とSpace認可、Resource UIDとgeneration、Idempotency-Key、Operation記録、観測状態、再起動後の回復までを一つの耐久性境界として設計します。
+Read the [overview](/spec/host-api/v2/), [HTTP API](/spec/host-api/v2/http), and [Form requirements](/spec/host-api/v2/forms). Design authentication and Space authorization, Resource UIDs and generations, Idempotency-Key handling, Operation records, observed state, and post-restart recovery as one durability boundary.
 
-## v1から移る場合 {#migration}
+## Moving from v1 {#migration}
 
-v2へpackageやSnapshotを持ち込む必要はありません。仕様が自動変換することもありません。旧Resourceやproviderの移行は、それを所有する製品の案内で確認します。[v2移行案内](/spec/host-api/v2/migration)は判断事項を説明し、[凍結されたv1仕様](/spec/host-api/v1)は旧契約を保持します。
+v2 does not require packages or Snapshots, and the specification does not automatically convert them. Check the product that owns existing Resources or Providers for its migration plan. The [v2 migration guide](/spec/host-api/v2/migration) explains questions to resolve; the [frozen v1 specification](/spec/host-api/v1) retains the earlier contract.

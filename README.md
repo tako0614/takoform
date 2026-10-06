@@ -5,22 +5,21 @@ Takoformは、資源の仕様を作者がHTTPSで公開し、その仕様を実�
 更新・削除で何が起きるかは、**Form**という資源ごとの仕様で定義します。
 
 現在の文書はHost API v2を中心に構成しています。**v2の規範本文は英語**で、
-日本語の入口・解説はその理解を助ける資料です。仕様を読むためにGoライブラリや
+公開サイトの入口・解説も英語で提供します。仕様を読むためにGoライブラリや
 特定のProviderを導入する必要はありません。
 
 ## 読み始める
 
 | 目的 | 入口 |
 | --- | --- |
-| Takoformの仕組みを知る | [概要と用語](spec/host-api/v2/README.md) / [日本語の概念ガイド](website/model/index.md) |
-| 資源を操作する流れを知る | [日本語の入門](website/start/index.md) / [HTTPの往復例](spec/host-api/v2/examples.md) |
+| Takoformの仕組みを知る | [概要と用語](spec/host-api/v2/README.md) / [概念ガイド](website/model/index.md) |
+| 資源を操作する流れを知る | [入門](website/start/index.md) / [HTTPの往復例](spec/host-api/v2/examples.md) |
 | クライアントを作る | [クライアントガイド](website/client/index.md) / [HTTP API](spec/host-api/v2/http.md) |
 | 自分のFormを定義する | [Form作者向けガイド](website/authoring/index.md) / [Formの要件と完成例](spec/host-api/v2/forms.md) |
 | Hostを実装する | [Host実装ガイド](website/host-api/index.md) / [HTTPの適合条件](spec/host-api/v2/http.md#conformance) |
 | 既存v1の資源・実装を引き継ぐ | [Migration](spec/host-api/v2/migration.md) / [固定済みv1仕様](spec/host-api/v1.md) |
 
 公開サイトは [takoform.com](https://takoform.com/) です。
-英語の説明は [English documentation](website/en/v2/index.md) から読めます。
 
 ## 仕様の構成
 
@@ -71,7 +70,7 @@ bun run check
 
 `check`は文書の境界、固定済みv1・v2、生成元との一致、リンク、既存Goコード、サイトbuildを
 確認します。公開サイトや実資源は変更しません。生成ページを直接編集せず、
-規範は`spec/host-api/v2/`から参照し、日英の解説は`website/`の対応する元ファイルを編集します。
+規範は`spec/host-api/v2/`から参照し、英語の解説は`website/`の対応する元ファイルを編集します。
 
 ```console
 bun scripts/site.mjs --write

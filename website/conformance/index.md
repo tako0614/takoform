@@ -4,70 +4,70 @@ title: V1 conformance checks
 
 # V1 conformance checks {#conformance-と参照実装}
 
-このページは保持するv1の検証ツールと結果の読み方を説明します。v2の適合条件は
-[v2 HTTP API](/spec/host-api/v2/http#conformance)を参照してください。
-以下のパッケージ・Snapshot・署名の検査は、v2の必須条件ではありません。
+This non-normative guide explains the retained v1 verification tools and reports. For v2 requirements,
+read the [v2 HTTP API](/spec/host-api/v2/http#conformance).
+The package, Snapshot, and signature checks below are not mandatory v2 requirements.
 
-検証レポートは、対象として記載されたデータや実装について、決められた要件を満たすかを
-示します。たとえばパッケージの検証に成功しても、そのFormが特定のHostで使えるとは限りません。
+A report describes whether the named data or implementation satisfies the
+requirements under test. A valid package, for example, does not establish that
+its Form is usable on a particular Host.
 
-このページは検証結果の読み方を説明します。要件の定義は
-[適合性に関する仕様](/spec/conformance) を参照してください。
+The [v1 conformance specification](/spec/conformance) defines the retained requirements.
 
-## 検証の対象 {#claim-を分けて読む}
+## What is being verified? {#claim-を分けて読む}
 
-| 対象 | 主に確認する内容 |
+| Subject | Main checks |
 | --- | --- |
-| Form Package | 定義、FormRef、正規化した内容、収録ファイル、許可されたデータ形式 |
-| Interface / Binding | ダイジェストと定義の一致、操作や能力の定義 |
-| Snapshot | 必要なデータと参照先が揃っていること、入力順によらず構築結果が同じになること |
-| Host | API、リソース操作、同時更新の制御、再試行、識別子、エラー等の振る舞い |
-| クライアント | 宣言された設定だけを送ること、FormRefとパッケージの識別を混同しないこと |
-| 公開元の署名等 | 配布物の来歴、署名、公開記録、失効情報 |
+| Form Package | Definition, FormRef, canonical contents, declared files and allowed data formats |
+| Interface / Binding | Digests, definitions, operations and capabilities |
+| Snapshot | Complete data and references, and order-independent construction |
+| Host | API, resource lifecycle, concurrency, retries, identities and errors |
+| Client | Only declared settings are sent; FormRef is kept distinct from package identity |
+| Publisher trust data | Provenance, signatures, publication records and revocation data |
 
-一つの検証結果から、ほかの対象の適合性や本番での利用可否まで判断することはできません。
+One result does not prove another subject's conformance or production readiness.
 
-## 手元で検証する {#repository-から実行できる-harness}
+## Run local verification {#repository-から実行できる-harness}
 
-最初にリポジトリのルートで依存モジュールを取得します。この取得にはネットワークを使うことがあります。
+First fetch dependencies at the repository root. This step may access the network.
 
 ```console
 go mod download
 ```
 
-依存取得後、以下の検証はネットワークに接続せず、リソースも変更しません。
+After dependencies are available, the following checks do not access the network or modify resources.
 
 ```console
 go run ./cmd/form-package verify conformance/takoform-v1/generic-host/external-family/counter-reservation
 ```
 
-パッケージ索引、収録ファイル、FormRef、ダイジェストを検証します。
+This checks the package index, declared files, FormRef and digests.
 
 ```console
 go run ./cmd/generic-conformance verify --manifest conformance/takoform-v1/generic.json
 ```
 
-パッケージ・Interface・Binding・Snapshotの参照関係、入力順への依存がないこと、失敗時に
-不完全な結果を返さないことを検証します。使用する `external-family` と `zero-family` は
-テスト用のデータで、実在のFormや稼働中のHostを表すものではありません。
+This checks package, Interface, Binding and Snapshot references, input-order
+independence and absence of partial results on failure. `external-family` and
+`zero-family` are fixtures, not real Forms or running Hosts.
 
-どちらのコマンドも、Host上でのリソース操作やFormの有効化、実行コードの起動は行いません。
+Neither command performs Host resource operations, activates a Form or starts executable code.
 
-## レポートの確認点 {#report-を読むときの確認点}
+## Reading a report {#report-を読むときの確認点}
 
-1. `status` だけでなく、何を対象に検証したレポートかを確認します。
-2. FormRefの4項目で、検証した定義を特定します。
-3. `packageDigest` はパッケージ索引、`schemaDigest` はForm定義の内容を指すことを区別します。
-4. 公開やHost上の操作の結果は、それを行った公開元やHostの記録で別に確認します。
+1. Check the subject of the report, not just `status`.
+2. Identify the verified definition using all four FormRef fields.
+3. Distinguish the package index's `packageDigest` from the definition's `schemaDigest`.
+4. Check publication and Host operation outcomes separately in the publisher's or Host's records.
 
-## ソースコード {#source}
+## Source code {#source}
 
-検証ツールとテストデータは [GitHub](https://github.com/tako0614/takoform) で公開しています。
-OpenTofu向け実装の検証は
-[terraform-provider-takoform](https://github.com/tako0614/terraform-provider-takoform) を参照してください。
+Verification tools and fixtures are on [GitHub](https://github.com/tako0614/takoform).
+For checks of the OpenTofu implementation, see
+[terraform-provider-takoform](https://github.com/tako0614/terraform-provider-takoform).
 
-## 次に読む
+## Read next {#次に読む}
 
-- [保持するHost API v1](/spec/host-api/v1) — v1の接続先と操作。
-- [v2への移行](/spec/host-api/v2/migration) — 別のAPIとして移行するときの違い。
-- [Host API v1](/v1/) — この適合検査の対象となる仕様。
+- [Retained Host API v1](/spec/host-api/v1) — v1 discovery and operations.
+- [Migration to v2](/spec/host-api/v2/migration) — differences when moving to the separate API.
+- [Host API v1](/v1/) — the specification covered by these checks.

@@ -4,32 +4,32 @@ title: Create a Form
 
 # Create a Form {#authoring}
 
-Takoform v2のFormは、Hostが管理する一種類のResourceについて、設定と振る舞いを定義する仕様です。まず「このResourceが何を所有するか」を一文で決め、その後に入力、観測、操作、失敗時の回復を具体化します。公開したURLからHostがコードを取得する仕組みではありません。Hostは実装済みのFormだけを明示的にサポートします。
+A Takoform v2 Form defines the settings and behavior for one kind of Host-managed Resource. Start by stating what the Resource owns; then make its inputs, observations, operations, and failure recovery precise. A Host does not fetch code from a published Form URL. It explicitly implements the Forms it supports.
 
-このページでは、架空の `KeyValueEntry` を題材に、一つのFormを設計し、Host API v2で確かめる流れを紹介します。これはチュートリアル用の例で、公開済みのFormやHostサポートを示すものではありません。
+This guide walks through designing and checking a fictional `KeyValueEntry` Form. It is a teaching example, not a claim that the Form is published or supported by any Host.
 
-## 1. Resourceの目的と境界を決める {#purpose}
+## 1. Define the Resource and its boundary {#purpose}
 
-例のResourceは「指定したSpaceにある、名前付きの文字列entry一つ」です。entryだけを所有し、collection全体や他のentryは所有しません。HTTPの共通形式は[Host API v2](/spec/host-api/v2/http)、Form固有の規範要件は[Form仕様](/spec/host-api/v2/forms)が定めます。
+The example Resource is “one named string entry in a Space.” It owns that entry, not the entire collection or other entries. The [Host API v2](/spec/host-api/v2/http) defines common HTTP behavior; the [Form specification](/spec/host-api/v2/forms) defines the meaning specific to this Resource.
 
-このFormが使う識別子は、架空の次のURLです。
+The example uses this fictional exact Form URL:
 
 ```text
 https://forms.publisher.example/key-value-entry/1.0.0
 ```
 
-Form URLは文字列の完全一致で識別されます。同じURLの意味を後から変えず、契約の変更には新しいURLを使います。SemVer風のパスは作者が選べる慣習であり、Host APIの版や互換性を自動で決めません。
+Forms are identified by exact URL string. Do not silently change the contract at an existing URL; use a new URL for a semantic change. A SemVer-shaped path is an authoring convention, not a Host API version or an automatic compatibility rule.
 
-## 2. 入力と観測を分ける {#definition}
+## 2. Separate desired input from observation {#definition}
 
-`spec` は利用者が望む状態、`observed` はHostが確認した状態、`output` は利用に必要な値です。三つを混ぜず、未確認を「存在しない」や「ready」と表現しないようにします。
+`spec` is desired state, `observed` is what the Host has confirmed, and `output` contains values needed to use the Resource. Keep the three separate. In particular, do not turn an unknown result into “absent” or “ready.”
 
-この例の `spec` は次の二項目だけです。未知の項目と `null` は拒否し、暗黙の既定値はありません。
+This example's `spec` has exactly two fields. Unknown fields and `null` are rejected; neither field has an implicit default.
 
 | Field | Meaning | Create | Update |
 | --- | --- | --- | --- |
-| `key` | 同じHost・Space・Form内で一意なキー。Unicode scalar値1〜128文字。大文字小文字を区別。 | 必須 | 不変 |
-| `value` | 保存する文字列。Unicode scalar値0〜4096文字。空文字列も有効。 | 必須 | 置換可能 |
+| `key` | Unique within the same Host, Space, and Form URL. 1–128 Unicode scalar values; case-sensitive. | Required | Immutable |
+| `value` | Stored string, 0–4096 Unicode scalar values. Empty string is valid. | Required | Replaceable |
 
 ```json
 {
@@ -38,35 +38,35 @@ Form URLは文字列の完全一致で識別されます。同じURLの意味を
 }
 ```
 
-長さはUTF-8バイト数ではなくUnicode scalar値の数です。Hostがまだentryを確認していなければ `observed: {}`。存在を確認した値は `{ "entryExists": true, "key": "welcome", "value": "Hello, Ada!" }`、不在を確認した値は `{ "entryExists": false }` とします。確認に失敗したときは `entryExists: false` にしません。`output` は常に `{}` で、このFormはアプリケーションの稼働状態を保証しません。
+Lengths count Unicode scalar values, not UTF-8 bytes. Before the first confirmed observation, use `observed: {}`. Confirmed presence is `{ "entryExists": true, "key": "welcome", "value": "Hello, Ada!" }`; confirmed absence is `{ "entryExists": false }`. If the Host cannot check, it must not claim absence. `output` is always `{}`. This Form does not claim that an application is running.
 
-## 3. 操作と失敗後の回復を定義する {#lifecycle}
+## 3. Define operations and recovery {#lifecycle}
 
-Formごとにcreate/read/update/deleteの意味を決めます。HTTP status、generation、Idempotency-Key、Operationの形は共通APIの規則を使い、Form仕様で再定義しません。
+Define what create, read, update, and delete mean for this Form. Use common API rules for HTTP statuses, generations, `Idempotency-Key`, and Operation shape rather than redefining them in each Form.
 
-- **Create:** `(Host, Space, Form URL, key)`の範囲でentryを一つ作成します。同じキーが既に使われていれば `key_conflict` で失敗し、既存値は変更しません。
-- **Read:** Resourceと最後に確認した状態を返します。GETごとの再照会は要求しません。
-- **Update:** `value`だけ置き換えます。`key`変更は外部効果の前に拒否します。不在entryをupdateで再作成しません。
-- **Delete:** 対象entryだけを削除します。既に不在だと確認できれば削除完了です。collectionや別entryは削除しません。
+- **Create:** Create one entry scoped by `(Host, Space, Form URL, key)`. If the key is already in use, fail with `key_conflict` and leave its existing value unchanged.
+- **Read:** Return the Resource and its last confirmed state. This Form does not require a new backend lookup for every GET.
+- **Update:** Replace only `value`. Reject a changed `key` before external effects. Updating a missing entry does not recreate it.
+- **Delete:** Remove only the entry this Resource represents. If it is confirmed absent, deletion is complete. Do not delete the collection or another entry.
 
-外部書込み後に応答が失われた場合、タイムアウトだけで「未実行」と決めてはいけません。同じResourceと同じOperationのまま、同じキーを読み戻して値を照合します。結果を証明できなければOperationを解決待ちのまま保持します。Formの例を増やす前に、部分成功・失敗・不明結果をどう扱うかを仕様とテストで決めましょう。
+If the response is lost after a write may have happened, a timeout does not prove that nothing happened. Keep the same Resource and Operation, read back the same key, and compare its value. If the result cannot be proved, retain the Operation as unresolved. Before adding more examples, decide and test how the Form handles partial success, failure, and unknown outcomes.
 
-## 4. Form仕様とテストを書く {#write}
+## 4. Write and test the Form specification {#write}
 
-上の項目表を基に、人が読める規範仕様を作ります。少なくとも以下を一続きで読めるようにします。
+Turn the table above into a human-readable normative specification. A reader should be able to find all of these answers without guessing:
 
-1. Resourceの目的と、Formが所有しないもの。
-2. 全 `spec` フィールドの型、必須性、省略時の意味、上限、未知フィールドの扱い、変更可能性。
-3. `observed`、`output`、未観測・古い観測・readyの意味。
-4. create/read/update/deleteの効果、失敗、部分効果、同じUIDでの回復と削除範囲。
-5. Resource参照、Interface、Binding、artifactがある場合の正確な識別子、所有者、制約。ない場合は「なし」と明記。
-6. private inputを使うなら名前・値・必要条件と、公開Resourceやログへ漏らさない方法。秘密が任意か、全ての有効な利用で必須かを区別。
+1. The Resource's purpose and what it does not own.
+2. Every `spec` field's type, requiredness, omission behavior, limits, unknown-field rule, and mutability.
+3. The meaning of `observed`, `output`, unobserved or stale values, and any readiness claim.
+4. Create/read/update/delete effects, failures, partial effects, same-UID recovery, and deletion scope.
+5. Exact identities, owners, and constraints for any Resource references, Interfaces, Bindings, or artifacts. Say “none” when not applicable.
+6. For private inputs: their names, values, and when they are required; whether they are optional or intrinsic to every valid use; and how they stay out of public Resources and logs.
 
-この例には参照、Interface、Binding、artifact、private inputはありません。機械可読schemaを添える場合も、規範文と同じ入力・更新・エラー意味になるようテストします。完全な要件は[Form仕様 §2](/spec/host-api/v2/forms#what-a-form-specification-must-define)と[作者チェックリスト](/spec/host-api/v2/forms#author-checklist)を参照してください。
+This example has no references, Interfaces, Bindings, artifacts, or private inputs. If you add JSON Schema or another machine-readable aid, test that it agrees with the normative text. See [Form requirements](/spec/host-api/v2/forms#what-a-form-specification-must-define) and the [author checklist](/spec/host-api/v2/forms#author-checklist) for the full contract.
 
-## 5. 対応Hostで確認する {#check}
+## 5. Check a Host's support and try the API {#check}
 
-Hostの管理者からAPI root、Space、認証方法を取得してください。以下は環境変数を設定済みとするシェル例です。架空のForm URLなので、実在Hostが対応しているとは限りません。
+Ask the Host operator for the API root, Space, and authentication method. The following shell example assumes those values are set. Since the Form URL is fictional, a real Host may not support it.
 
 ```sh
 export BASE_URL='https://host.example.test/api-root-returned-by-discovery'
@@ -79,9 +79,9 @@ curl --fail-with-body -G "$BASE_URL/support" \
   --data-urlencode "form=$FORM_URL"
 ```
 
-`support`の `form` が渡したURLと完全一致し、`supported` と必須操作を確認します。`supported: true` は実装の宣言であり、あなたの権限、空き容量、個別Operationの成功を保証しません。未対応ならResourceを作らず、Host管理者に確認します。
+Check that `form` exactly equals the URL you sent and inspect `supported` and the required operations. `supported: true` declares implementation; it does not promise your authorization, capacity, or success for an individual Operation. If unsupported, do not create a Resource; ask the Host operator.
 
-対応Hostでcreateを試す場合は、毎回異なるIdempotency-Keyを使います。`200`なら返されたOperationはterminalです。`202`なら `Location` のOperationをpollし、terminalになるまで待ってからResourceを読みます。
+On a Host that supports the Form, use a fresh `Idempotency-Key` for create. A `200` response contains a terminal Operation; for `202`, poll the Operation at `Location`. Wait for a terminal result before reading the Resource.
 
 ```sh
 curl --fail-with-body -X POST "$BASE_URL/resources" \
@@ -91,10 +91,10 @@ curl --fail-with-body -X POST "$BASE_URL/resources" \
   --data '{"form":"https://forms.publisher.example/key-value-entry/1.0.0","space":"development","name":"welcome-entry","spec":{"key":"welcome","value":"Hello, Ada!"}}'
 ```
 
-応答の `Location` が指すOperationをGETし、terminal成功後、応答のResource UIDを `/resources/{uid}` からGETします。更新は完全な `spec` と現在のgenerationを送り、同じ `key` のまま `value` を置き換えます。削除は `Takoform-Expected-Generation` とIdempotency-Keyを付けてDELETEし、同じOperation規則で完了を確認します。正確なヘッダーと応答の扱いは[HTTP APIのcreate/read/update/delete](/spec/host-api/v2/http#create)を参照してください。
+GET the Operation at its `Location`. After terminal success, GET the Resource by its returned UID. For update, send the complete `spec` with the current generation and the same `key`, replacing only `value`. For delete, send the current generation and a new idempotency key, then wait for that Operation to complete. The [HTTP API's create/read/update/delete sections](/spec/host-api/v2/http#create) define the exact headers and responses.
 
-## 次に進む {#continue}
+## Continue
 
-- [Formの規範仕様](/spec/host-api/v2/forms)
-- [Host API v2の共通形式と操作](/spec/host-api/v2/http)
-- [Form authors向けチェックリスト](/spec/host-api/v2/forms#author-checklist)
+- [Normative Form specification](/spec/host-api/v2/forms)
+- [Common Host API v2 format and operations](/spec/host-api/v2/http)
+- [Form author checklist](/spec/host-api/v2/forms#author-checklist)
