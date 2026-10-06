@@ -184,12 +184,37 @@ describe("sealed W09 history and platform-neutral schema records", () => {
       ["spec/host-api/v2/unlisted.json", "forms.takoform.com/v2\n"],
       ["spec/host-api/v2/retired.md", "# v1からの移行\nforms.takoform.com/v2\n"],
       ["spec/host-api/v2-release.json", "{}\n"],
-      ["spec/host-api/v2.freeze.json", "{}\n"],
       ["spec/host-api/v2/freeze.json", "{}\n"],
       ["spec/host-api/v2.freeze-copy.json", "{}\n"],
     ]) {
       expect(() => classifySpecificationPublicationSource(path, Buffer.from(content))).toThrow();
     }
+  });
+
+  test("only the exact fixed-v2 digest manifest shape coexists with the v1 record closure", () => {
+    const path = "spec/host-api/v2.freeze.json";
+    const source = readFileSync(new URL(`../${path}`, import.meta.url));
+    expect(classifySpecificationPublicationSource(path, source)).toBe("fixed-v2-digest-manifest");
+
+    const manifest = JSON.parse(source.toString("utf8"));
+    for (const invalid of [
+      { ...manifest, version: "2" },
+      {
+        ...manifest,
+        normativeProse: [...manifest.normativeProse, {
+          path: "spec/schemas/v2/schema.json", sha256: `sha256:${"0".repeat(64)}`,
+        }],
+      },
+      {
+        ...manifest,
+        normativeProse: manifest.normativeProse.map((entry, index) =>
+          index === 0 ? { ...entry, sha256: "not-a-digest" } : entry),
+      },
+      { ...manifest, lane: "forms.takoform.com/v2/new-version" },
+    ]) {
+      expect(() => classifySpecificationPublicationSource(path, Buffer.from(JSON.stringify(invalid)))).toThrow();
+    }
+    expect(() => classifySpecificationPublicationSource(path, Buffer.from("{}\n"))).toThrow();
   });
 
   test("v2 language is inert only in explicitly classified proposals", () => {
