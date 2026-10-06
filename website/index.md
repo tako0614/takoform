@@ -1,7 +1,8 @@
 ---
 layout: page
-title: Takoform — Form仕様とHost API v2
-description: Form作者は版固定URLで仕様を公開し、Hostは対応するFormを実装します。Host API v2でResourcesを作成・観測・更新・削除する契約を案内します。
+title: Takoform
+titleTemplate: false
+description: リソースの仕様と、操作のための共通HTTP API。Host API v1とv2の仕様・ガイドを版ごとに読めます。
 sidebar: false
 ---
 

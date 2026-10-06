@@ -2,6 +2,9 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { defineConfig, type DefaultTheme } from "vitepress";
 import { renderForSearch } from "./search.mjs";
+import { fileURLToPath } from "node:url";
+
+const configDirectory = path.dirname(fileURLToPath(import.meta.url));
 
 // Pages rarely carry a frontmatter description. Fall back to the first prose
 // paragraph of the Markdown source so a shared link describes the actual page
@@ -40,9 +43,9 @@ function firstParagraph(srcDir, relativePath) {
 // takoform.com — the API and common-model-only site this repository owns.
 //
 // A local build carries the frozen normative Host API v1/common-model closure,
-// a revision-open English Host API v2 candidate, non-normative indexes and
+// the published, revision-open English Host API v2 contract, non-normative indexes and
 // presentation, the exact public schema bytes at the paths their $id names,
-// and conformance language. This revised v2 candidate is not yet published.
+// and conformance language.
 // Published Form definitions, family-specific examples, publisher
 // catalogs, and third-party client adapter pages are not served here; each belongs to the
 // publisher or adapter that owns it.
@@ -51,15 +54,9 @@ function firstParagraph(srcDir, relativePath) {
 // scripts/site.mjs and checked byte-for-byte by `bun run check:site`. A /spec/
 // v1 mirror is normative only when v1.freeze.json lists its source. V2 mirrors
 // declare authority and revision status separately; navigation and indexes
-// are non-normative. The old v2 freeze remains historical evidence, not a
-// claim that this revised candidate is already published.
+// are non-normative.
 
 const repository = "https://github.com/tako0614/takoform";
-const providerQuickStart =
-  "https://github.com/tako0614/terraform-provider-takoform/blob/main/README.md#quick-start";
-const providerComposition =
-  "https://github.com/tako0614/terraform-provider-takoform/blob/main/README.md#native-opentofu-provider-composition";
-
 // The pinned esbuild 0.28 pair cannot downlevel object/array destructuring
 // during dependency pre-bundling. Keep the browser build target independent:
 // this only applies to Vite's development optimizer, not the release build.
@@ -70,7 +67,6 @@ const contractSidebar = [
   {
     text: "Contract map",
     items: [
-      { text: "Overview", link: "/spec/" },
       { text: "Conformance language", link: "/spec/conformance" },
       { text: "Versioning and compatibility", link: "/spec/versioning" },
       { text: "Portability boundary", link: "/spec/portability-boundary" },
@@ -79,7 +75,6 @@ const contractSidebar = [
   {
     text: "Host API v1（履歴）",
     items: [
-      { text: "Lane overview", link: "/spec/host-api/" },
       { text: "Wire contract", link: "/spec/host-api/v1" },
     ],
   },
@@ -105,34 +100,6 @@ const contractSidebar = [
   },
 ];
 
-const guideSidebar = [
-  { text: "トップ", link: "/" },
-  {
-    text: "ドキュメント",
-    items: [
-      { text: "はじめる", link: "/start/" },
-      { text: "共通モデル", link: "/model/" },
-      { text: "GoからHostを使う", link: "/client/" },
-      { text: "Formを作る", link: "/authoring/" },
-      { text: "OpenTofu / Terraform から使う", link: "/use/" },
-      { text: "Host API の案内", link: "/host-api/" },
-      { text: "Host API v2（改訂中）", link: "/v2/" },
-      { text: "実装ガイド", link: "/guides/" },
-      { text: "仕様一覧", link: "/reference/" },
-      { text: "用語集", link: "/glossary" },
-      { text: "適合性の検証", link: "/conformance/" },
-    ],
-  },
-  {
-    text: "JSON Schema",
-    items: [{ text: "スキーマ一覧", link: "/schemas/" }],
-  },
-  {
-    text: "サイト情報",
-    items: [{ text: "このサイトについて", link: "/site" }],
-  },
-];
-
 const v2Sidebar = [
   { text: "Host API v2（改訂中）", link: "/v2/" },
   {
@@ -150,24 +117,27 @@ const v2Sidebar = [
     items: [
       { text: "はじめる", link: "/start/" },
       { text: "共通モデル", link: "/model/" },
-      { text: "GoからHostを使う", link: "/client/" },
+      { text: "クライアント設計", link: "/client/" },
       { text: "Formを作る", link: "/authoring/" },
       { text: "OpenTofu / Terraform から使う", link: "/use/" },
       { text: "Host API の案内", link: "/host-api/" },
       { text: "実装ガイド", link: "/guides/" },
-      { text: "仕様一覧", link: "/reference/" },
+      { text: "用語集", link: "/glossary" },
     ],
   },
-  {
-    text: "履歴として残す v1 仕様",
-    items: [{ text: "Host API v1（凍結）", link: "/spec/host-api/v1" }],
-  },
+];
+
+const v1Sidebar = [
+  { text: "Host API v1（凍結）", link: "/v1/" },
+  { text: "適合性の検証", link: "/conformance/" },
+  { text: "スキーマ一覧", link: "/schemas/" },
+  ...contractSidebar,
 ];
 
 const englishLabels: Record<string, string> = {
   トップ: "Home", ドキュメント: "Documentation", はじめる: "Getting started",
   実装ガイド: "Implementation guides", 仕様一覧: "Reference", 用語集: "Glossary",
-  Formを作る: "Create a Form", GoからHostを使う: "Use a Host from Go",
+  Formを作る: "Create a Form", クライアント設計: "Client design",
   "OpenTofu / Terraform から使う": "Use from OpenTofu / Terraform",
   "Host API の案内": "Host API guide", 共通モデル: "Common model",
   適合性の検証: "Conformance checks", スキーマ一覧: "Schema index",
@@ -189,13 +159,35 @@ function englishSidebar(items: DefaultTheme.SidebarItem[]): DefaultTheme.Sidebar
   }));
 }
 
-const relatedSidebar = {
-  text: "関連する利用案内",
-  items: [
-    { text: "OpenTofu / Terraform の HCL クイックスタート", link: providerQuickStart },
-    { text: "他のProviderと組み合わせる", link: providerComposition },
-    { text: "GitHub", link: repository },
-  ],
+function collectSidebarLinks(items: DefaultTheme.SidebarItem[]): string[] {
+  return items.flatMap((item) => [
+    ...(item.link ? [item.link] : []),
+    ...(item.items ? collectSidebarLinks(item.items) : []),
+  ]);
+}
+
+const v1SpecSidebarRoutes = [...new Set(
+  collectSidebarLinks(v1Sidebar)
+    .filter((link) => link.startsWith("/spec/"))
+    .filter((link) => link !== "/spec/" && link !== "/spec/host-api/")
+    .map((link) => link.replace(/\/+$/u, "")),
+)];
+
+const rootSpecSidebars = {
+  "/spec": [],
+  "/spec/host-api": [],
+  "/spec/host-api/v2": v2Sidebar,
+  ...Object.fromEntries(v1SpecSidebarRoutes.map((route) => [route, v1Sidebar])),
+};
+
+const englishSpecSidebars = {
+  "/en/spec": [],
+  "/en/spec/host-api": [],
+  "/en/spec/host-api/v2": englishSidebar(v2Sidebar),
+  ...Object.fromEntries(v1SpecSidebarRoutes.map((route) => [
+    `/en${route}`,
+    englishSidebar(v1Sidebar),
+  ])),
 };
 
 export default defineConfig({
@@ -211,22 +203,27 @@ export default defineConfig({
       description: "A common API for managing resources on servers that implement a specification published at a URL.",
       themeConfig: {
         nav: [
-          { text: "Start", link: "/en/start/" },
-          { text: "Guides", link: "/en/guides/" },
-          { text: "Host API v2", link: "/en/v2/" },
+          { text: "Home", link: "/en/" },
           { text: "Reference", link: "/en/reference/" },
+          { text: "About", link: "/en/site" },
         ],
         sidebar: {
+          ...englishSpecSidebars,
           "/en/v2/": englishSidebar(v2Sidebar),
-          "/en/spec/host-api/v2/": englishSidebar(v2Sidebar),
-          "/": [
-            ...englishSidebar([...guideSidebar, ...contractSidebar]),
-            { ...relatedSidebar, text: "Related links", items: [
-            { text: "OpenTofu / Terraform HCL quick start", link: providerQuickStart },
-            { text: "Combine with other providers", link: providerComposition },
-            { text: "GitHub", link: repository },
-            ] },
-          ],
+          "/en/start/": englishSidebar(v2Sidebar),
+          "/en/model/": englishSidebar(v2Sidebar),
+          "/en/client/": englishSidebar(v2Sidebar),
+          "/en/authoring/": englishSidebar(v2Sidebar),
+          "/en/use/": englishSidebar(v2Sidebar),
+          "/en/host-api/": englishSidebar(v2Sidebar),
+          "/en/guides/": englishSidebar(v2Sidebar),
+          "/en/glossary": englishSidebar(v2Sidebar),
+          "/en/conformance/": englishSidebar(v1Sidebar),
+          "/en/schemas/": englishSidebar(v1Sidebar),
+          "/en/v1/": englishSidebar(v1Sidebar),
+          "/en/reference/": [],
+          "/en/site": [],
+          "/": [],
         },
         footer: {
           message: 'Specifications and source code are available on <a href="https://github.com/tako0614/takoform">GitHub</a>.',
@@ -268,6 +265,17 @@ export default defineConfig({
   // default browser target list. Nothing here needs to run on a 2021 browser,
   // and building for one silently costs the pin.
   vite: {
+    resolve: {
+      alias: [
+        {
+          find: /^\.\/VPLocalSearchBox\.vue$/u,
+          replacement: path.resolve(
+            configDirectory,
+            "theme/components/VersionSearch.vue",
+          ),
+        },
+      ],
+    },
     optimizeDeps: {
       esbuildOptions: { target: DEV_OPTIMIZE_TARGET },
     },
@@ -339,15 +347,27 @@ export default defineConfig({
       },
     } } } } },
     nav: [
-      { text: "はじめる", link: "/start/" },
-      { text: "ガイド", link: "/guides/" },
-      { text: "Host API v2", link: "/v2/" },
+      { text: "トップ", link: "/" },
       { text: "仕様一覧", link: "/reference/" },
+      { text: "このサイトについて", link: "/site" },
     ],
     sidebar: {
+      ...rootSpecSidebars,
       "/v2/": v2Sidebar,
-      "/spec/host-api/v2/": v2Sidebar,
-      "/": [...guideSidebar, ...contractSidebar, relatedSidebar],
+      "/start/": v2Sidebar,
+      "/model/": v2Sidebar,
+      "/client/": v2Sidebar,
+      "/authoring/": v2Sidebar,
+      "/use/": v2Sidebar,
+      "/host-api/": v2Sidebar,
+      "/guides/": v2Sidebar,
+      "/glossary": v2Sidebar,
+      "/v1/": v1Sidebar,
+      "/conformance/": v1Sidebar,
+      "/schemas/": v1Sidebar,
+      "/reference/": [],
+      "/site": [],
+      "/": [],
     },
     socialLinks: [{ icon: "github", link: repository }],
     footer: {

@@ -25,6 +25,8 @@ v2の規範原文は英語で、現在は改訂可能です。各規範ページ
 
 ## 読む順序 {#reading}
 
+用語を確認したい場合は[v2用語集](/glossary)を参照してください。
+
 - **利用者:** [使い始める](/start/)の一連の架空HTTP walkthroughから、詳細な[要求・応答例](/spec/host-api/v2/examples)へ進みます。
 - **Form作者:** [Form要件](/spec/host-api/v2/forms)でspec・observed・outputと失敗時の意味を定義します。
 - **クライアント実装者:** [クライアント設計ガイド](/client/)で操作意図、再送期限、Operationと世代競合の扱いを読み、[HTTP再送契約](/spec/host-api/v2/http#retry)を確認します。
