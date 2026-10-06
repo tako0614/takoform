@@ -1,17 +1,17 @@
 ---
 title: Host API v2
-description: Understand v2 concepts, how to read its normative chapters, and the English source's revision and publication status.
+description: Read the Host API v2 concepts, fixed English specification and implementation guides.
 ---
 
 # Host API v2 {#v2}
 
 Host API v2 is a shared HTTP contract for creating, reading, updating, and deleting Resources managed by a Host. A Form defines Resource-specific meaning; the Host implements the Form; and the client operates with both in view.
 
-## Source and current status {#status}
+## Specification source {#status}
 
-The normative source is English and remains open to revision. Each page labels its source language and distinguishes normative requirements from explanations. The published version is at [takoform.com](https://takoform.com/en/v2/). Local copies and previews may contain different text.
+The English normative source is fixed. Changes to protocol meaning require another API major. Each page distinguishes requirements from explanations; improvements to guides and site presentation do not change the normative text.
 
-This status does not establish that a Host or implementation is running or conformant. Before using a Host or client, separately verify its operator's endpoint, authentication, and Form support.
+Before using a Host or client, verify its operator's endpoint, authentication, and Form support. Specification publication and implementation support are separate facts.
 
 ## v2 specification chapters {#chapters}
 

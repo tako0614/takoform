@@ -1,0 +1,18 @@
+{
+  "kind": "takoform.host-api.freeze",
+  "lane": "forms.takoform.com/v2",
+  "normativeProse": [
+    {
+      "path": "spec/host-api/v2/README.md",
+      "sha256": "sha256:d93d3118bf231b00066e4cf1402f3a214f7e279aa93fde56e508e593bf6dc6b8"
+    },
+    {
+      "path": "spec/host-api/v2/http.md",
+      "sha256": "sha256:2d5d272430bfea0f4daa7955d6ecc4db1a9cf4f79048fcf6737e9691126d0a1a"
+    },
+    {
+      "path": "spec/host-api/v2/forms.md",
+      "sha256": "sha256:5754a1fcca22054a5fe849128acd18ead0bd90e9e6b973daa5ae1243f4de359d"
+    }
+  ]
+}

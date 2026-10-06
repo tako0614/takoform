@@ -34,16 +34,16 @@ Takoformは、資源の仕様を作者がHTTPSで公開し、その仕様を実�
 - 競合する更新、応答喪失、再起動、結果不明・部分失敗の復旧もHTTP契約に含まれます。
 - Offering、事前確認、秘密入力は独立した任意機能です。
 
-v2の規範本文は英語で、現在は改訂可能です。別の文書バージョンや固定済みの最終版を意味しません。
-公開版は[takoform.com](https://takoform.com/v2/)で確認できます。ローカル版やプレビューは公開版と異なる場合があります。
-公開文書の改訂と、各Hostの実装対応は別の状態です。
+v1・v2の規範本文は固定されています。仕様の意味を変更する場合は、別のAPI majorで定義します。
+公開版は[takoform.com](https://takoform.com/v2/)で確認できます。解説やサイトの改善で仕様は変わりません。
+仕様の公開と、各Hostの実装対応は別の状態です。
 
 個別Formの定義・利用例は、その作者のサイトが所有します。ここには中央カタログや
 Hostの稼働状況を置きません。SDKや各Providerは独立した実装であり、仕様そのものではありません。
 
 ## 保持するv1の資料とコード
 
-v1の規範本文と公開スキーマは変更せず保持します。v2の改訂はその意味を変えません。
+v1の規範本文と公開スキーマは変更せず保持します。v2は独立した契約です。
 
 - [v1 HTTP API](spec/host-api/v1.md)と[固定範囲](spec/host-api/v1.freeze.json)
 - [v1の契約・スキーマ一覧](spec/README.md#published-host-api-v1-reference)
@@ -69,9 +69,9 @@ bun install --frozen-lockfile
 bun run check
 ```
 
-`check`は文書の境界、固定済みv1、生成元との一致、リンク、既存Goコード、サイトbuildを
+`check`は文書の境界、固定済みv1・v2、生成元との一致、リンク、既存Goコード、サイトbuildを
 確認します。公開サイトや実資源は変更しません。生成ページを直接編集せず、
-規範は`spec/host-api/v2/`、日英の解説は`website/`の対応する元ファイルを編集します。
+規範は`spec/host-api/v2/`から参照し、日英の解説は`website/`の対応する元ファイルを編集します。
 
 ```console
 bun scripts/site.mjs --write

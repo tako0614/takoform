@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-// One-way verifier for the Host API v1 normative closure. There is
-// deliberately no writer: the manifest is bootstrapped once, then its first
-// Git addition is the authority for every later check.
+// One-way verifier for the fixed Host API v1 and v2 normative sources. There
+// is deliberately no writer: each manifest's first Git addition is the
+// authority for every later check.
 
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
@@ -13,6 +13,13 @@ import { fileURLToPath } from "node:url";
 export const FREEZE_PATH = "spec/host-api/v1.freeze.json";
 export const FREEZE_KIND = "takoform.host-api.freeze";
 export const EXACT_HOST_API_LANE = "forms.takoform.com/v1";
+export const V2_FREEZE_PATH = "spec/host-api/v2.freeze.json";
+export const EXACT_V2_HOST_API_LANE = "forms.takoform.com/v2";
+export const EXPECTED_V2_NORMATIVE_PROSE = Object.freeze([
+  "spec/host-api/v2/README.md",
+  "spec/host-api/v2/http.md",
+  "spec/host-api/v2/forms.md",
+]);
 export const SCHEMA_LEDGER_PATH = "release/public-schema-identities.json";
 export const EXPECTED_NORMATIVE_PROSE = Object.freeze([
   "spec/host-api/v1.md",
@@ -142,14 +149,14 @@ function commitAccessor(root, commit) {
   };
 }
 
-function validateDigestEntries(entries, expectedPaths, label, problems) {
+function validateDigestEntries(entries, expectedPaths, label, problems, lane = "v1") {
   if (!Array.isArray(entries) || entries.length !== expectedPaths.length) {
     problems.push(`${label} must name exactly ${expectedPaths.join(", ")}`);
     return [];
   }
   const paths = entries.map((entry) => entry?.path);
   if (!sameArray(paths, expectedPaths)) {
-    problems.push(`${label} paths or order differ from the intended Host API v1 closure`);
+    problems.push(`${label} paths or order differ from the intended Host API ${lane} closure`);
   }
   for (const entry of entries) {
     if (!sameKeys(entry, EXPECTED_DIGEST_ENTRY_KEYS) || !safeRepositoryPath(entry.path) ||
@@ -395,6 +402,31 @@ function inspectTree(accessor) {
   return { problems: [...new Set(problems)], manifest, manifestBytes, schemas };
 }
 
+function inspectV2Tree(accessor) {
+  const problems = [];
+  const manifestBytes = readRequired(accessor, V2_FREEZE_PATH, problems);
+  if (manifestBytes === null) return { problems, manifestBytes };
+  const manifest = parseJSON(manifestBytes, V2_FREEZE_PATH, problems);
+  if (!sameKeys(manifest, ["kind", "lane", "normativeProse"])) {
+    problems.push(`${V2_FREEZE_PATH} must contain only kind, lane, and normativeProse`);
+    return { problems, manifestBytes };
+  }
+  if (manifest.kind !== FREEZE_KIND) problems.push(`${V2_FREEZE_PATH} kind must be ${FREEZE_KIND}`);
+  if (manifest.lane !== EXACT_V2_HOST_API_LANE) {
+    problems.push(`${V2_FREEZE_PATH} lane must be exactly ${EXACT_V2_HOST_API_LANE}`);
+  }
+  const entries = validateDigestEntries(manifest.normativeProse,
+    EXPECTED_V2_NORMATIVE_PROSE, "v2 normativeProse", problems, "v2");
+  for (const entry of entries) {
+    if (!EXPECTED_V2_NORMATIVE_PROSE.includes(entry?.path)) continue;
+    const bytes = readRequired(accessor, entry.path, problems);
+    if (bytes !== null && sha256(bytes) !== entry.sha256) {
+      problems.push(`${entry.path} differs from its frozen sha256`);
+    }
+  }
+  return { problems: [...new Set(problems)], manifestBytes };
+}
+
 export function readHostAPIFreezeManifest(root) {
   const problems = [];
   const bytes = readRequired(fileAccessor(root), FREEZE_PATH, problems);
@@ -405,7 +437,7 @@ export function readHostAPIFreezeManifest(root) {
   return manifest;
 }
 
-function repositoryHistory(root) {
+function repositoryHistory(root, manifestPath = FREEZE_PATH) {
   const inside = runGit(root, ["rev-parse", "--is-inside-work-tree"], { allowFailure: true });
   if (inside.status !== 0 || inside.stdout.trim() !== "true") {
     return { problem: `${root} is not a Git worktree` };
@@ -413,14 +445,36 @@ function repositoryHistory(root) {
   const shallow = runGit(root, ["rev-parse", "--is-shallow-repository"]).stdout.trim() === "true";
   const log = runGit(
     root,
-    ["log", "--reverse", "--format=%H", "--diff-filter=A", "--root", "HEAD", "--", FREEZE_PATH],
+    ["log", "--reverse", "--format=%H", "--diff-filter=A", "--root", "HEAD", "--", manifestPath],
     { allowFailure: true },
   );
   const commits = log.status === 0 ? log.stdout.trim().split(/\s+/u).filter(Boolean) : [];
-  const atHead = runGit(root, ["cat-file", "-e", `HEAD:${FREEZE_PATH}`], {
+  const atHead = runGit(root, ["cat-file", "-e", `HEAD:${manifestPath}`], {
     allowFailure: true,
   }).status === 0;
   return { shallow, firstAddCommit: commits[0] ?? null, atHead };
+}
+
+function compareV2FirstAdd(root, current, firstAddCommit, problems) {
+  const historical = inspectV2Tree(commitAccessor(root, firstAddCommit));
+  for (const problem of historical.problems) {
+    problems.push(`first-add commit ${firstAddCommit}: ${problem}`);
+  }
+  if (historical.manifestBytes !== null && current.manifestBytes !== null &&
+    !current.manifestBytes.equals(historical.manifestBytes)) {
+    problems.push(`${V2_FREEZE_PATH} differs from its first-add commit ${firstAddCommit}`);
+  }
+  const currentAccessor = fileAccessor(root);
+  const historicalAccessor = commitAccessor(root, firstAddCommit);
+  for (const path of EXPECTED_V2_NORMATIVE_PROSE) {
+    try {
+      if (!currentAccessor.read(path).equals(historicalAccessor.read(path))) {
+        problems.push(`${path} differs from its first-add commit ${firstAddCommit}`);
+      }
+    } catch {
+      // inspectV2Tree already reports missing current or historical source.
+    }
+  }
 }
 
 function compareFirstAdd(root, current, firstAddCommit, problems) {
@@ -468,19 +522,22 @@ function compareFirstAdd(root, current, firstAddCommit, problems) {
 export function verifyHostAPIFreeze(root, { mode = "check" } = {}) {
   if (mode !== "check" && mode !== "bootstrap") throw new Error(`unsupported mode: ${mode}`);
   const current = inspectTree(fileAccessor(root));
+  const currentV2 = inspectV2Tree(fileAccessor(root));
   let history;
+  let v2History;
   try {
     history = repositoryHistory(root);
+    v2History = repositoryHistory(root, V2_FREEZE_PATH);
   } catch (error) {
-    return { problems: [...current.problems, `cannot inspect Git history: ${error.message}`], firstAddCommit: null };
+    return { problems: [...current.problems, ...currentV2.problems, `cannot inspect Git history: ${error.message}`], firstAddCommit: null, v2FirstAddCommit: null };
   }
-  const problems = [...current.problems];
-  if (history.problem) return { problems: [...problems, history.problem], firstAddCommit: null };
+  const problems = [...current.problems, ...currentV2.problems];
+  if (history.problem || v2History.problem) return { problems: [...problems, history.problem ?? v2History.problem], firstAddCommit: null, v2FirstAddCommit: null };
   if (mode === "bootstrap") {
-    if (history.firstAddCommit !== null || history.atHead) {
+    if (history.firstAddCommit !== null || history.atHead || v2History.firstAddCommit !== null || v2History.atHead) {
       problems.push("bootstrap is forbidden after the freeze manifest entered Git history");
     }
-    return { problems: [...new Set(problems)], firstAddCommit: history.firstAddCommit };
+    return { problems: [...new Set(problems)], firstAddCommit: history.firstAddCommit, v2FirstAddCommit: v2History.firstAddCommit };
   }
   if (history.shallow) {
     problems.push("cannot prove the first-add commit from a shallow Git history");
@@ -489,7 +546,12 @@ export function verifyHostAPIFreeze(root, { mode = "check" } = {}) {
   } else {
     compareFirstAdd(root, current, history.firstAddCommit, problems);
   }
-  return { problems: [...new Set(problems)], firstAddCommit: history.firstAddCommit };
+  if (v2History.firstAddCommit === null) {
+    problems.push(`${V2_FREEZE_PATH} has no first-add commit; commit the fixed current v2 source and manifest together`);
+  } else {
+    compareV2FirstAdd(root, currentV2, v2History.firstAddCommit, problems);
+  }
+  return { problems: [...new Set(problems)], firstAddCommit: history.firstAddCommit, v2FirstAddCommit: v2History.firstAddCommit };
 }
 
 export function inspectHostAPIFreeze(root, options = {}) {
@@ -514,10 +576,10 @@ export function main(argv = process.argv.slice(2)) {
     return;
   }
   if (mode === "bootstrap") {
-    process.stdout.write("host-api-freeze: bootstrap verified the uncommitted Host API v1 closure\n");
+    process.stdout.write("host-api-freeze: bootstrap verified the uncommitted Host API v1 and v2 closures\n");
   } else {
     process.stdout.write(
-      `host-api-freeze: current bytes equal first-add commit ${result.firstAddCommit}\n`,
+      `host-api-freeze: current v1/v2 bytes equal first-add commits ${result.firstAddCommit} and ${result.v2FirstAddCommit}\n`,
     );
   }
 }

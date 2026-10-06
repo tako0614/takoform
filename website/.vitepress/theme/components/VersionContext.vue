@@ -15,16 +15,16 @@ const currentVersion = computed(() => documentVersion(currentPath.value));
 const isEnglish = computed(() => currentPath.value === "/en" || currentPath.value.startsWith("/en/"));
 const currentStatus = computed(() => {
   if (currentVersion.value === "v1") return isEnglish.value ? "Frozen" : "凍結済み";
-  if (currentVersion.value === "v2") return isEnglish.value ? "Revision-open" : "改訂可能";
+  if (currentVersion.value === "v2") return isEnglish.value ? "Fixed" : "固定済み";
   return "";
 });
 const controlLabel = computed(() => isEnglish.value
   ? currentVersion.value
     ? `Documentation version, current ${currentVersion.value}, ${currentStatus.value}`
-    : "Documentation version, v1 frozen, v2 revision-open"
+    : "Documentation version, v1 frozen, v2 fixed"
   : currentVersion.value
     ? `文書の版、現在 ${currentVersion.value}、${currentStatus.value}`
-    : "文書の版、v1凍結済み、v2改訂可能");
+    : "文書の版、v1凍結済み、v2固定済み");
 
 const options = computed(() => [
   { version: "v1", label: "API v1" },

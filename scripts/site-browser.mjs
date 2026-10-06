@@ -14,7 +14,7 @@ import {
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const v2Routes = ["/v2/", "/spec/host-api/v2/", "/spec/host-api/v2/http", "/spec/host-api/v2/forms", "/spec/host-api/v2/examples", "/spec/host-api/v2/migration"];
-const routes = ["", "/en"].flatMap((prefix) => ["/", "/v1/", "/spec/", "/spec/host-api/", "/spec/host-api/v1", "/schemas/", "/site", "/start/", "/model/", "/client/", "/authoring/", "/use/", "/host-api/", "/guides/", "/reference/", "/glossary", ...v2Routes].map((route) => `${prefix}${route}`));
+const routes = ["", "/en"].flatMap((prefix) => ["/", "/v1/", "/spec/host-api/v1", "/schemas/", "/site", "/start/", "/model/", "/client/", "/authoring/", "/use/", "/host-api/", "/guides/", "/glossary", ...v2Routes].map((route) => `${prefix}${route}`));
 const widths = [320, 375, 414, 768];
 const sidebarRoutes = [...new Set([
   ...["", "/en"].flatMap((prefix) => v2Routes.map((route) => prefix + route)),

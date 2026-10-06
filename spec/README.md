@@ -1,16 +1,17 @@
 # Takoform API and common model
 
-This non-normative index separates the v2 specification source from the
-published, frozen v1 reference. It does not add to or reinterpret either contract.
+This non-normative index separates the fixed v1 and v2 specifications.
+It does not add to or reinterpret either contract.
 
 ## Host API v2 specification
 
 The [Host API v2 specification](host-api/v2/README.md) treats publisher-owned
 HTTP specifications as Form identities and allows v2-only implementations.
-The normative source is English and remains open to revision. The published
-version is at [takoform.com](https://takoform.com/en/v2/); local copies and previews
-may differ. This is not a separate document-version stream or immutable final text. Publication and
-deployed Host support are separate facts. Published v1 remains frozen reference
+The normative source is English and fixed. The published
+version is at [takoform.com](https://takoform.com/en/v2/). Changes to protocol
+meaning require another API major; guides and presentation may improve without
+changing the contract. Publication and deployed Host support are separate facts.
+Published v1 remains frozen reference
 material; retaining it does not require new v2 Hosts or clients to implement v1.
 
 Read the v2 [overview](host-api/v2/README.md), [HTTP API](host-api/v2/http.md),

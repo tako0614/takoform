@@ -1,13 +1,14 @@
 # Takoform documentation design
 
-Approved direction: a version-neutral site, with separate v1 and v2 reading paths.
-This is a documentation interface, not a product marketing page. Its readers are
-Form authors, Host implementers and client implementers choosing the contract they need.
+Approved direction: a concise Takoform overview followed by direct v1 and v2
+documentation entries. This is a documentation interface, not a product marketing
+page. Its readers are Form authors, Host implementers and client implementers.
 
 ## Shared system
 
 - Genre: modern-minimal, technical and restrained.
-- Home: a compact version catalogue, headed by `Takoform`, not an API version.
+- Home: explain the shared resource/Form/Host/client model, then link directly to v1
+  and v2. Do not add a catalogue-status panel or an extra index layer.
 - Documentation: long-document layout with a version-scoped sidebar and outline.
 - Preserve VitePress's installed sans/mono fonts, light/dark palette, search
   launcher, language switch, footer and keyboard conventions. Do not rotate themes.
@@ -20,9 +21,10 @@ Form authors, Host implementers and client implementers choosing the contract th
 
 ## Information architecture
 
-The root describes Takoform without presenting v2 as the whole site. v2 is listed
-first, explicitly open to revision; v1 has its own visible entry, explicitly frozen.
-Neither status claims that any Host, SDK or Provider is available or conformant.
+The root is the actual Takoform overview, not a catalogue or secondary index. Primary
+navigation contains only Overview, v1 and v2. The API documentation is fixed: v1 is
+frozen and v2 is fixed. These statuses do not claim that any Host, SDK or Provider is
+available or conformant.
 
 `/v1/` and `/v2/` are the documentation entries. Existing guide and specification
 URLs remain reachable; a single route classifier assigns their version. v1 pages
@@ -32,7 +34,8 @@ prose, raw sources and JSON schemas are not rewritten for presentation.
 Every documentation page identifies its version separately from its language.
 Switch versions using explicit equivalent-page mappings only; when no equivalent
 exists, use the selected version's entry without carrying an unrelated fragment.
-Migration links explicitly name the other version. Neutral indexes may list both.
+Migration links explicitly name the other version. Shared pages remain neutral and
+do not acquire a version-specific sidebar by default.
 
 Search defaults to the page's version, or all versions on a neutral page. Readers
 can explicitly choose another scope. Filter the actual matches before truncating

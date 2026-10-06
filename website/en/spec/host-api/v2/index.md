@@ -4,7 +4,7 @@ normative: true
 canonicalSource: spec/host-api/v2/README.md
 canonicalUrl: /_source/host-api/v2/README.md.txt
 sourceLanguage: en
-releaseState: revision-open
+releaseState: published
 ---
 
 <div lang="en" class="specification-source">

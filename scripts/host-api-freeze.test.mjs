@@ -15,10 +15,12 @@ import {
   EXACT_HOST_API_LANE,
   EXPECTED_MACHINE_ROOTS,
   EXPECTED_NORMATIVE_PROSE,
+  EXPECTED_V2_NORMATIVE_PROSE,
   EXPECTED_SCHEMA_CLOSURE,
   EXPECTED_SCHEMA_ROOTS,
   FREEZE_KIND,
   FREEZE_PATH,
+  V2_FREEZE_PATH,
   inspectHostAPIFreeze,
 } from "./host-api-freeze.mjs";
 
@@ -217,11 +219,59 @@ function createFixture() {
     },
   };
   write(root, FREEZE_PATH, `${JSON.stringify(manifest, null, 2)}\n`);
+  const v2Manifest = {
+    kind: FREEZE_KIND,
+    lane: "forms.takoform.com/v2",
+    normativeProse: EXPECTED_V2_NORMATIVE_PROSE.map((path) => {
+      const bytes = `# ${path}\n`;
+      write(root, path, bytes);
+      return { path, sha256: digest(bytes) };
+    }),
+  };
+  write(root, V2_FREEZE_PATH, `${JSON.stringify(v2Manifest, null, 2)}\n`);
   write(root, "website/index.md", "# Mutable presentation\n");
-  return { root, manifest };
+  return { root, manifest, v2Manifest };
 }
 
 describe("Host API v1 immutable freeze", () => {
+  test("fixes exactly the three current English v2 normative sources without changing v1's closure", () => {
+    expect(EXPECTED_V2_NORMATIVE_PROSE).toEqual([
+      "spec/host-api/v2/README.md",
+      "spec/host-api/v2/http.md",
+      "spec/host-api/v2/forms.md",
+    ]);
+    const { root } = createFixture();
+    expect(inspectHostAPIFreeze(root, { mode: "bootstrap" })).toEqual([]);
+  });
+
+  test("rejects edited v2 source bytes and an expanded or rewritten v2 manifest", () => {
+    const { root, v2Manifest } = createFixture();
+    const path = EXPECTED_V2_NORMATIVE_PROSE[1];
+    write(root, path, "# changed HTTP contract\n");
+    expect(inspectHostAPIFreeze(root, { mode: "bootstrap" }).join("\n"))
+      .toContain(`${path} differs from its frozen sha256`);
+
+    v2Manifest.normativeProse[1].sha256 = digest("# changed HTTP contract\n");
+    v2Manifest.normativeProse.push({ path: "spec/host-api/v2/examples.md", sha256: digest("# Examples\n") });
+    write(root, V2_FREEZE_PATH, `${JSON.stringify(v2Manifest, null, 2)}\n`);
+    expect(inspectHostAPIFreeze(root, { mode: "bootstrap" }).join("\n"))
+      .toContain("v2 normativeProse must name exactly");
+  });
+
+  test("first-add history protects v2 even if its manifest and source are rewritten together", () => {
+    const { root, v2Manifest } = createFixture();
+    git(root, "add", ".");
+    git(root, "commit", "--quiet", "-m", "fixed v1 and v2 Host API");
+    expect(inspectHostAPIFreeze(root, { mode: "check" })).toEqual([]);
+    const path = EXPECTED_V2_NORMATIVE_PROSE[0];
+    const changed = "# changed v2 overview\n";
+    write(root, path, changed);
+    v2Manifest.normativeProse[0].sha256 = digest(changed);
+    write(root, V2_FREEZE_PATH, `${JSON.stringify(v2Manifest, null, 2)}\n`);
+    const problems = inspectHostAPIFreeze(root, { mode: "check" }).join("\n");
+    expect(problems).toContain(`${V2_FREEZE_PATH} differs from its first-add commit`);
+    expect(problems).toContain(`${path} differs from its first-add commit`);
+  });
   test("pins the complete semantic prose, machine, schema-root, and recursive schema closure", () => {
     expect(EXPECTED_NORMATIVE_PROSE).toEqual([
       "spec/host-api/v1.md",

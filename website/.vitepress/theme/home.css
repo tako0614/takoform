@@ -1,5 +1,4 @@
-/* Hallmark · pre-emit critique: P5 H5 E4 S5 R5 V5 */
-/* Hallmark · genre: modern-minimal · macrostructure: version catalogue · theme: VitePress default tokens · enrichment: none · nav: version-aware VitePress · footer: retained VitePress */
+/* Hallmark · genre: modern-minimal · macrostructure: product overview + direct version entries · theme: VitePress default tokens · enrichment: none · nav: VitePress native · footer: retained VitePress */
 
 .home-page {
   --home-space-1: 0.5rem;
@@ -61,17 +60,8 @@
   margin: 0;
 }
 
-.home-version {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0 var(--home-space-2);
-}
-
-.home-version span {
-  color: var(--home-muted);
-  font-size: 0.8rem;
-  white-space: nowrap;
+.home-introduction p + p {
+  margin-block-start: var(--home-space-3);
 }
 
 .home-index {
@@ -102,8 +92,7 @@
   border-block-end: 1px solid var(--home-rule);
 }
 
-.home-index a,
-.home-archive a {
+.home-index a {
   color: var(--vp-c-text-1);
   text-decoration-color: var(--home-rule);
   text-underline-offset: 0.2em;
@@ -118,8 +107,7 @@
   white-space: nowrap;
 }
 
-.home-index a:hover,
-.home-archive a:hover {
+.home-index a:hover {
   text-decoration-color: currentColor;
 }
 
@@ -128,34 +116,6 @@
   color: var(--home-muted);
   font-size: 0.9rem;
   line-height: 1.55;
-}
-
-.home-archive {
-  margin-block-start: var(--home-space-5);
-  padding-block-start: var(--home-space-2);
-  border-block-start: 1px solid var(--home-rule);
-  color: var(--home-muted);
-  font-size: 0.875rem;
-  line-height: 1.7;
-}
-
-.home-archive p {
-  max-width: 64rem;
-  margin: 0;
-}
-
-.home-archive .home-related {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0 var(--home-space-3);
-  margin-block-start: var(--home-space-1);
-}
-
-.home-related a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  white-space: nowrap;
 }
 
 @media (min-width: 56rem) {

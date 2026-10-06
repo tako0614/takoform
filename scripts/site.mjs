@@ -5,9 +5,8 @@
 // The site generator carries the frozen Host API v1/common-model closure and
 // the exact public schema bytes at the paths their $id values name. It also
 // derives clearly non-normative indexes and hand-authored presentation that
-// point at those contracts without redefining them. The English v2 source is
-// revision-open: it can be published as current documentation without freezing
-// its future text.
+// point at those contracts without redefining them. The English v2 normative
+// source is fixed as well; presentation changes do not alter either contract.
 //
 // Two rules keep it honest and are enforced below rather than reviewed:
 //
@@ -59,7 +58,6 @@ export const FROZEN_HOST_API_SPEC_DOCUMENTS = Object.freeze(
 );
 
 export const MIRRORED_SPEC_DOCUMENTS = Object.freeze([...new Set([
-  "spec/README.md",
   "spec/conformance.md",
   "spec/versioning.md",
   "spec/form-families.md",
@@ -67,7 +65,6 @@ export const MIRRORED_SPEC_DOCUMENTS = Object.freeze([...new Set([
   "spec/core/README.md",
   "spec/form-definition/README.md",
   "spec/form-package/README.md",
-  "spec/host-api/README.md",
   ...FROZEN_HOST_API_SPEC_DOCUMENTS,
   "spec/interface-contract/README.md",
   "spec/binding-contract/README.md",
@@ -77,39 +74,39 @@ export const MIRRORED_SPEC_DOCUMENTS = Object.freeze([...new Set([
   "spec/trust/README.md",
 ])]);
 
-// The current English v2 source remains revision-open rather than immutable.
-// Normative authority and publication state are separate; examples and
+// The English v2 normative source is fixed. Normative authority and
+// publication state are separate; examples and
 // migration guidance remain non-normative.
 export const V2_SPEC_DOCUMENTS = Object.freeze([
   Object.freeze({
     path: "spec/host-api/v2/README.md",
     normative: true,
     sourceLanguage: "en",
-    releaseState: "revision-open",
+    releaseState: "published",
   }),
   Object.freeze({
     path: "spec/host-api/v2/http.md",
     normative: true,
     sourceLanguage: "en",
-    releaseState: "revision-open",
+    releaseState: "published",
   }),
   Object.freeze({
     path: "spec/host-api/v2/forms.md",
     normative: true,
     sourceLanguage: "en",
-    releaseState: "revision-open",
+    releaseState: "published",
   }),
   Object.freeze({
     path: "spec/host-api/v2/examples.md",
     normative: false,
     sourceLanguage: "en",
-    releaseState: "revision-open",
+    releaseState: "published",
   }),
   Object.freeze({
     path: "spec/host-api/v2/migration.md",
     normative: false,
     sourceLanguage: "en",
-    releaseState: "revision-open",
+    releaseState: "published",
   }),
 ]);
 export const V2_SOURCE_PREFIX = "/_source/host-api/v2";
@@ -137,7 +134,6 @@ export const HAND_AUTHORED_ROUTE_SOURCES = Object.freeze([
   `${SITE_ROOT}/authoring/index.md`,
   `${SITE_ROOT}/client/index.md`,
   `${SITE_ROOT}/use/index.md`,
-  `${SITE_ROOT}/reference/index.md`,
   `${SITE_ROOT}/v1/index.md`,
   `${SITE_ROOT}/v2/index.md`,
   `${SITE_ROOT}/glossary.md`,
@@ -863,13 +859,11 @@ export function inspectRenderedSitePages(pages, servedPaths = new Set()) {
         problems.push(`${page.path} source notice disagrees with releaseState=${page.releaseState}`);
       }
     }
-    if (page.releaseState === "unpublished" || page.releaseState === "revision-open") {
+    if (page.releaseState === "published" && page.authority === "normative") {
       const notice = page.html.match(/<aside\b[^>]*class="[^"]*\bmirror-notice\b[^"]*"[^>]*>([\s\S]*?)<\/aside>/u);
-      const stateText = page.releaseState === "revision-open"
-        ? /(?:revision.open|改訂可能)/iu
-        : /(?:unpublished|未公開|公開準備中|publication is being prepared)/iu;
-      if (notice === null || !stateText.test(readableText(notice[1]))) {
-        problems.push(`${page.path} does not render its ${page.releaseState} release state`);
+      if (notice === null || !/(?:frozen|fixed|固定済み)/iu.test(readableText(notice[1])) ||
+          /(?:revision.open|open to revision|改訂可能)/iu.test(readableText(notice[1]))) {
+        problems.push(`${page.path} does not identify its fixed normative source`);
       }
     }
     if (page.sourceLanguage !== undefined &&

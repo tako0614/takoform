@@ -10,9 +10,10 @@ and [Form requirements](v2/forms.md). The [examples](v2/examples.md) show
 creation through deletion and recovery after failures. The
 [migration guide](v2/migration.md) explains the separate v1 and v2 contracts.
 
-The English source defines v2 and remains open to revision. See
-[takoform.com](https://takoform.com/en/v2/) for the published version; local copies
-and previews may differ. Publication does not certify any Host implementation.
+The English normative source defines the fixed v2 contract. See
+[takoform.com](https://takoform.com/en/v2/) for the published version.
+Guides and presentation may improve without changing its requirements.
+Publication does not certify any Host implementation.
 
 ## Retained Host API v1
 

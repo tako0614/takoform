@@ -70,4 +70,4 @@ OpenTofu向け実装の検証は
 
 - [保持するHost API v1](/spec/host-api/v1) — v1の接続先と操作。
 - [v2への移行](/spec/host-api/v2/migration) — 別のAPIとして移行するときの違い。
-- [仕様一覧](/reference/) — 実装の基準となる仕様。
+- [Host API v1](/v1/) — この適合検査の対象となる仕様。
