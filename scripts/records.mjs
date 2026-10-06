@@ -5,6 +5,12 @@ import { createHash, createPublicKey, verify } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { readdir } from "node:fs/promises";
 import { resolve } from "node:path";
+import {
+  EXACT_V2_HOST_API_LANE,
+  EXPECTED_V2_NORMATIVE_PROSE,
+  FREEZE_KIND,
+  V2_FREEZE_PATH,
+} from "./host-api-freeze.mjs";
 
 const paths = Object.freeze({
   specificationLedger: "release/specification-releases.json",
@@ -126,6 +132,23 @@ function problem(problems, message) {
   problems.push(message);
 }
 
+function isFixedV2DigestManifest(text) {
+  let manifest;
+  try {
+    manifest = JSON.parse(text);
+  } catch {
+    return false;
+  }
+  return exactKeys(manifest, ["kind", "lane", "normativeProse"]) &&
+    manifest.kind === FREEZE_KIND && manifest.lane === EXACT_V2_HOST_API_LANE &&
+    Array.isArray(manifest.normativeProse) &&
+    manifest.normativeProse.length === EXPECTED_V2_NORMATIVE_PROSE.length &&
+    manifest.normativeProse.every((entry, index) =>
+      exactKeys(entry, ["path", "sha256"]) &&
+      entry.path === EXPECTED_V2_NORMATIVE_PROSE[index] &&
+      /^sha256:[0-9a-f]{64}$/u.test(entry.sha256));
+}
+
 export function classifySpecificationPublicationSource(path, raw) {
   const text = Buffer.from(raw).toString("utf8");
   const proposalPath = typeof path === "string" && path !== proposalIndexPath &&
@@ -138,6 +161,14 @@ export function classifySpecificationPublicationSource(path, raw) {
     );
   }
   if (!proposalPath) {
+    if (path === V2_FREEZE_PATH) {
+      if (!isFixedV2DigestManifest(text)) {
+        throw new Error(`${path}: only the exact fixed-v2 digest manifest shape is permitted`);
+      }
+      // The freeze verifier owns digest and first-add byte equality; this
+      // closure permits no other v2 schema, Host, or document-version record.
+      return "fixed-v2-digest-manifest";
+    }
     const normativeV2Source = normativeV2MarkdownSources.has(path);
     const nonNormativeV2Example = nonNormativeV2ExampleSources.has(path);
     const nonNormativeV2Migration = nonNormativeV2MigrationSources.has(path);
