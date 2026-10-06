@@ -1,22 +1,22 @@
 ---
 title: Using v2
-description: APIクライアントやInfrastructure as CodeからHost API v2を利用するときの境界を説明します。
+description: Understand how API clients and Infrastructure as Code tools can use Host API v2, and what support to verify.
 ---
 
 # Using v2 {#use}
 
-Host API v2はHTTP契約です。CLI、SDK、Infrastructure as Code providerなど、どの種類のクライアントからでも利用できますが、そのソフトウェアがv2を実装していることが前提です。このサイトは特定のHost、Provider、公開Formの利用可能性を保証しません。
+Host API v2 is an HTTP contract that client software can call when it implements v2. A command-line tool, library, or Infrastructure as Code integration may act as that client. This repository documents the protocol; it does not own or certify those client adapters. Check the selected Host, Form, and client for actual support.
 
-## クライアントに必要な処理 {#client-responsibilities}
+## What a client must do {#client-responsibilities}
 
-クライアントはHostのDiscoveryから`baseUrl`と認証方法を読みます。Form URLと完全な`spec`に基づいて要求を作り、認可済みSpaceを選び、Operationを追跡します。Update/Deleteには読み取ったgenerationを付け、変更後はResourceの`observedGeneration`を確認します。詳細は[クライアントガイド](/client/)と[説明用例](/spec/host-api/v2/examples)を参照してください。
+A client reads the Host's Discovery response for its `baseUrl` and authentication scheme. It builds requests from a Form URL and complete `spec`, chooses a Space it is authorized to use, and follows the resulting Operation. Update/Delete requests carry the Resource generation that was read; after a change, the client checks `observedGeneration`. See the [client guide](/client/) and [illustrative examples](/spec/host-api/v2/examples).
 
 ## Infrastructure as Code {#infrastructure-as-code}
 
-IaCのproviderは、Resourceを宣言状態と実状態の差分として扱うだけでなく、APIの世代条件、Operation、応答喪失後の照合、削除結果もstateと一貫させる必要があります。Terraform/OpenTofuで利用するには、対象providerがHost API v2を明示的にサポートし、使うHostとForm URLにも対応しているかを確認してください。
+An IaC provider must keep its state consistent with v2's generation conditions, Operations, reconciliation after lost responses, and deletion outcomes—not just compare declared and remote values. Before using Terraform or OpenTofu, verify that the provider explicitly supports Host API v2 and the selected Host and Form URL.
 
-このサイトに案内されている既存Takoform Providerはv1向けです。v2対応Providerとして扱わないでください。従来のprovider経路を調べる場合は[v1仕様](/spec/host-api/v1)と[Providerのv1案内](https://github.com/tako0614/terraform-provider-takoform)を参照してください。
+The existing Takoform Provider linked from this site targets v1. Do not treat it as a v2 Provider. For the earlier provider path, see the [v1 specification](/spec/host-api/v1) and the [Provider's v1 guide](https://github.com/tako0614/terraform-provider-takoform).
 
-## 例と実装状況 {#examples-status}
+## Examples and implementation status {#examples-status}
 
-[v2要求・応答例](/spec/host-api/v2/examples)は架空のHostとFormを使う非規範の説明です。実運用のendpointやproviderではありません。利用前にHost運営者の認証・アクセス・Form対応の案内と、各クライアントのversioned supportを確認してください。
+The [v2 request/response examples](/spec/host-api/v2/examples) are non-normative and use a fictional Host and Form. They are not production endpoints or a provider. Before use, check the Host operator's authentication, access, and Form support information, plus the version-specific support statement for each client.

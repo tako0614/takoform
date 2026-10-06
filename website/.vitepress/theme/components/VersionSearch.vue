@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import localSearchIndex from "@localSearchIndex";
 import MiniSearch, { type SearchResult } from "minisearch";
-import { useRoute, useRouter, useData } from "vitepress";
+import { useRoute, useRouter } from "vitepress";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { defaultSearchScope, resultVersion, searchResults } from "../../search-scope.mjs";
 
@@ -10,10 +10,8 @@ type IndexedResult = SearchResult & { title?: string; titles?: string[] };
 type Index = MiniSearch<{ title: string; titles: string[] }>;
 
 const emit = defineEmits<{ (event: "close"): void }>();
-const { localeIndex } = useData();
 const route = useRoute();
 const router = useRouter();
-const english = computed(() => localeIndex.value === "en");
 const dialog = ref<HTMLDialogElement | null>(null);
 const input = ref<HTMLInputElement | null>(null);
 const query = ref("");
@@ -25,7 +23,7 @@ const results = computed(() => index.value
   ? searchResults(index.value, query.value, scope.value) as IndexedResult[]
   : []);
 
-const text = computed(() => english.value ? {
+const text = {
   search: "Search documentation",
   placeholder: "Search documentation",
   scope: "Search scope",
@@ -39,21 +37,7 @@ const text = computed(() => english.value ? {
   empty: "No results in this scope. Try all versions.",
   count: (n: number) => `${n} results`,
   common: "Common",
-} : {
-  search: "ドキュメントを検索",
-  placeholder: "ドキュメントを検索",
-  scope: "検索範囲",
-  all: "すべての版",
-  v1: "v1 と共通",
-  v2: "v2 と共通",
-  close: "検索を閉じる",
-  loading: "検索索引を読み込み中…",
-  error: "検索索引を読み込めませんでした。閉じて再度お試しください。",
-  prompt: "検索語を入力してください。",
-  empty: "この範囲には結果がありません。すべての版もお試しください。",
-  count: (n: number) => `${n} 件`,
-  common: "共通",
-});
+};
 
 let previousFocus: HTMLElement | null = null;
 let previousOverflow = "";
@@ -65,8 +49,8 @@ async function loadIndex() {
   state.value = "loading";
   index.value = null;
   try {
-    const loader = localSearchIndex[localeIndex.value as keyof typeof localSearchIndex];
-    if (!loader) throw new Error("No search index for locale");
+    const loader = localSearchIndex.root;
+    if (!loader) throw new Error("No documentation search index");
     const json = (await loader()).default;
     const loaded = MiniSearch.loadJSON<{ title: string; titles: string[] }>(json, {
       fields: ["title", "titles", "text"],
@@ -141,8 +125,7 @@ function onKeydown(event: KeyboardEvent) {
   }
 }
 
-watch([query, scope, localeIndex], () => { selected.value = 0; });
-watch(localeIndex, loadIndex, { flush: "sync" });
+watch([query, scope], () => { selected.value = 0; });
 
 onMounted(() => {
   previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;

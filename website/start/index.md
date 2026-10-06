@@ -1,15 +1,15 @@
 ---
 title: Getting started with v2
-description: 架空のKeyValueEntryを例に、DiscoveryからResourceの削除確認までを一続きでたどります。
+description: Follow one fictional KeyValueEntry through Discovery, support, create, update, and delete.
 ---
 
 # Getting started with v2 {#start}
 
-Host API v2では、FormがResourceの意味を定義し、Hostが対応するFormを実装し、クライアントがResourceを管理します。下の一連のHTTP例は架空のHost `host.example` とForm URL `https://forms.publisher.example/key-value-entry/1.0.0` を使った説明です。接続可能なサービスや実在する公開Formを示すものではありません。完全な要求・応答の記録と失敗時の分岐は[要求・応答例](/spec/host-api/v2/examples)にあります。
+Host API v2 separates the Form that defines a Resource's meaning, the Host that implements supported Forms, and the client that manages Resources. The HTTP walkthrough below uses the fictional Host `host.example` and Form URL `https://forms.publisher.example/key-value-entry/1.0.0`. It does not identify a reachable service or published Form. See the [full request/response transcript](/spec/host-api/v2/examples) for all fields and failure branches.
 
-## 1. Hostを見つけ、Formへの対応を調べる {#discover-support}
+## 1. Discover the Host and check Form support {#discover-support}
 
-Formは作者が公開する版固定URLの仕様で、Hostはその仕様を実装するサービスです。Form URLが存在するだけではHostで実行できません。まずHostのoriginから接続先と認証方式を取得し、そのHostへ正確なForm URLを問い合わせます。
+A Form is a versioned specification URL published by its author; a Host is the service that implements it. The presence of a Form URL does not mean that a Host can execute it. First discover the Host's endpoint and authentication scheme, then ask that Host about the exact Form URL.
 
 ```http
 GET /.well-known/takoform/v2 HTTP/1.1
@@ -46,11 +46,11 @@ Cache-Control: no-store
 }
 ```
 
-Discoveryの`baseUrl`をAPI接続先にし、認証案内に従います。`support`はこのHostの技術的な対応を示します。利用権限や容量を予約する応答ではありません。
+Use Discovery's `baseUrl` and follow its authentication documentation. `support` reports this Host's technical support; it does not authorize the caller or reserve capacity.
 
-## 2. Createを受理し、OperationとResourceを読む {#create-read}
+## 2. Create, then read the Operation and Resource {#create-read}
 
-クライアントが選ぶのはForm URL、利用権限のあるSpace、name、Formに沿った`spec`、そして新しい操作ごとのIdempotency-Keyです。UIDとOperation IDはHostが発行します。
+The client chooses the Form URL, an authorized Space, name, a Form-conforming `spec`, and a fresh Idempotency-Key for each new operation. The Host issues the Resource UID and Operation ID.
 
 ```http
 POST /apis/forms.takoform.com/v2/resources HTTP/1.1
@@ -80,7 +80,7 @@ Retry-After: 1
 }
 ```
 
-`202 Accepted`は「受理済み、未完了」です。`Retry-After`の後に`Location`または`op_create_1`からOperationを取得し、成功を確認してからResourceを読みます。
+`202 Accepted` means “accepted, not finished.” After `Retry-After`, read the Operation from `Location` or `op_create_1`. Once it succeeds, fetch the Resource.
 
 ```http
 GET /apis/forms.takoform.com/v2/operations/op_create_1 HTTP/1.1
@@ -117,11 +117,11 @@ Cache-Control: no-store
 }
 ```
 
-`spec`は受理された希望値、`observed`はHostが最後に確認した状態です。`generation`と`observedGeneration`が同じなら、この例ではその世代が観測済みです。Operation成功や`phase: idle`だけで、アプリケーションの稼働までは判断できません。
+`spec` is the accepted desired value; `observed` is what the Host last checked. Matching `generation` and `observedGeneration` means this generation is observed in the example. Operation success or `phase: idle` alone does not establish application health.
 
-## 3. 世代を条件に全specを更新する {#update}
+## 3. Update the full spec with a generation condition {#update}
 
-更新は差分patchではなく、新しい`spec`文書全体を送ります。読み取った世代を条件にし、別の操作なので新しいキーを使います。
+Update replaces the complete `spec` document; it is not a patch. Send the generation you read and use a new key because this is a new operation.
 
 ```http
 PUT /apis/forms.takoform.com/v2/resources/r_1 HTTP/1.1
@@ -147,11 +147,11 @@ Retry-After: 1
 }
 ```
 
-Operation `op_update_1`が完了状態になるまで確認し、Resource `r_1`を再取得します。更新が完了した例では`generation`と`observedGeneration`がともに2、`spec.value`と観測した`observed.value`が`welcome`です。最新世代が1でなければ、この古い要求を新世代へ付け替えず、Resourceを読み直して変更意図を組み立て直します。
+Follow `op_update_1` to a terminal state and fetch Resource `r_1` again. In the successful example, both generations are 2 and the desired `spec.value` and observed `observed.value` are `welcome`. If the current generation is no longer 1, do not attach this stale request to the newer generation: reread the Resource and reconstruct the intended change.
 
-## 4. 世代2を条件に削除する {#delete}
+## 4. Delete with generation 2 {#delete}
 
-Resourceの最新generationを確認した後、その値でDeleteを要求します。削除もOperationで追跡します。
+After confirming the current Resource generation, use that value for Delete. Deletion is also tracked by an Operation.
 
 ```http
 DELETE /apis/forms.takoform.com/v2/resources/r_1 HTTP/1.1
@@ -174,8 +174,8 @@ Retry-After: 1
 }
 ```
 
-`op_delete_1`を読み、成功を確認します。その後のResourceのGETは、Hostが削除記録を保持する場合は`410 Gone`、保持しない場合は`404 Not Found`になり得ます。削除結果の根拠にはOperationを使い、404/410だけから実行先への効果を推測しません。要求・応答の全項目と失敗時の復旧経路は[HTTP API](/spec/host-api/v2/http)と[完全な例](/spec/host-api/v2/examples)を参照してください。
+Read `op_delete_1` and confirm success. A later Resource GET may return `410 Gone` if this Host retains a deletion marker or `404 Not Found` otherwise. Use the Operation as the evidence of the deletion result; do not infer backend effects from 404/410 alone. For the complete message shapes and recovery alternatives, see the [HTTP API](/spec/host-api/v2/http) and [full examples](/spec/host-api/v2/examples).
 
-## Host実装者が持つべき耐久性 {#host-implementers}
+## Host implementers {#host-implementers}
 
-受理済みOperation、Idempotency-Keyとの対応、Resource UIDとgeneration、最後に確認したobserved状態を、プロセス再起動後も追跡できる必要があります。HTTP処理が終わった後にworkerが進行する場合も、未処理・実行中・結果不明を区別して再開します。詳細は[Host実装ガイド](/host-api/)を参照してください。
+An accepted Operation, its Idempotency-Key mapping, Resource UID and generation, and last verified observation must remain traceable across process restart. If a worker continues work after the HTTP handler returns, it must distinguish queued, running, and unknown outcomes on recovery. See the [Host implementation guide](/host-api/).

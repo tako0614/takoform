@@ -50,12 +50,12 @@ describe("version-separated documentation navigation", () => {
     }
   });
 
-  test("switches to a locale-matched version entry unless the page is already in that version", () => {
-    expect(versionTarget("/en/client/#intent?view=compact", "v2")).toBe("/en/client/");
+  test("switches to the canonical version entry unless the page is already in that version", () => {
+    expect(versionTarget("/en/client/#intent?view=compact", "v2")).toBe("/client/");
     expect(versionTarget("/spec/host-api/v1#wire", "v1")).toBe("/spec/host-api/v1");
     expect(versionTarget("/client/#intent", "v1")).toBe("/v1/");
-    expect(versionTarget("/en/spec/host-api/v1#wire", "v2")).toBe("/en/v2/");
-    expect(versionTarget("/en/reference/#anything", "v1")).toBe("/en/v1/");
+    expect(versionTarget("/en/spec/host-api/v1#wire", "v2")).toBe("/v2/");
+    expect(versionTarget("/en/reference/#anything", "v1")).toBe("/v1/");
     expect(versionTarget("/spec/host-api/", "v1")).toBe("/v1/");
     expect(() => versionTarget("/", "v3")).toThrow(TypeError);
   });
@@ -100,26 +100,14 @@ describe("version-separated documentation navigation", () => {
     checkEnglishLabels(rootSidebar["/v2/"]);
     expect(rootSidebar["/v1/"][0].text).toBe("Host API v1");
     expect(rootSidebar["/reference/"]).toBeUndefined();
-    const englishSidebar = config.locales.en.themeConfig.sidebar;
-    expect(englishSidebar["/en/reference/"]).toBeUndefined();
-    expect(getSidebar(englishSidebar, "/en/spec/")).toEqual([]);
-    expect(getSidebar(englishSidebar, "/en/spec/host-api/")).toEqual([]);
-    expect(getSidebar(englishSidebar, "/en/spec/host-api/v1.html"))
-      .toEqual(englishSidebar["/en/spec/host-api/v1"]);
-    expect(config.locales.en.themeConfig.nav.map((item) => item.link))
-      .toEqual(["/en/"]);
-    expect(config.locales.en.themeConfig.nav.map((item) => item.text))
-      .toEqual(["Overview"]);
-    expect(englishSidebar["/en/v1/"][0].text).toBe("Host API v1");
+    expect(config.lang).toBe("en");
+    expect(config.locales).toBeUndefined();
 
     const versionContext = readFileSync("website/.vitepress/theme/components/VersionContext.vue", "utf8");
     const mirrorNotice = readFileSync("website/.vitepress/theme/components/MirrorNotice.vue", "utf8");
     const v1Page = readFileSync("website/v1/index.md", "utf8");
-    const enV1Page = readFileSync("website/en/v1/index.md", "utf8");
     const v2Page = readFileSync("website/v2/index.md", "utf8");
-    const enV2Page = readFileSync("website/en/v2/index.md", "utf8");
     const sitePage = readFileSync("website/site.md", "utf8");
-    const enSitePage = readFileSync("website/en/site.md", "utf8");
     const layout = readFileSync("website/.vitepress/theme/Layout.vue", "utf8");
     expect(versionContext).not.toContain("version-status");
     expect(versionContext).not.toContain("frozen");
@@ -139,22 +127,16 @@ describe("version-separated documentation navigation", () => {
     expect(mirrorNotice).toContain("original");
     expect(mirrorNotice).not.toContain("frozen");
     expect(mirrorNotice).not.toContain("fixed");
-    expect(v1Page).toContain("HTTP API仕様");
-    expect(v2Page).toContain("仕様を読む");
+    expect(v1Page).toContain("HTTP API");
+    expect(v2Page).toContain("Read the specification");
     expect(v1Page).not.toContain("frozen");
     expect(v1Page).not.toContain("凍結");
-    expect(enV1Page).not.toContain("frozen");
     expect(v2Page).not.toContain("fixed");
     expect(v2Page).not.toContain("固定済み");
-    expect(enV2Page).not.toContain("fixed");
-    expect(sitePage).toContain("言語の選択は版とは別");
-    expect(sitePage).toContain("規範と解説を分けて");
-    expect(enSitePage).toContain("Language is a separate choice");
-    expect(enSitePage).toContain("distinguishes normative text from explanation");
+    expect(sitePage).toContain("All documentation is in English.");
+    expect(sitePage).toContain("distinguishes normative text from explanation");
     expect(sitePage).not.toContain("固定済み");
     expect(sitePage).not.toContain("凍結済み");
-    expect(enSitePage).not.toContain("frozen");
-    expect(enSitePage).not.toContain("fixed");
     expect(layout).toContain("#nav-bar-content-after");
     expect(layout).not.toContain("nav-screen-content-after");
   });

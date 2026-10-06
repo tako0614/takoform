@@ -28,6 +28,7 @@ import {
   SCHEMA_IDENTITY_ORIGIN,
   SCHEMA_LEDGER_PATH,
   SITE_DIST,
+  LEGACY_ENGLISH_REDIRECTS,
   V2_SPEC_DOCUMENTS,
   distDigest,
   inspectDist,
@@ -86,13 +87,11 @@ export const PAGE_READBACK_ROUTES = Object.freeze([
   "/sitemap.xml",
 ]);
 export const V1_RETENTION_ROUTES = Object.freeze([
-  "/spec/host-api/v1", "/en/spec/host-api/v1",
+  "/spec/host-api/v1",
 ]);
 export const V2_NORMATIVE_ROUTES = Object.freeze(
-  V2_SPEC_DOCUMENTS.filter((document) => document.normative).flatMap((document) => [
-    siteRouteForV2SpecDocument(document.path, "ja"),
-    siteRouteForV2SpecDocument(document.path, "en"),
-  ]),
+  V2_SPEC_DOCUMENTS.filter((document) => document.normative).map((document) =>
+    siteRouteForV2SpecDocument(document.path)),
 );
 export const V2_RAW_SOURCE_ROUTES = Object.freeze(
   V2_SPEC_DOCUMENTS.filter((document) => document.normative).map((document) =>
@@ -104,8 +103,14 @@ const INITIAL_V2_RAW_SOURCE_DIGESTS = Object.freeze(Object.fromEntries(
   ]),
 ));
 export const SITE_CONTRACT_READBACK_ROUTES = Object.freeze([
-  ...PAGE_READBACK_ROUTES, ...V1_RETENTION_ROUTES, ...V2_NORMATIVE_ROUTES,
+  ...new Set([...PAGE_READBACK_ROUTES, ...V1_RETENTION_ROUTES,
+    ...V2_NORMATIVE_ROUTES, ...LEGACY_ENGLISH_REDIRECTS.map(({ to }) => to)]),
 ]);
+const LEGACY_QUERY_PROBE = Object.freeze({
+  from: "/en/spec/host-api/v2/forms?legacy=readback&keep=%2F",
+  to: "/spec/host-api/v2/forms?legacy=readback&keep=%2F",
+  canonical: "/spec/host-api/v2/forms",
+});
 // Kept as an import-compatible name for callers that used the original page
 // sample. It deliberately contains no schema routes now.
 export const READBACK_ROUTES = PAGE_READBACK_ROUTES;
@@ -507,6 +512,124 @@ async function readbackDigests(
   return digests;
 }
 
+function exactLegacyLocation(origin, route, target, response) {
+  const location = response.headers?.get?.("location");
+  if (location !== target && location !== `${origin}${target}`) {
+    throw new Error(
+      `readback of ${origin}${route} redirected to ${JSON.stringify(location ?? null)}, not exact same-origin ${target}`,
+    );
+  }
+}
+
+function discardRedirectBody(response) {
+  try {
+    const cancellation = response.body?.cancel?.();
+    if (cancellation?.catch) void cancellation.catch(() => {});
+  } catch {
+    // A redirect's body is not authority; refusal/readback uses status and Location.
+  }
+}
+
+async function readbackInBatches(entries, readOne) {
+  const found = [];
+  for (let start = 0; start < entries.length; start += 8) {
+    found.push(...await Promise.all(entries.slice(start, start + 8).map(readOne)));
+  }
+  return found;
+}
+
+async function readLegacyEnglishRoutes(fetchImpl, origin, signal) {
+  const redirects = {};
+  const found = await readbackInBatches(LEGACY_ENGLISH_REDIRECTS, async ({ from, to }) => {
+    const response = await fetchImpl(`${origin}${from}`, {
+      headers: { "cache-control": "no-cache", pragma: "no-cache" },
+      redirect: "manual",
+      ...(signal === undefined ? {} : { signal }),
+    });
+    discardRedirectBody(response);
+    if (response.status !== 301) {
+      throw new Error(`readback of ${origin}${from} returned HTTP ${response.status}, not 301`);
+    }
+    exactLegacyLocation(origin, from, to, response);
+    return { from, to };
+  });
+  for (const { from, to } of found) redirects[from] = to;
+  return redirects;
+}
+
+async function readPriorLegacyProjection(fetchImpl, origin, signal) {
+  const probe = "/en/spec/host-api/v1";
+  const response = await fetchImpl(`${origin}${probe}`, {
+    headers: { "cache-control": "no-cache", pragma: "no-cache" },
+    redirect: "manual",
+    ...(signal === undefined ? {} : { signal }),
+  });
+  if (response.status === 301) {
+    discardRedirectBody(response);
+    exactLegacyLocation(origin, probe, "/spec/host-api/v1", response);
+    return { mode: "redirected", routes: await readLegacyEnglishRoutes(fetchImpl, origin, signal),
+      releaseStates: new Set() };
+  }
+  if (response.status !== 200) {
+    discardRedirectBody(response);
+    throw new Error(`${origin}${probe} returned HTTP ${response.status}, not historical 200 or current 301`);
+  }
+  // The old bilingual site's logical English pages are direct 200 responses.
+  // Its .html, index.html, and no-slash directory aliases can be Pages 308s;
+  // do not mistake those for a partial conversion or disqualify that rollback.
+  const routes = { [probe]: sha256(Buffer.from(await response.arrayBuffer())) };
+  const releaseStates = new Set();
+  const logicalRoutes = LEGACY_ENGLISH_REDIRECTS.filter(({ from, to }) =>
+    (from === "/en/" || (to !== "/" && from === `/en${to}`)) && from !== probe);
+  const directPages = await readbackInBatches(logicalRoutes, async ({ from: route }) => {
+    const oldPage = await fetchImpl(`${origin}${route}`, {
+      headers: { "cache-control": "no-cache", pragma: "no-cache" },
+      redirect: "manual",
+      ...(signal === undefined ? {} : { signal }),
+    });
+    if (oldPage.status !== 200) {
+      throw new Error(`${origin}${route} returned HTTP ${oldPage.status}, not historical 200`);
+    }
+    const body = Buffer.from(await oldPage.arrayBuffer());
+    if (V2_NORMATIVE_ROUTES.some((canonical) => route === `/en${canonical}`)) {
+      const states = [...body.toString("utf8").matchAll(/\bdata-release-state="([^"]+)"/gu)];
+      if (states.length !== 1 || !["published", "revision-open"].includes(states[0][1])) {
+        throw new Error(`${origin}${route} lacks one published or revision-open v2 marker`);
+      }
+      return { route, digest: sha256(body), releaseState: states[0][1] };
+    }
+    return { route, digest: sha256(body), releaseState: null };
+  });
+  for (const { route, digest, releaseState } of directPages) {
+    routes[route] = digest;
+    if (releaseState !== null) releaseStates.add(releaseState);
+  }
+  return { mode: "bilingual", routes, releaseStates };
+}
+
+async function verifyLegacyEnglishRedirects(fetchImpl, origin, expectedPages, signal) {
+  for (const { to } of LEGACY_ENGLISH_REDIRECTS) {
+    if (expectedPages[to] === undefined) {
+      throw new Error(`missing exact canonical readback for legacy English target ${to}`);
+    }
+  }
+  const redirects = await readLegacyEnglishRoutes(fetchImpl, origin, signal);
+  const probe = await fetchImpl(`${origin}${LEGACY_QUERY_PROBE.from}`, {
+    headers: { "cache-control": "no-cache", pragma: "no-cache" },
+    redirect: "manual",
+    ...(signal === undefined ? {} : { signal }),
+  });
+  discardRedirectBody(probe);
+  if (probe.status !== 301) {
+    throw new Error(`readback of ${origin}${LEGACY_QUERY_PROBE.from} returned HTTP ${probe.status}, not 301`);
+  }
+  exactLegacyLocation(origin, LEGACY_QUERY_PROBE.from, LEGACY_QUERY_PROBE.to, probe);
+  await verifyExactRoutes(fetchImpl, origin,
+    { [LEGACY_QUERY_PROBE.to]: expectedPages[LEGACY_QUERY_PROBE.canonical] },
+    `the canonical query target at ${origin}`, { redirect: "manual", signal });
+  return redirects;
+}
+
 async function requireAbsentRoutes(fetchImpl, origin, routes, { signal } = {}) {
   for (const route of routes) {
     const response = await fetchImpl(`${origin}${route}`, {
@@ -593,16 +716,22 @@ async function readV2Projection(fetchImpl, origin, signal) {
     }
     (V2_RAW_SOURCE_ROUTES.includes(route) ? sources : pages)[route] = sha256(body);
   }
+  const legacy = await readPriorLegacyProjection(fetchImpl, origin, signal);
+  for (const state of legacy.releaseStates) releaseStates.add(state);
   if (releaseStates.size !== 1) {
     throw new Error(`${origin} mixes v2 release states across normative pages`);
   }
-  return { pages, sources, releaseState: [...releaseStates][0] };
+  return {
+    pages, sources, releaseState: [...releaseStates][0],
+    legacy: { mode: legacy.mode, routes: legacy.routes },
+  };
 }
 
 function sameProjection(left, right) {
   return left.releaseState === right.releaseState &&
     JSON.stringify(left.pages) === JSON.stringify(right.pages) &&
-    JSON.stringify(left.sources) === JSON.stringify(right.sources);
+    JSON.stringify(left.sources) === JSON.stringify(right.sources) &&
+    JSON.stringify(left.legacy) === JSON.stringify(right.legacy);
 }
 
 async function requirePriorV2Projection(fetchImpl, candidate, schemas) {
@@ -656,8 +785,12 @@ async function verifyFullDeployment(fetchImpl, origin, expected, options = {}) {
   );
   const sources = expected.sources === undefined ? undefined : await verifyExactRoutes(
     fetchImpl, origin, expected.sources, `the deployment ${origin}`, { ...options, redirect: "manual" });
-  await requireAbsentRoutes(fetchImpl, origin, ABSENT_ROUTES, options);
-  return { pages, schemas, ...(sources === undefined ? {} : { sources }), absent: ABSENT_ROUTES };
+  const redirects = expected.redirects === undefined ? undefined :
+    await verifyLegacyEnglishRedirects(fetchImpl, origin, expected.pages, options.signal);
+  const absent = expected.absentRoutes ?? ABSENT_ROUTES;
+  await requireAbsentRoutes(fetchImpl, origin, absent, options);
+  return { pages, schemas, ...(sources === undefined ? {} : { sources }),
+    ...(redirects === undefined ? {} : { redirects }), absent };
 }
 
 async function verifyApex(fetchImpl, expectedPages, options = {}) {
@@ -671,8 +804,12 @@ async function verifyApex(fetchImpl, expectedPages, options = {}) {
   const sources = options.sources === undefined ? undefined : await verifyExactRoutes(
     fetchImpl, SITE_PUBLIC_ORIGIN, options.sources, `the public alias ${SITE_PUBLIC_ORIGIN}`,
     { ...options, redirect: "manual" });
-  await requireAbsentRoutes(fetchImpl, SITE_PUBLIC_ORIGIN, ABSENT_ROUTES, options);
-  return { pages, ...(sources === undefined ? {} : { sources }), absent: ABSENT_ROUTES };
+  const redirects = options.redirects === undefined ? undefined :
+    await verifyLegacyEnglishRedirects(fetchImpl, SITE_PUBLIC_ORIGIN, expectedPages, options.signal);
+  const absent = options.absentRoutes ?? ABSENT_ROUTES;
+  await requireAbsentRoutes(fetchImpl, SITE_PUBLIC_ORIGIN, absent, options);
+  return { pages, ...(sources === undefined ? {} : { sources }),
+    ...(redirects === undefined ? {} : { redirects }), absent };
 }
 
 async function verifyWww(fetchImpl, expectedPages, options = {}) {
@@ -686,8 +823,12 @@ async function verifyWww(fetchImpl, expectedPages, options = {}) {
   const sources = options.sources === undefined ? undefined : await verifyExactRoutes(
     fetchImpl, SITE_WWW_ORIGIN, options.sources, `the public alias ${SITE_WWW_ORIGIN}`,
     { ...options, redirect: "manual" });
-  await requireAbsentRoutes(fetchImpl, SITE_WWW_ORIGIN, ABSENT_ROUTES, options);
-  return { pages, ...(sources === undefined ? {} : { sources }), absent: ABSENT_ROUTES };
+  const redirects = options.redirects === undefined ? undefined :
+    await verifyLegacyEnglishRedirects(fetchImpl, SITE_WWW_ORIGIN, expectedPages, options.signal);
+  const absent = options.absentRoutes ?? ABSENT_ROUTES;
+  await requireAbsentRoutes(fetchImpl, SITE_WWW_ORIGIN, absent, options);
+  return { pages, ...(sources === undefined ? {} : { sources }),
+    ...(redirects === undefined ? {} : { redirects }), absent };
 }
 
 async function verifySchemaOrigin(fetchImpl, expectedSchemas, options = {}) {
@@ -1214,8 +1355,10 @@ async function pollReadbacks(checks, config, label) {
 async function pollProductionAliases(fetchImpl, expected, config) {
   return await pollReadbacks(
     [
-      ["apex", (signal) => verifyApex(fetchImpl, expected.pages, { signal, sources: expected.sources })],
-      ["www", (signal) => verifyWww(fetchImpl, expected.pages, { signal, sources: expected.sources })],
+      ["apex", (signal) => verifyApex(fetchImpl, expected.pages,
+        { signal, sources: expected.sources, redirects: expected.redirects, absentRoutes: expected.absentRoutes })],
+      ["www", (signal) => verifyWww(fetchImpl, expected.pages,
+        { signal, sources: expected.sources, redirects: expected.redirects, absentRoutes: expected.absentRoutes })],
       ["forms", (signal) => verifySchemaOrigin(fetchImpl, expected.schemas, { signal })],
     ],
     config,
@@ -1274,11 +1417,12 @@ export async function runSiteDeploy(parsed, options = {}) {
     const expected = {
       pages: localPageDigests(root, PAGE_READBACK_ROUTES),
       schemas: localSchemaDigests(root, schemaEntries),
+      absentRoutes: ABSENT_ROUTES,
     };
     const readback = {
       immutable: await verifyFullDeployment(fetchImpl, parsed.deploymentUrl, expected),
-      apex: await verifyApex(fetchImpl, expected.pages),
-      www: await verifyWww(fetchImpl, expected.pages),
+      apex: await verifyApex(fetchImpl, expected.pages, { absentRoutes: ABSENT_ROUTES }),
+      www: await verifyWww(fetchImpl, expected.pages, { absentRoutes: ABSENT_ROUTES }),
       forms: await verifySchemaOrigin(fetchImpl, expected.schemas),
     };
     return {
@@ -1300,6 +1444,7 @@ export async function runSiteDeploy(parsed, options = {}) {
   const schemaPartition = parsed.initialCutover
     ? requireInitialCutoverPartition(schemaEntries)
     : null;
+  const absentRoutes = ABSENT_ROUTES;
 
   const plan = {
     surface,
@@ -1318,7 +1463,8 @@ export async function runSiteDeploy(parsed, options = {}) {
       immutable: {
         exact: [...pageReadbackRoutes, ...(v2SiteSurface ? V2_RAW_SOURCE_ROUTES : []),
           ...schemaEntries.map(({ route }) => route)],
-        absent: ABSENT_ROUTES,
+        ...(v2SiteSurface ? { redirects: LEGACY_ENGLISH_REDIRECTS, queryRedirect: LEGACY_QUERY_PROBE } : {}),
+        absent: absentRoutes,
       },
       production: parsed.initialCutover
         ? {
@@ -1330,8 +1476,10 @@ export async function runSiteDeploy(parsed, options = {}) {
           apexPages: pageReadbackRoutes,
           wwwPages: pageReadbackRoutes,
           ...(v2SiteSurface ? { v2RawSources: V2_RAW_SOURCE_ROUTES } : {}),
-          apexAbsent: ABSENT_ROUTES,
-          wwwAbsent: ABSENT_ROUTES,
+          ...(v2SiteSurface ? { legacyEnglishRedirects: LEGACY_ENGLISH_REDIRECTS,
+            queryRedirect: LEGACY_QUERY_PROBE } : {}),
+          apexAbsent: absentRoutes,
+          wwwAbsent: absentRoutes,
           schemas: schemaEntries.map(({ route }) => route),
         },
     },
@@ -1402,6 +1550,8 @@ export async function runSiteDeploy(parsed, options = {}) {
     pages: localPageDigests(root, pageReadbackRoutes),
     schemas: localSchemaDigests(root, schemaEntries),
     ...(v2SiteSurface ? { sources: localDigests(root, V2_RAW_SOURCE_ROUTES) } : {}),
+    ...(v2SiteSurface ? { redirects: LEGACY_ENGLISH_REDIRECTS } : {}),
+    absentRoutes,
   };
 
   if (v2SiteSurface && parsed.environment === "production") {
@@ -1546,7 +1696,7 @@ export async function runSiteDeploy(parsed, options = {}) {
     deploymentUrl,
     ...(parsed.environment === "production" ? { productionDeploymentVerified } : {}),
     readback,
-    absentRoutes: ABSENT_ROUTES,
+    absentRoutes,
     publicOriginsVerified: [],
   };
 

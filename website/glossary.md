@@ -1,50 +1,50 @@
 ---
 title: Glossary
-description: Host API v2の主要語を、FormとHostの責任分担に沿って説明します。
+description: Key Host API v2 terms, organized around the distinction between Form and Host responsibilities.
 ---
 
 # Glossary {#glossary}
 
 ## Form {#form}
 
-作者が公開する版固定URLの仕様。Resourceの意味と操作の条件を定めます。Hostや実行環境そのものではありません。
+A versioned specification URL published by its author. It defines Resource meaning and operation requirements; it is not itself a Host or execution environment.
 
 ## Host {#host}
 
-Formを実装し、認証されたクライアントへResource APIを提供するサービス。特定Formのサポート状況はHostごとに異なります。
+A service that implements Forms and exposes a Resource API to authenticated clients. Support for a particular Form varies by Host.
 
 ## Resource {#resource}
 
-Hostが管理する対象。UID、Form URL、Space、name、generation、`spec`、`observed`、`output`などを持ちます。
+An object managed by a Host. It has a UID, Form URL, Space, name, generation, `spec`, `observed`, `output`, and other fields defined by the contract.
 
 ## spec {#spec}
 
-Resourceの受理済み希望状態。Updateでは文書全体を置き換えます。
+The accepted desired state of a Resource. Update replaces the complete document.
 
 ## observed {#observed}
 
-Hostが最後に確認した状態。specの希望世代に追いついていない場合があります。
+The latest state checked by the Host. It can lag behind the desired generation.
 
 ## output {#output}
 
-Formが意味を定める操作結果や接続情報。空である場合もあります。
+Operation results or connection information whose meaning is defined by the Form. It may be empty.
 
 ## generation / observedGeneration {#generation-observedgeneration}
 
-generationは受理された希望状態の世代です。observedGenerationはobservedが反映する世代を示します。
+`generation` identifies an accepted desired-state version. `observedGeneration` identifies the version reflected by `observed`.
 
 ## Operation {#operation}
 
-Create、Update、Deleteの進行と結果を表す記録。クライアントはOperationを読み、必要に応じてResourceの状態を再取得します。
+A record of progress and outcome for Create, Update, or Delete. A client reads it and may fetch the Resource again.
 
 ## Idempotency-Key {#idempotency-key}
 
-同じ要求の再送を識別するクライアント指定キー。同じキーを使う再送では、元の要求内容も同じでなければなりません。
+A client-provided key that identifies retries of the same request. A retry using the key must preserve the original request contents.
 
 ## Space {#space}
 
-Host内のResourceスコープ。Spaceを指定すること自体は、そのSpaceを使う権限を与えません。
+A Resource scope within a Host. Naming a Space does not grant permission to use it.
 
-## v1専用語 {#v1-terms}
+## v1-only terms {#v1-terms}
 
-FormRef、Form Package、Snapshot、revision、schemaDigestは凍結されたv1契約の語彙です。v2のForm URLやResource generationと同一視せず、詳細は[凍結v1仕様](/spec/host-api/v1)で確認してください。
+FormRef, Form Package, Snapshot, revision, and `schemaDigest` belong to the frozen v1 contract. They are not synonyms for a v2 Form URL or Resource generation. See the [frozen v1 specification](/spec/host-api/v1).

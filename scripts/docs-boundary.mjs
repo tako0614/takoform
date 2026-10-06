@@ -71,11 +71,9 @@ const hostApiV2Token = /\bforms\.takoform\.com\/v2(?:[^A-Za-z0-9_]|$)/iu;
 // unrelated document into a new contract.
 const v2DocumentPaths = new Set([
   ...["README", "http", "forms", "examples", "migration"].map((name) => `spec/host-api/v2/${name}.md`),
-  ...["", "en/"].flatMap((locale) => [
-    `website/${locale}v2/index.md`,
-    ...["start", "model", "client", "authoring", "use", "host-api", "guides", "reference"].map((name) => `website/${locale}${name}/index.md`),
-    ...["index", "http", "forms", "examples", "migration"].map((name) => `website/${locale}spec/host-api/v2/${name}.md`),
-  ]),
+  "website/v2/index.md",
+  ...["start", "model", "client", "authoring", "use", "host-api", "guides"].map((name) => `website/${name}/index.md`),
+  ...["index", "http", "forms", "examples", "migration"].map((name) => `website/spec/host-api/v2/${name}.md`),
 ]);
 
 const hostApi11Token =

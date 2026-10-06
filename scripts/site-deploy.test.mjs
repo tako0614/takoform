@@ -32,7 +32,7 @@ import {
   runSiteDeploy,
 } from "./site-deploy.mjs";
 import { EXPECTED_V2_NORMATIVE_PROSE, INITIAL_V2_NORMATIVE_SHA256, V2_FREEZE_PATH } from "./host-api-freeze.mjs";
-import { SCHEMA_LEDGER_PATH, SITE_DIST, v2NormativeSourceRoute } from "./site.mjs";
+import { LEGACY_ENGLISH_REDIRECTS, SCHEMA_LEDGER_PATH, SITE_DIST, v2NormativeSourceRoute } from "./site.mjs";
 
 const HEAD = "a".repeat(40);
 const DEPLOYMENT = "https://1a2b3c4d.takoform-site.pages.dev";
@@ -44,6 +44,7 @@ const SCHEMA_LEDGER = JSON.parse(
 );
 const SCHEMA_ENTRIES = [...SCHEMA_LEDGER.identities, ...SCHEMA_LEDGER.retired];
 const SCHEMA_ROUTES = SCHEMA_ENTRIES.map(({ id }) => new URL(id).pathname);
+const LEGACY_ENGLISH_TARGETS = new Map(LEGACY_ENGLISH_REDIRECTS.map(({ from, to }) => [from, to]));
 const EXPECTED_INITIAL_ABSENT_ROUTES = [
   "/schemas/v1/form-package-revocation-checkpoint.schema.json",
   "/schemas/v1/form-package-revocation.schema.json",
@@ -204,7 +205,7 @@ function gitRunner({
 
 function localBody(root, route) {
   const fileRoute = route === "/" ? "/index.html" :
-    SITE_CONTRACT_READBACK_ROUTES.includes(route) && route !== "/sitemap.xml"
+    (SITE_CONTRACT_READBACK_ROUTES.includes(route) || LEGACY_ENGLISH_TARGETS.has(route)) && route !== "/sitemap.xml"
       ? route.endsWith("/") ? `${route}index.html` : `${route}.html`
       : route;
   return readFileSync(join(root, `${SITE_DIST}${fileRoute}`));
@@ -214,6 +215,7 @@ function servingFetch(root, {
   events = [],
   oldFormsPartition = false,
   override = new Map(),
+  legacyMode = "redirect",
 } = {}) {
   return async (url, init = {}) => {
     events.push(`fetch:${url}`);
@@ -222,6 +224,16 @@ function servingFetch(root, {
     const replacement = override.get(url);
     if (replacement !== undefined) return replacement;
     if (ABSENT_ROUTES.includes(route)) return { ok: false, status: 404 };
+    if (["/en/reference/", "/en/spec/", "/en/spec/host-api/"].includes(route)) {
+      return { ok: false, status: 404 };
+    }
+    if (LEGACY_ENGLISH_TARGETS.has(route)) {
+      expect(init.redirect).toBe("manual");
+      return legacyMode === "direct"
+        ? { ok: true, status: 200, arrayBuffer: async () => localBody(root, route) }
+        : { ok: false, status: 301,
+          headers: new Headers({ location: `${LEGACY_ENGLISH_TARGETS.get(route)}${parsed.search}` }) };
+    }
     if (
       oldFormsPartition &&
       parsed.origin === SCHEMA_PUBLIC_ORIGIN &&
@@ -260,12 +272,20 @@ function priorRevisionRoot({ changeSource = true, initialSource = false, state =
     writeFileSync(join(root, `${SITE_DIST}${fileRoute}`),
       `<aside data-release-state="${state}">previous page for ${route}</aside>`);
   }
+  for (const { from } of LEGACY_ENGLISH_REDIRECTS) {
+    const fileRoute = from.endsWith("/") ? `${from}index.html` : `${from}.html`;
+    const file = join(root, `${SITE_DIST}${fileRoute}`);
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, V2_NORMATIVE_ROUTES.some((route) => from === `/en${route}`)
+      ? `<aside data-release-state="${state}">previous English page for ${from}</aside>`
+      : `previous English page for ${from}`);
+  }
   return root;
 }
 
 function changedRevisionFetch(currentRoot, priorRoot, run, options = {}) {
   const current = servingFetch(currentRoot, options);
-  const prior = servingFetch(priorRoot, options);
+  const prior = servingFetch(priorRoot, { ...options, legacyMode: "direct" });
   return (url, init) => {
     const origin = new URL(url).origin;
     const uploaded = run.calls.some(([command, ...args]) => command === "wrangler" && args.includes("deploy"));
@@ -277,12 +297,21 @@ function changedRevisionFetch(currentRoot, priorRoot, run, options = {}) {
   };
 }
 
-function staleThenConvergingFetch(root, { staleAttempts, events = [] } = {}) {
+function postUploadOnlyOverride(root, run, override) {
+  const normal = servingFetch(root);
+  return (url, init) => {
+    const uploaded = run.calls.some(([command, ...args]) => command === "wrangler" && args.includes("deploy"));
+    return uploaded && override.has(url) ? override.get(url) : normal(url, init);
+  };
+}
+
+function staleThenConvergingFetch(root, { staleAttempts, events = [], run } = {}) {
   const baseFetch = servingFetch(root, { events });
   const attempts = new Map();
   return async (url, init = {}) => {
     const parsed = new URL(url);
-    if ([SITE_PUBLIC_ORIGIN, SITE_WWW_ORIGIN, SCHEMA_PUBLIC_ORIGIN].includes(parsed.origin)) {
+    const uploaded = run?.calls.some(([command, ...args]) => command === "wrangler" && args.includes("deploy"));
+    if (uploaded && [SITE_PUBLIC_ORIGIN, SITE_WWW_ORIGIN, SCHEMA_PUBLIC_ORIGIN].includes(parsed.origin)) {
       const firstRoute = parsed.origin === SCHEMA_PUBLIC_ORIGIN ? SCHEMA_ROUTES[0] : "/";
       if (parsed.pathname === firstRoute) {
         attempts.set(parsed.origin, (attempts.get(parsed.origin) ?? 0) + 1);
@@ -824,6 +853,15 @@ describe("takoform-site runs", () => {
     expect(result.site.publicOrigins).toEqual([...SITE_PUBLIC_ORIGINS]);
     expect(Object.keys(result.readback.immutable.schemas)).toHaveLength(48);
     expect(Object.keys(result.readback.forms.schemas)).toHaveLength(48);
+    expect(Object.keys(result.readback.immutable.redirects)).toHaveLength(LEGACY_ENGLISH_REDIRECTS.length);
+    for (const { from, to } of LEGACY_ENGLISH_REDIRECTS) {
+      expect(result.readback.immutable.redirects[from]).toBe(to);
+      expect(result.readback.apex.redirects[from]).toBe(to);
+      expect(result.readback.www.redirects[from]).toBe(to);
+      expect(result.readback.immutable.pages).toHaveProperty(to);
+      expect(events).toContain(`fetch:${DEPLOYMENT}${from}`);
+      expect(events).toContain(`fetch:${DEPLOYMENT}${to}`);
+    }
     for (const route of SCHEMA_ROUTES) {
       expect(events).toContain(`fetch:${DEPLOYMENT}${route}`);
       expect(events).toContain(`fetch:${SCHEMA_PUBLIC_ORIGIN}${route}`);
@@ -868,6 +906,118 @@ describe("takoform-site runs", () => {
       { root, run, env: {}, fetch: changedRevisionFetch(root, priorRoot, run) },
     )).rejects.toThrow("prior public Host API v2 source differs from both the fixed current bytes");
     expect(run.calls.some(([command, ...args]) => command === "wrangler" && args.includes("deploy"))).toBe(false);
+  });
+
+  test("the bilingual predecessor remains eligible but mixed old and new English routes refuse before upload", async () => {
+    const root = fixtureRoot();
+    const priorRoot = priorRevisionRoot({ changeSource: false });
+    const admittedRun = gitRunner();
+    const admitted = await runSiteDeploy(
+      parseSiteDeployArgs(["--apply", "--environment", "production", "--execute"]),
+      { root, run: admittedRun, env: {}, fetch: changedRevisionFetch(root, priorRoot, admittedRun) },
+    );
+    expect(admitted.executed).toBe(true);
+    expect(admittedRun.calls.filter(([command, ...args]) =>
+      command === "wrangler" && args.includes("deploy"))).toHaveLength(1);
+
+    const mixedRun = gitRunner();
+    const mixed = changedRevisionFetch(root, priorRoot, mixedRun, {
+      override: new Map([[`${ROLLBACK_CANDIDATE}/en/spec/host-api/v2/http`,
+        { status: 301, headers: new Headers({ location: "/spec/host-api/v2/http" }) }]]),
+    });
+    await expect(runSiteDeploy(
+      parseSiteDeployArgs(["--apply", "--environment", "production", "--execute"]),
+      { root, run: mixedRun, env: {}, fetch: mixed },
+    )).rejects.toThrow("not historical 200");
+    expect(mixedRun.calls.some(([command, ...args]) => command === "wrangler" && args.includes("deploy"))).toBe(false);
+  });
+
+  test("a redirected predecessor with one remaining direct English page refuses before upload", async () => {
+    const root = fixtureRoot();
+    const run = gitRunner();
+    const from = "/en/spec/host-api/v2/http";
+    const fetch = servingFetch(root, {
+      override: new Map([[`${ROLLBACK_CANDIDATE}${from}`,
+        { status: 200, arrayBuffer: async () => Buffer.from("old bilingual page") }]]),
+    });
+    await expect(runSiteDeploy(
+      parseSiteDeployArgs(["--apply", "--environment", "production", "--execute"]),
+      { root, run, env: {}, fetch },
+    )).rejects.toThrow(`${ROLLBACK_CANDIDATE}${from} returned HTTP 200, not 301`);
+    expect(run.calls.some(([command, ...args]) => command === "wrangler" && args.includes("deploy"))).toBe(false);
+  });
+
+  test("the candidate rejects an external or wrong legacy redirect target after one upload", async () => {
+    for (const location of ["https://other.example/spec/host-api/v1", "/spec/host-api/v1?wrong=1"]) {
+      const root = fixtureRoot();
+      const run = gitRunner();
+      const from = "/en/spec/host-api/v1.html";
+      const fetch = servingFetch(root, {
+        override: new Map([[`${DEPLOYMENT}${from}`,
+          { status: 301, headers: new Headers({ location }) }]]),
+      });
+      let failure;
+      try {
+        await runSiteDeploy(parseSiteDeployArgs(["--apply", "--environment", "production", "--execute"]),
+          { root, run, env: {}, fetch });
+      } catch (error) { failure = error; }
+      expect(failure).toMatchObject({ kind: "takoform.site-post-upload-failure",
+        reason: "immutable deployment readback failed" });
+      expect(failure.message).toContain("not exact same-origin");
+      expect(run.calls.filter(([command, ...args]) => command === "wrangler" && args.includes("deploy"))).toHaveLength(1);
+    }
+  });
+
+  test("the candidate preserves the query exactly and reads the canonical result bytes", async () => {
+    const from = "/en/spec/host-api/v2/forms?legacy=readback&keep=%2F";
+    const target = "/spec/host-api/v2/forms?legacy=readback&keep=%2F";
+    const root = fixtureRoot();
+    const events = [];
+    const run = gitRunner({ events });
+    const result = await runSiteDeploy(
+      parseSiteDeployArgs(["--apply", "--environment", "production", "--execute"]),
+      { root, run, env: {}, fetch: servingFetch(root, { events }) },
+    );
+    expect(result.executed).toBe(true);
+    for (const origin of [DEPLOYMENT, SITE_PUBLIC_ORIGIN, SITE_WWW_ORIGIN]) {
+      expect(events).toContain(`fetch:${origin}${from}`);
+      expect(events).toContain(`fetch:${origin}${target}`);
+    }
+    for (const location of ["/spec/host-api/v2/forms", "/spec/host-api/v2/forms?legacy=readback&keep=%2f"] ) {
+      const failedRoot = fixtureRoot();
+      const failedRun = gitRunner();
+      const fetch = servingFetch(failedRoot, {
+        override: new Map([[`${DEPLOYMENT}${from}`,
+          { status: 301, headers: new Headers({ location }) }]]),
+      });
+      let failure;
+      try {
+        await runSiteDeploy(parseSiteDeployArgs(["--apply", "--environment", "production", "--execute"]),
+          { root: failedRoot, run: failedRun, env: {}, fetch });
+      } catch (error) { failure = error; }
+      expect(failure).toMatchObject({ kind: "takoform.site-post-upload-failure",
+        reason: "immutable deployment readback failed" });
+      expect(failure.message).toContain("not exact same-origin");
+    }
+  });
+
+  test("a missing legacy redirect on a public alias fails post-upload convergence", async () => {
+    const root = fixtureRoot();
+    const run = gitRunner();
+    const from = "/en/spec/host-api/v2/";
+    const fetch = postUploadOnlyOverride(root, run, new Map([
+      [`${SITE_WWW_ORIGIN}${from}`, { status: 404 }],
+    ]));
+    let failure;
+    try {
+      await runSiteDeploy(parseSiteDeployArgs(["--apply", "--environment", "production", "--execute"]),
+        { root, run, env: {}, fetch, postUploadReadback: { attempts: 1, intervalMs: 0 } });
+    } catch (error) { failure = error; }
+    expect(failure).toMatchObject({ kind: "takoform.site-post-upload-failure",
+      rollbackCandidate: { url: ROLLBACK_CANDIDATE } });
+    expect(failure.message).toContain("readback not converged");
+    expect(failure.message).toContain(`${SITE_WWW_ORIGIN}${from}`);
+    expect(run.calls.filter(([command, ...args]) => command === "wrangler" && args.includes("deploy"))).toHaveLength(1);
   });
 
   test("routine production admits only the original public v2 bytes as the editorial predecessor", async () => {
@@ -1216,7 +1366,7 @@ describe("takoform-site runs", () => {
         run,
         env: {},
         events,
-        fetch: staleThenConvergingFetch(root, { staleAttempts: 2, events }),
+        fetch: staleThenConvergingFetch(root, { staleAttempts: 2, events, run }),
         postUploadReadback: { attempts: 4, intervalMs: 0 },
       },
     );
@@ -1258,7 +1408,7 @@ describe("takoform-site runs", () => {
           run,
           env: {},
           events,
-          fetch: staleThenConvergingFetch(root, { staleAttempts: 100, events }),
+          fetch: staleThenConvergingFetch(root, { staleAttempts: 100, events, run }),
           postUploadReadback: { attempts: 3, intervalMs: 0 },
         },
       );
@@ -1496,14 +1646,12 @@ describe("takoform-site runs", () => {
           root,
           run,
           env: {},
-          fetch: servingFetch(root, {
-            override: new Map([
+          fetch: postUploadOnlyOverride(root, run, new Map([
               [
                 `${SITE_PUBLIC_ORIGIN}${PAGE_READBACK_ROUTES[0]}`,
                 { ok: true, status: 200, arrayBuffer: async () => Buffer.from("stale") },
               ],
-            ]),
-          }),
+            ])),
           postUploadReadback: { attempts: 1, intervalMs: 0 },
         },
       ),
@@ -1520,14 +1668,12 @@ describe("takoform-site runs", () => {
           root: staleRoot,
           run: staleRun,
           env: {},
-          fetch: servingFetch(staleRoot, {
-            override: new Map([
+          fetch: postUploadOnlyOverride(staleRoot, staleRun, new Map([
               [
                 `${SITE_WWW_ORIGIN}${PAGE_READBACK_ROUTES[0]}`,
                 { ok: true, status: 200, arrayBuffer: async () => Buffer.from("stale") },
               ],
-            ]),
-          }),
+            ])),
           postUploadReadback: { attempts: 1, intervalMs: 0 },
         },
       ),
@@ -1542,11 +1688,9 @@ describe("takoform-site runs", () => {
           root: redirectRoot,
           run: redirectRun,
           env: {},
-          fetch: servingFetch(redirectRoot, {
-            override: new Map([
+          fetch: postUploadOnlyOverride(redirectRoot, redirectRun, new Map([
               [`${SITE_WWW_ORIGIN}${PAGE_READBACK_ROUTES[0]}`, { ok: false, status: 301 }],
-            ]),
-          }),
+            ])),
           postUploadReadback: { attempts: 1, intervalMs: 0 },
         },
       ),

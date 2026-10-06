@@ -1,24 +1,22 @@
 # takoform.com の所有と公開
 
 表示にはVitePress標準の配色、フォント、部品を使います。独自ロゴやロゴ入りの共有画像は
-使わず、サイト名をテキストで表示します。トップページと日本語の案内では
+使わず、サイト名をテキストで表示します。トップページとガイドでは
 用途と操作を直接説明し、宣伝的なコピーや不要な内部用語を増やしません。正確なAPI名や
 フィールド名、固定済みの仕様本文は変更せず、解説と区別します。
 
 トップはForm・Host・Clientの役割、HTTP操作例とその進行、実装者別の読み先を説明し、
-sidebarや版の一覧は表示しません。title・subtitle・節見出しは英語とし、本文は日英で案内します。
-各ページのtitle（ブラウザ/OG/TwitterとH1）、生成索引とナビゲーションのページ名も
-両localeで英語に揃えます。本文の説明と言語別URL・既存fragmentは維持します。
+sidebarや版の一覧は表示しません。公開サイトは本文、title、検索、navigation、footer、
+404表示まで英語に統一します。日本語本文と言語切替は設けません。
 `/v1/`はAPI・共通モデル・スキーマ、`/v2/`はAPIと解説を案内します。
-版はヘッダーのAPI selectorで選びます。言語の選択を分け、残す文書URLの目次と前後リンクを版ごとに閉じます。
+版はヘッダーのAPI selectorで選び、文書URLの目次と前後リンクを版ごとに閉じます。
 サイト案内には版専用sidebarを付けません。表示上の所属は
 `.vitepress/versions.mjs`で判定し、検索も同じ判定を使います。検索は現在の版と共通文書を
 初期範囲にし、結果に版を表示します。「すべての版」は明示して選べます。
 
-日本語は既存のルート、英語は`/en/`で公開します。VitePressの言語メニューは同じページの
-対応言語へ移動し、ページ内の位置も維持します。目次は選択した言語とAPI版に合わせます。
-ガイドは翻訳します。v1・v2仕様はいずれも英語の原文を両言語のページに表示し、
-その範囲に原文のlangを指定します。翻訳済みとは表示しません。
+英語ページの正規URLはルートです。旧`/en/`ページは対応する正規URLへ301転送し、
+queryとfragmentを維持します。日本語の既存fragment IDはリンク互換のため残しますが、
+表示本文は英語です。v1・v2仕様はいずれも英語の原文を表示し、その範囲にlangを指定します。
 公開JSONのパスとバイト列は複製・変更しません。
 
 `takoform.com` はTakoformの概念とAPIを扱うsiteです。
@@ -47,9 +45,9 @@ website/
 ├── v1/  v2/               API版別の入口（手書き）
 ├── spec/host-api/v2/       v2の規範本文・解説のmirror（生成）
 ├── schemas/               schema 索引 page（生成・non-normative）
-├── en/                    英語ガイド（手書き）とspec/schema索引（生成）
 └── public/
     ├── schemas/           公開 schema の bytes（生成）
+    ├── _redirects          旧英語URLから正規URLへの301転送（生成）
     ├── _headers  robots.txt
     └                      配信 header、robots、site assets（手書き）
 ```
@@ -81,8 +79,8 @@ bun run site:dev                    # 手元で見る
 `bun run check` はこれらの検査を含みます。生成物が古いまま commit されることはありません。
 
 `start/`は架空のHostとFormによるv2のHTTP往復例、`authoring/`はFormの設計例、
-`client/`は操作意図・再送・保持期限の設計を扱います。日英のコード片とリンクの対応、
-描画したHTMLを検査しますが、実Hostでの成功を示す例ではありません。
+`client/`は操作意図・再送・保持期限の設計を扱います。コード片・リンクと描画したHTMLを
+検査しますが、実Hostでの成功を示す例ではありません。
 既存Goテストはv1ライブラリの検査として残り、v2ガイドの実行証拠として扱いません。
 v1の六つのHTTP往復例は`hostclient/testdata/v1-http-exchange.md`へ元のbytesを保って移し、
 既存のclient実行・固定schema照合を継続します。v2入門をv1 clientで検証しません。
@@ -106,7 +104,7 @@ Chrome / Chromium を headless で動かします。browser が見つからな�
 標準 path にない場合は `TAKOFORM_BROWSER=/absolute/path/to/chrome` を設定してください。
 browser の自動 download や、既存 browser profile の利用はしません。
 
-- `/`、v1/v2入口、両版のAPI本文、schema索引、各ガイドとサイト案内の日英を
+- `/`、v1/v2入口、両版のAPI本文、schema索引、各ガイドとサイト案内を
   320 / 375 / 414 / 768 px で開き、横 overflow と切れた操作要素がないことを確認します。
 - トップと共通ページにはsidebarがなく、v1・v2のページはその版の目次・前後リンクだけを表示することを確認します。
   目次の全グループは最初から開きます。
@@ -114,9 +112,8 @@ browser の自動 download や、既存 browser profile の利用はしません
   戻ることを確認します。
 - 1280 px の light / dark 両方でヘッダーのAPI selectorとkeyboard focus indicatorを確認します。
 - asset の HTTP error、JavaScript error、予期しない外部通信も失敗として扱います。
-- 英語版にも同じレスポンシブ検査を行います。375 / 1024 / 1280 pxで言語メニューから
-  同一ページへ往復し、見出しの位置とhydration後の言語を確認します。
-- 版切替は同じ言語の入口へ移動し、前の版のfragmentを持ち越さないこと、検索は現在の版を
+- 旧`/en/`URLからの転送でqueryとfragmentを維持し、hydration後も英語で表示することを確認します。
+- 版切替は対象版の入口へ移動し、前の版のfragmentを持ち越さないこと、検索は現在の版を
   初期範囲にし、全版検索は明示選択した場合だけ使うことを確認します。
 
 本文、link、button、code highlighting の contrast と見た目の最終判断は、light / dark の
@@ -136,7 +133,7 @@ portable な `bun run check` へ browser binary を暗黙に要求しません�
 | `/v2/`、`/spec/host-api/v2/**` | v2仕様の入口と原文mirror。規範か解説か、原文の言語を表示する |
 | `/v1/` | v1仕様・モデル・スキーマと既存ツールの入口 |
 | `/schemas/` | identity の non-normative 索引 page |
-| `/en/`と上記ページの`/en/**`版 | 英語の案内・索引と、v1・v2の英語原文 |
+| 旧`/en/`と`/en/**`ページ | 対応する正規URLへの301転送。別ページとしては生成しない |
 | `/schemas/<$id と同じ path>` | 公開 schema の exact な bytes |
 | `/sitemap.xml`、`/robots.txt`、`/404.html` | site の付随物 |
 
@@ -295,13 +292,17 @@ receipt、旧 owner の識別子は cutover evidence として保持しますが
    `--initial-cutover`と`--verify-cutover`を受け付けません。
 
 Cloudflare Pages自体は以前の成功deploymentへ戻せますが、このrepositoryの安全条件を
-代わりに判定しません。全48 schemaと固定済みのraw原文3件・v2規範文書の日英6 page・
+代わりに判定しません。全48 schemaと固定済みのraw原文3件・v2規範文書・
 保持するv1 pageを旧public aliasとのexact readbackで確認できるimmutable deploymentだけを
-rollback候補として提示します。旧版のv2 pageは`published`または`revision-open`を示す必要が
+rollback候補として提示します。従来の二言語deploymentでは両URLの規範pageを照合し、
+英語単一deploymentでは正規pageと旧URLからの301を照合します。異なる構成の混在や外部への
+転送を許容しません。旧版のv2 pageは`published`または`revision-open`を示す必要が
 あります。旧pageの表示が新候補と異なることだけでは候補から除外しませんが、旧原文3件は
 新候補または上記の初回版の集合と一致しなければなりません。新候補の
 HTML・原文・schemaはupload後にそのbuildのbytesに対してexact readbackします。
-`website/public/_headers` は日英の仕様path (`/spec/*`、`/en/spec/*`) に `no-transform` を付け、
+旧URLの301は、公開済みroute一覧から生成したsame-originの正規URLと照合します。
+未公開の`/en/spec/`等は404を維持し、無制限なwildcard転送にはしません。
+`website/public/_headers` は仕様pathと旧URL (`/spec/*`、`/en/spec/*`) に `no-transform` を付け、
 CDNが仕様例の本文を書き換えないようにします。Cloudflareのメールアドレス難読化も抑止されます。
 Pages既定のHTML再検証 (`public, max-age=0, must-revalidate`) と、別pathの `/schemas/*` の
 既存cache/CORS指定は保持します。これはsite自身の応答headerであり、zone全体の

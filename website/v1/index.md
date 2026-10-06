@@ -1,26 +1,26 @@
 ---
 title: Host API v1
-description: Host API v1の仕様、共通モデル、スキーマと検証資料への入口です。
+description: Entry point to the Host API v1 specification, common model, schemas and verification documentation.
 ---
 
 # Host API v1 {#v1}
 
-既存のv1 Hostやクライアントを扱うためのAPI仕様、共通モデル、検証資料をまとめています。
+API specifications, the common model and verification resources for existing v1 Hosts and clients.
 
-## API仕様 {#api}
+## API specification {#api}
 
-- [HTTP API仕様](/spec/host-api/v1) — 接続先、要求と応答、操作の規則。
-- [互換性と版管理](/spec/versioning) — 版の扱いと互換性の境界。
+- [HTTP API specification](/spec/host-api/v1) — Endpoints, requests, responses and operation rules.
+- [Versioning and compatibility](/spec/versioning) — Version handling and compatibility boundaries.
 
-## リソースと接続のモデル {#model}
+## Resource and connection model {#model}
 
-- [Form Definition](/spec/form-definition/) — リソースの定義。
-- [Form Package](/spec/form-package/)と[Snapshot](/spec/core/) — 定義の配布と解決。
-- [Interface](/spec/interface-contract/)と[Binding](/spec/binding-contract/) — 接続の契約。
-- [Trustと失効](/spec/trust/) — v1の検証に関する規則。
+- [Form Definition](/spec/form-definition/) — Resource definitions.
+- [Form Package](/spec/form-package/) and [Snapshot](/spec/core/) — Distribution and resolution.
+- [Interface](/spec/interface-contract/) and [Binding](/spec/binding-contract/) — Connection contracts.
+- [Trust and revocation](/spec/trust/) — Verification rules for v1.
 
-## 検証とツール {#tools}
+## Verification and tools {#tools}
 
-- [スキーマ一覧](/schemas/) — 公開JSON Schema。
-- [適合性](/spec/conformance)と[検証ツール](/conformance/) — 検査対象とその境界。
-- [OpenTofu / Terraform Providerの利用案内](https://github.com/tako0614/terraform-provider-takoform/blob/main/README.md#quick-start) — Providerを使ってv1 Hostに接続する手順。
+- [Schema index](/schemas/) — Published JSON schemas.
+- [Conformance](/spec/conformance) and [verification tools](/conformance/) — What checks cover and where they stop.
+- [OpenTofu / Terraform Provider guide](https://github.com/tako0614/terraform-provider-takoform/blob/main/README.md#quick-start) — Connect to a v1 Host using the Provider.

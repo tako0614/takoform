@@ -12,7 +12,6 @@ const router = useRouter();
 const changingVersion = ref(false);
 const currentPath = computed(() => route.path);
 const currentVersion = computed(() => documentVersion(currentPath.value));
-const isEnglish = computed(() => currentPath.value === "/en" || currentPath.value.startsWith("/en/"));
 
 const options = computed(() => [
   { version: "v1", label: "API v1" },
@@ -33,11 +32,11 @@ async function changeVersion(event: Event) {
 
 <template>
   <label v-if="variant === 'control'" class="version-context">
-    <span class="visually-hidden">{{ isEnglish ? "API version" : "APIの版" }}</span>
+    <span class="visually-hidden">API version</span>
     <select
       :value="currentVersion ?? 'shared'"
       :disabled="changingVersion"
-      :aria-label="isEnglish ? 'API version' : 'APIの版'"
+      aria-label="API version"
       @change="changeVersion"
     >
       <option value="shared" disabled>API</option>

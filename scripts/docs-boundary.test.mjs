@@ -13,13 +13,11 @@ function baseEntries() {
 describe("current documentation boundary", () => {
   test("allows the v2 identity only in explicitly owned source, mirrors, and reader guides", () => {
     const entries = baseEntries();
-    for (const path of ["spec/host-api/v2/README.md", "spec/host-api/v2/http.md", "spec/host-api/v2/forms.md", "spec/host-api/v2/examples.md", "spec/host-api/v2/migration.md", "website/spec/host-api/v2/http.md", "website/en/spec/host-api/v2/http.md", "website/spec/host-api/v2/migration.md", "website/en/spec/host-api/v2/migration.md"]) {
+    for (const path of ["spec/host-api/v2/README.md", "spec/host-api/v2/http.md", "spec/host-api/v2/forms.md", "spec/host-api/v2/examples.md", "spec/host-api/v2/migration.md", "website/spec/host-api/v2/http.md", "website/spec/host-api/v2/migration.md"]) {
       entries.set(path, "API identity: forms.takoform.com/v2.\n");
     }
-    for (const locale of ["", "en/"]) {
-      for (const guide of ["start", "model", "client", "authoring", "use", "host-api", "guides", "reference"]) {
-        entries.set(`website/${locale}${guide}/index.md`, "API identity: forms.takoform.com/v2.\n");
-      }
+    for (const guide of ["start", "model", "client", "authoring", "use", "host-api", "guides"]) {
+      entries.set(`website/${guide}/index.md`, "API identity: forms.takoform.com/v2.\n");
     }
     expect(inspectDocs(entries)).toEqual([]);
     entries.set("spec/host-api/v2/unowned.md", "API identity: forms.takoform.com/v2.\n");

@@ -1,7 +1,6 @@
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { defineConfig, type DefaultTheme } from "vitepress";
-import { renderForSearch } from "./search.mjs";
 import { fileURLToPath } from "node:url";
 
 const configDirectory = path.dirname(fileURLToPath(import.meta.url));
@@ -134,15 +133,6 @@ const v1Sidebar = [
   ...contractSidebar,
 ];
 
-// Page names stay English in both locales; only their content routes differ.
-function englishSidebar(items: DefaultTheme.SidebarItem[]): DefaultTheme.SidebarItem[] {
-  return items.map((item) => ({
-    ...item,
-    ...(item.link ? { link: `/en${item.link}` } : {}),
-    ...(item.items ? { items: englishSidebar(item.items) } : {}),
-  }));
-}
-
 function collectSidebarLinks(items: DefaultTheme.SidebarItem[]): string[] {
   return items.flatMap((item) => [
     ...(item.link ? [item.link] : []),
@@ -164,60 +154,10 @@ const rootSpecSidebars = {
   ...Object.fromEntries(v1SpecSidebarRoutes.map((route) => [route, v1Sidebar])),
 };
 
-const englishSpecSidebars = {
-  "/en/spec": [],
-  "/en/spec/host-api": [],
-  "/en/spec/host-api/v2": englishSidebar(v2Sidebar),
-  ...Object.fromEntries(v1SpecSidebarRoutes.map((route) => [
-    `/en${route}`,
-    englishSidebar(v1Sidebar),
-  ])),
-};
-
 export default defineConfig({
-  lang: "ja-JP",
+  lang: "en",
   title: "Takoform",
-  description:
-    "仕様をURLで公開し、対応するサーバーでリソースを管理するための共通API。",
-  locales: {
-    root: { label: "日本語", lang: "ja-JP" },
-    en: {
-      label: "English",
-      lang: "en",
-      description: "A common API for managing resources on servers that implement a specification published at a URL.",
-      themeConfig: {
-        nav: [
-          { text: "Overview", link: "/en/" },
-        ],
-        sidebar: {
-          ...englishSpecSidebars,
-          "/en/v2/": englishSidebar(v2Sidebar),
-          "/en/start/": englishSidebar(v2Sidebar),
-          "/en/model/": englishSidebar(v2Sidebar),
-          "/en/client/": englishSidebar(v2Sidebar),
-          "/en/authoring/": englishSidebar(v2Sidebar),
-          "/en/use/": englishSidebar(v2Sidebar),
-          "/en/host-api/": englishSidebar(v2Sidebar),
-          "/en/guides/": englishSidebar(v2Sidebar),
-          "/en/glossary": englishSidebar(v2Sidebar),
-          "/en/conformance/": englishSidebar(v1Sidebar),
-          "/en/schemas/": englishSidebar(v1Sidebar),
-          "/en/v1/": englishSidebar(v1Sidebar),
-          "/en/site": [],
-          "/": [],
-        },
-        footer: {
-          message: '<a href="/en/site">About this site</a> · <a href="https://github.com/tako0614/takoform">GitHub</a>',
-          copyright: "MIT © 2026 Takoform contributors",
-        },
-        docFooter: { prev: "Previous page", next: "Next page" },
-        darkModeSwitchLabel: "Appearance", returnToTopLabel: "Return to top",
-        sidebarMenuLabel: "Menu", outlineTitle: "On this page",
-        langMenuLabel: "Change language",
-        notFound: { title: "Page not found", quote: "Check the URL or use search to find a page.", linkText: "Home" },
-      },
-    },
-  },
+  description: "A common API for managing resources on servers that implement a specification published at a URL.",
   cleanUrls: true,
   lastUpdated: false,
   markdown: {
@@ -280,53 +220,19 @@ export default defineConfig({
           ? firstParagraph(siteConfig.srcDir, pageData.relativePath)
           : undefined) ?? description;
     const pageUrl = new URL(route, "https://takoform.com/").href;
-    // hreflang targets the same page in the other locale when that source file
-    // exists; x-default points at the root (Japanese) locale.
-    const jaPath = pageData.relativePath.startsWith("en/")
-      ? pageData.relativePath.slice(3)
-      : pageData.relativePath;
-    const jaRoute = jaPath
-      .replace(/(^|\/)index\.md$/u, "$1")
-      .replace(/\.md$/u, "");
-    const hasJa =
-      siteConfig?.srcDir !== undefined &&
-      existsSync(path.join(siteConfig.srcDir, jaPath));
-    const hasEn =
-      siteConfig?.srcDir !== undefined &&
-      existsSync(path.join(siteConfig.srcDir, `en/${jaPath}`));
-    const jaUrl = new URL(jaRoute, "https://takoform.com/").href;
-    const enUrl = new URL(`en/${jaRoute}`, "https://takoform.com/").href;
-    const alternates = [];
-    if (hasJa) {
-      alternates.push(["link", { rel: "alternate", hreflang: "ja", href: jaUrl }]);
-    }
-    if (hasEn) {
-      alternates.push(["link", { rel: "alternate", hreflang: "en", href: enUrl }]);
-    }
-    if (hasJa && hasEn) {
-      alternates.push(["link", { rel: "alternate", hreflang: "x-default", href: jaUrl }]);
-    }
     return [
       ["meta", { property: "og:title", content: title }],
       ["meta", { property: "og:description", content: ogDescription }],
-      ["meta", { property: "og:locale", content: route.startsWith("en/") ? "en_US" : "ja_JP" }],
+      ["meta", { property: "og:locale", content: "en_US" }],
       ["meta", { property: "og:url", content: pageUrl }],
       ["link", { rel: "canonical", href: pageUrl }],
-      ...alternates,
       ["meta", { name: "twitter:title", content: title }],
       ["meta", { name: "twitter:description", content: ogDescription }],
     ];
   },
   themeConfig: {
     outline: { level: [2, 3] },
-    search: { provider: "local", options: { _render: renderForSearch, locales: { root: { translations: {
-      button: { buttonText: "検索", buttonAriaLabel: "検索" },
-      modal: {
-        displayDetails: "詳細を表示", resetButtonTitle: "検索をクリア",
-        backButtonTitle: "閉じる", noResultsText: "見つかりませんでした",
-        footer: { selectText: "選択", navigateText: "移動", closeText: "閉じる" },
-      },
-    } } } } },
+    search: { provider: "local" },
     nav: [
       { text: "Overview", link: "/" },
     ],
@@ -350,22 +256,21 @@ export default defineConfig({
     socialLinks: [{ icon: "github", link: repository }],
     footer: {
       message:
-        '<a href="/site">このサイトについて</a> · <a href="https://github.com/tako0614/takoform">GitHub</a>',
+        '<a href="/site">About this site</a> · <a href="https://github.com/tako0614/takoform">GitHub</a>',
       copyright: "MIT © 2026 Takoform contributors",
     },
-    docFooter: { prev: "前へ", next: "次へ" },
-    darkModeSwitchLabel: "配色",
-    returnToTopLabel: "先頭へ",
-    sidebarMenuLabel: "目次",
-    outlineTitle: "このページ",
-    langMenuLabel: "言語を切り替える",
+    docFooter: { prev: "Previous page", next: "Next page" },
+    darkModeSwitchLabel: "Appearance",
+    returnToTopLabel: "Return to top",
+    sidebarMenuLabel: "Menu",
+    outlineTitle: "On this page",
     notFound: {
-      title: "ページがありません",
-      quote: "URLが正しいか確認するか、検索から探してください。",
-      linkText: "トップへ",
+      title: "Page not found",
+      quote: "Check the URL or use search to find a page.",
+      linkText: "Home",
     },
   },
-  // The document follows its locale on both SSR and client navigation.
+  // The document remains English on both SSR and client navigation.
   // Generated specification bodies declare lang="en" independently.
   transformHtml(code, _id, context) {
     const authority = context.pageData.frontmatter.normative === true

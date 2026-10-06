@@ -1,11 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
-import { useData } from "vitepress";
-
-const { lang } = useData();
-const isEnglish = computed(() => lang.value === "en");
-const localePrefix = computed(() => (isEnglish.value ? "/en" : ""));
-const copy = computed(() => isEnglish.value ? {
+const copy = {
   introduction: "Takoform describes how clients create, inspect, update and delete resources on a server. A Form defines a kind of resource. A Host is the server that implements it and provides the API.",
   model: "A database and a worker need different settings and expose different ways to use them. Forms describe those differences. The Host API provides a common way to submit changes, follow their progress and handle conflicts or retries.",
   roles: [
@@ -31,33 +25,7 @@ const copy = computed(() => isEnglish.value ? {
     { path: "/host-api/", label: "Implement a Host", text: "Connect the API to an execution backend and preserve accepted operations through failures and restarts." },
   ],
   scope: "This site documents Takoform's common API and concepts. Individual Form specifications are published by their authors; Hosts and client tools document their own supported features.",
-} : {
-  introduction: "Takoformは、サーバーが提供するリソースの作成・取得・更新・削除を、共通の手順で扱うための仕様です。リソースの種類ごとの仕様をForm、APIを提供するサーバーをHostと呼びます。",
-  model: "データベースとワーカーでは、必要な設定も使い方も異なります。その違いをFormで定義し、変更の要求、進捗の確認、競合や再試行の扱いはHost APIに揃えます。",
-  roles: [
-    { name: "Form", text: "入力・出力・振る舞い・他のリソースとの接続を定めます。異なる実装でも同じ意味で扱えるよう、作者が仕様を記述します。" },
-    { name: "Host", text: "対応するFormを実装し、リソースを提供します。権限、状態の保存、障害からの復旧を担当し、実行先にはローカル環境やクラウドサービスを使えます。" },
-    { name: "Client", text: "HostとFormを選び、必要な設定を送って結果を確認します。アプリ、CLI、インフラ管理用のProviderなどがクライアントになります。" },
-  ],
-  portability: "共通になるのはリソースを管理するための操作方法です。利用するときは、選んだFormにHostが対応しているかを確認し、そのHostの容量、利用条件、必要な権限を確かめます。",
-  exampleIntro: "v2でキーと値を保存するリソースを作る例です。formでリソースの仕様を指定し、specに保存したい内容を渡します。",
-  exampleCaption: "Host API v2の説明例です。HostとFormには説明用のドメインを使っています。",
-  requestLabel: "作成リクエスト",
-  steps: [
-    { name: "対応するFormを確認する", text: "Hostの接続先と認証方法を調べ、使いたいFormのURLを指定して対応状況を問い合わせます。" },
-    { name: "変更を要求する", text: "POSTでリソースの作成を要求します。Hostは受理した変更を追跡するためのOperationを返します。" },
-    { name: "結果を読む", text: "Operationの完了後、Resourceから観測した状態と出力を読みます。要求の受理と、実際に使える状態になったことは区別します。" },
-    { name: "更新・削除する", text: "ResourceのUIDと現在の世代を指定します。応答が失われた場合は、Hostの再送期限内に同じキーと要求で結果を確認できます。" },
-  ],
-  exampleLink: "一連の要求と応答を読む",
-  readingIntro: "以下のガイドはv2を扱います。既存の実装について調べるときは、ヘッダーから対応するAPIの版を選んでください。",
-  readings: [
-    { path: "/client/", label: "APIを使う", text: "接続、変更の要求、結果の確認をクライアントへ組み込みます。TerraformやOpenTofuでは、使うAPIとFormに対応したProviderを選びます。" },
-    { path: "/authoring/", label: "Formを定義する", text: "リソースの入力、観測できる状態、使い方を、他の人が実装できる仕様として記述します。" },
-    { path: "/host-api/", label: "Hostを実装する", text: "APIと実行基盤を接続し、受理した操作を障害や再起動の後も追跡できるようにします。" },
-  ],
-  scope: "このサイトでは共通APIとTakoformの考え方を説明します。個別Formの仕様は各作者の公開先で、Hostやクライアントの対応機能はそれぞれのドキュメントで確認できます。",
-});
+};
 const request = `POST /apis/forms.takoform.com/v2/resources HTTP/1.1
 Host: host.example
 Authorization: Bearer <host-credential>
@@ -108,7 +76,7 @@ Idempotency-Key: 946eec36-4a6a-41de-8f3c-e83d2c58c246
             </li>
           </ol>
         </div>
-        <a class="home-reading-link" :href="`${localePrefix}/start/`">{{ copy.exampleLink }}</a>
+        <a class="home-reading-link" href="/start/">{{ copy.exampleLink }}</a>
       </section>
 
       <section class="home-section home-reading" aria-labelledby="home-reading-title">
@@ -116,7 +84,7 @@ Idempotency-Key: 946eec36-4a6a-41de-8f3c-e83d2c58c246
         <p>{{ copy.readingIntro }}</p>
         <ul class="home-reading-list">
           <li v-for="reading in copy.readings" :key="reading.path">
-            <a class="home-reading-link" :href="`${localePrefix}${reading.path}`">{{ reading.label }}</a>
+            <a class="home-reading-link" :href="reading.path">{{ reading.label }}</a>
             <p>{{ reading.text }}</p>
           </li>
         </ul>
