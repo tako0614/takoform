@@ -5,7 +5,7 @@ description: Understand how API clients and Infrastructure as Code tools can use
 
 # Using v2 {#use}
 
-Host API v2 is an HTTP contract that client software can call when it implements v2. A command-line tool, library, or Infrastructure as Code integration may act as that client. This repository documents the protocol; it does not own or certify those client adapters. Check the selected Host, Form, and client for actual support.
+Host API v2 is a fixed HTTP contract that client software can call when it implements v2. A command-line tool, library, or Infrastructure as Code integration may act as that client. The Go SDK in this repository targets v1. Independent client adapters document their own version support; check the selected Host, Form, and client before use.
 
 ## What a client must do {#client-responsibilities}
 

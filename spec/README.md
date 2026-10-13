@@ -8,7 +8,7 @@ It does not add to or reinterpret either contract.
 The [Host API v2 specification](host-api/v2/README.md) treats publisher-owned
 HTTP specifications as Form identities and allows v2-only implementations.
 The normative source is English and fixed. The published
-version is at [takoform.com](https://takoform.com/en/v2/). Changes to protocol
+version is at [takoform.com](https://takoform.com/v2/). Changes to protocol
 meaning require another API major; guides and presentation may improve without
 changing the contract. Publication and deployed Host support are separate facts.
 Published v1 remains frozen reference
@@ -19,6 +19,9 @@ Read the v2 [overview](host-api/v2/README.md), [HTTP API](host-api/v2/http.md),
 The [migration guide](host-api/v2/migration.md) explains the differences from v1.
 
 Examples and guides remain informative, separate from normative requirements.
+The Go libraries in this repository implement v1. The caller-driven
+[v2 HTTP baseline probe](../conformance/v2/) checks only its documented
+sequence; it does not provide a Host or complete conformance evidence.
 
 ## Published Host API v1 reference
 
@@ -30,6 +33,10 @@ not apply to v2:
 - API root: `/apis/forms.takoform.com/v1`;
 - wire contract: [`host-api/v1.md`](host-api/v1.md); and
 - generic corpus: [`../conformance/takoform-v1/generic.json`](../conformance/takoform-v1/generic.json).
+
+References to the "current" lane or a future v2 proposal inside frozen v1
+documents retain their v1 publication context. Use the v2 documents above for
+v2 requirements; no v1 package or Snapshot rule is implied by the v2 guides.
 
 API v1 normative bytes are frozen by
 [`host-api/v1.freeze.json`](host-api/v1.freeze.json). Errata are non-normative
@@ -56,7 +63,7 @@ FormRef has no `official` bit.
   and portable desired, observed, and output shapes.
 - [`form-package/`](form-package/) defines one closed data-only package for one
   exact Form.
-- [`host-api/`](host-api/) defines discovery, lifecycle requests,
+- [`host-api/v1.md`](host-api/v1.md) defines v1 discovery, lifecycle requests,
   asynchronous Operations, identity fences, and portable errors.
 - [`interface-contract/`](interface-contract/),
   [`binding-contract/`](binding-contract/),

@@ -1,12 +1,12 @@
-# Security Policy
+# Security policy
 
-## 脆弱性の報告
+## Report a vulnerability
 
-セキュリティ上の問題を見つけた場合は、公開 issue ではなく **security@takos.jp** に
-非公開で報告してください。修正が完了するまで詳細を公開しないようお願いします。
+Report security issues privately to **security@takos.jp** rather than opening
+a public issue. Please keep the details private until the fix is complete.
 
-## 報告に含めてほしい情報
+## Include in your report
 
-- 影響を受ける機能やコンポーネント
-- 再現手順
-- 想定される影響
+- The affected feature or component.
+- Steps to reproduce the issue.
+- The expected impact.

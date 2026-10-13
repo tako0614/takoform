@@ -6,6 +6,9 @@ description: Entry point to the Host API v1 specification, common model, schemas
 # Host API v1 {#v1}
 
 API specifications, the common model and verification resources for existing v1 Hosts and clients.
+The Go package verifier, Snapshot compiler, Host client and trust tools in this
+repository implement v1. Frozen references to the "current" lane describe
+this contract; the separate v2 specification does not change v1 requirements.
 
 ## API specification {#api}
 

@@ -5,8 +5,10 @@ Core **v1.1.0** is a software/module artifact release. The Go module
 titled exactly `Takoform Core v1.1.0` name that one published artifact. GitHub
 supplies the source tarball and zip archive for the tag.
 
-Core SemVer does not version the Host API. The Host wire identity remains
+Core SemVer does not version the Host API. These Go libraries implement
 `forms.takoform.com/v1`; there is no Host API v1.1 discovery lane or route.
+The separately fixed [Host API v2 contract](../spec/host-api/v2/README.md) does
+not add v2 support to this Core artifact.
 
 The repository exposes one release entrypoint:
 

@@ -3,6 +3,9 @@
 This directory preserves the extraction evidence that moved the neutral Core
 source into this repository. These are receipts and byte maps, not current
 contract or release authority.
+For current API contracts and implementation support, use the
+[specification index](../../spec/README.md). For local documentation work, use
+the [site development guide](../site.md).
 
 - [`w10-core-cutover.md`](w10-core-cutover.md) records the non-destructive
   extraction and authority cutover, with the fixed source identities.

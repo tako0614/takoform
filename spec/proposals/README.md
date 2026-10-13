@@ -1,16 +1,17 @@
-# 策定中の提案
+# Proposals and historical design notes
 
-Takoform v2は提案段階のメモから[仕様本文](../host-api/v2/README.md)へ移しました。
-このディレクトリは採用前の検討と過去の提案を残す場所です。v2の仕様の正本ではありません。
+This non-normative index records ideas under review and retained proposals.
+A proposal is not an implemented API or a published contract. The fixed Host
+API v2 contract lives in [its specification](../host-api/v2/README.md), with
+separate [HTTP rules](../host-api/v2/http.md), [Form requirements](../host-api/v2/forms.md)
+and explanatory [examples](../host-api/v2/examples.md).
 
-このディレクトリの文書は、公開済みの規範や実装済みAPIを示しません。
-各文書で採用方針、未決事項、公開前の条件を区別します。
+[W19 dynamic Definition retrieval](w19-dynamic-definition-retrieval.md) is a
+historical proposal concerning v1. Its references to a future v2 design describe
+that earlier context. The fixed v2 contract identifies a Form by its publisher's
+version-fixed HTTPS specification URL; it does not require Host-side Definition
+retrieval or v1 package verification. The proposal body is retained as design
+history, not carried forward as a v2 requirement.
 
-- [v2の設計と責任分担](../host-api/v2/README.md)
-- [HTTP API](../host-api/v2/http.md)
-- [Form仕様の書き方](../host-api/v2/forms.md)
-- [要求・応答と復旧の具体例](../host-api/v2/examples.md)
-
-[W19の動的Definition取得案](w19-dynamic-definition-retrieval.md)は以前の検討資料です。
-v2はHostからのDefinition取得やpackage検証を前提にしないため、この案をv2の必須要件として
-引き継ぎません。過去の提案本文は判断理由を参照できるよう保持します。
+For both fixed contracts and actual repository implementation support, use
+the [specification index](../README.md).

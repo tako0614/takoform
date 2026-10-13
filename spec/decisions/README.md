@@ -4,6 +4,9 @@ These records preserve design rationale and decision history. They are
 non-normative: current behavior and requirements are defined only by the owning
 specification documents. A decision title or outcome may describe a superseded
 state and does not override the current specification.
+For the fixed v1 and v2 contracts and their implementation coverage, start
+with the [specification index](../README.md). Historical uses of "current",
+"experimental" or a proposed release describe the decision's own context.
 
 - [0001 — Provider v1 keeps Form versions independent](0001-provider-v1-keeps-form-versions-independent.md)
 - [0002 — Artifact URLs are credential-free persisted state](0002-artifact-urls-are-credential-free-state.md)
@@ -61,6 +64,6 @@ state and does not override the current specification.
 - [0055 — Specification release needs only the normative source (historical numbering; see 0060)](0055-specification-release-needs-only-normative-source.md)
 - [0056 — Core compiles artifacts into an immutable Snapshot](0056-core-compiles-artifacts-into-an-immutable-snapshot.md)
 - [0057 — Specification 1.1 freezes compatibility and independent identities (historical predecessor receipt; see 0060)](0057-specification-1-1-compatibility-and-independent-identities.md)
-- [0058 — Takoform API and Core share the v1 release line](0058-api-and-core-share-the-v1-release-line.md)
+- [0058 — Takoform API and Core share the v1 release line (historical: superseded by 0059)](0058-api-and-core-share-the-v1-release-line.md)
 - [0059 — Core SemVer identifies the software artifact](0059-core-semver-identifies-the-software-artifact.md)
 - [0060 — Two version axes, and no numbered Specification stream](0060-two-version-axes-and-no-numbered-specification-stream.md)

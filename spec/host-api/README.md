@@ -11,9 +11,12 @@ creation through deletion and recovery after failures. The
 [migration guide](v2/migration.md) explains the separate v1 and v2 contracts.
 
 The English normative source defines the fixed v2 contract. See
-[takoform.com](https://takoform.com/en/v2/) for the published version.
+[takoform.com](https://takoform.com/v2/) for the published version.
 Guides and presentation may improve without changing its requirements.
 Publication does not certify any Host implementation.
+The Go client in this repository implements v1. The
+[v2 baseline probe](../../conformance/v2/) is a limited caller-driven check,
+not a v2 SDK or reference Host.
 
 ## Retained Host API v1
 

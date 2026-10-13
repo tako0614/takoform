@@ -5,7 +5,7 @@ description: Design client recovery around durable intent records, replay deadli
 
 # Implementing a v2 client {#client}
 
-Read the Host's Discovery response for `baseUrl`, authentication guidance, and `replayWindowSeconds`. Build each request from the Form specification at its exact URL. Check `support`, Space authorization, and operation outcome as separate facts.
+This guide describes v2 client behavior; the Go Host client in this repository speaks v1. Confirm v2 support in the client you choose. Read a v2 Host's Discovery response for `baseUrl`, authentication guidance, and `replayWindowSeconds`; build each request from the Form specification at its exact URL. Check `support`, Space authorization, and operation outcome as separate facts.
 
 ## Record intent before sending {#intent}
 
@@ -26,7 +26,7 @@ An Idempotency-Key is not reusable merely because a request body happens to matc
 | Outcome | Client action |
 | --- | --- |
 | `202 Accepted` | Wait `Retry-After`, then GET the `Location` or Operation ID. Follow that Operation to a terminal state and reread the Resource. Do not create another mutation. |
-| Lost response, still within replay window | Resend the stored method, path/query, body, and key unchanged. Do not alter the body or create a new key. The replay returns the original Operation. |
+| Lost response, still within replay window | If the same stable principal remains authorized, resend the stored method, path/query, body, and key unchanged. Do not alter the body or create a new key. The Host returns the original Operation's current state; it may be `202` while work is unfinished or `200` once settled. |
 | Operation is `reconciling` / `effect: unknown` | Retain the UID and Operation ID as unresolved and continue checking the Operation. Do not send another mutation to that UID until the Host resolves the original backend identity. GET is not a substitute for recovery work. |
 | `409 generation_conflict` | The request was not accepted and has no Operation. GET the current Resource and decide what change is still intended. If continuing, create a new intent with the current generation and a new key. |
 | Replay window near or past its deadline | Stop automatic replay before `initial send time + replayWindowSeconds`. Check any known Operation ID and reconcile Resource/list evidence. If acceptance remains unknown, do not blindly resend with either the old or a new key. |
