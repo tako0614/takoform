@@ -12,20 +12,18 @@ A report describes whether the named data or implementation satisfies the
 requirements under test. A valid package, for example, does not establish that
 its Form is usable on a particular Host.
 
-The [v1 conformance specification](/spec/conformance) defines the retained requirements.
+The [v1 conformance specification](/spec/conformance) defines the retained requirements. The repository also provides a caller-driven v2 HTTP probe for a supplied disposable Form.
 
-## What is being verified? {#claim-を分けて読む}
+## What each result covers {#claim-を分けて読む}
 
-| Subject | Main checks |
-| --- | --- |
-| Form Package | Definition, FormRef, canonical contents, declared files and allowed data formats |
-| Interface / Binding | Digests, definitions, operations and capabilities |
-| Snapshot | Complete data and references, and order-independent construction |
-| Host | API, resource lifecycle, concurrency, retries, identities and errors |
-| Client | Only declared settings are sent; FormRef is kept distinct from package identity |
-| Publisher trust data | Provenance, signatures, publication records and revocation data |
+| Evidence source | What it checks | What it does not establish |
+| --- | --- | --- |
+| `form-package verify` | One v1 Form Package's index, declared files, FormRef and digests | Host support, publication, or lifecycle behavior |
+| `generic-conformance verify` | Caller-supplied package, Interface, Binding and Snapshot artifacts; reference closure, order-independent compilation, and failure behavior | Host lifecycle requests, fencing, support, activation, runtime code, or publisher family semantics |
+| v2 HTTP baseline probe | A caller-selected disposable Form through an injected transport, for the probe's implemented checks | Complete Host or Form conformance, production operation, or a reusable SDK |
+| Host, client, or publisher report | Only the exact implementation or workflow named in its evidence | Claims about a different Host, client, Form, publisher, or release |
 
-One result does not prove another subject's conformance or production readiness.
+Conformance claims belong to their stated subjects. One result does not transfer to another subject or establish production readiness.
 
 ## Run local verification {#repository-から実行できる-harness}
 
@@ -41,15 +39,17 @@ After dependencies are available, the following checks do not access the network
 go run ./cmd/form-package verify conformance/takoform-v1/generic-host/external-family/counter-reservation
 ```
 
-This checks the package index, declared files, FormRef and digests.
+This checks one local v1 package's index, declared files, FormRef and digests.
 
 ```console
 go run ./cmd/generic-conformance verify --manifest conformance/takoform-v1/generic.json
 ```
 
-This checks package, Interface, Binding and Snapshot references, input-order
-independence and absence of partial results on failure. `external-family` and
-`zero-family` are fixtures, not real Forms or running Hosts.
+This checks local package, Interface, Binding and Snapshot artifacts, reference
+closure, input-order independence and no usable partial Snapshot on failure.
+`external-family` and `zero-family` are fixtures, not real Forms or running
+Hosts. The generic corpus is an artifact compiler check; it does not execute
+Host operations or verify Host or client implementations.
 
 Neither command performs Host resource operations, activates a Form or starts executable code.
 

@@ -5,7 +5,7 @@ description: Choose a v2 learning path for users, Form authors, client implement
 
 # Guides {#guides}
 
-Follow the v2 contract for the role you have. Examples are illustrative; publication of the common API specification does not indicate that a public Host or implementation is available.
+These guides explain how to apply the fixed Host API v2 contract by role. The Go SDK in this repository targets v1; check version support with the independent client and Host you plan to use. Examples are illustrative, and local artifact checks do not establish that a v2 Host is deployed.
 
 ## Users {#users}
 

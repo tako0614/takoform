@@ -5,7 +5,7 @@ description: Design the durability boundary that keeps Resources, Operations, an
 
 # Implementing Host API v2 {#host-api}
 
-A v2 Host manages more than HTTP responses: it owns accepted work, Resource generations, and the state verified at its execution target. This guide focuses on the durability boundary. The [HTTP API](/spec/host-api/v2/http) is the source for exact paths, statuses, and retention requirements.
+This is design guidance, not a reference Host implementation. A v2 Host manages more than HTTP responses: it owns accepted work, Resource generations, and the state verified at its execution target. This guide focuses on the durability boundary. The [HTTP API](/spec/host-api/v2/http) is the source for exact paths, statuses, and retention requirements.
 
 ## Make acceptance one durable fact {#acceptance}
 
