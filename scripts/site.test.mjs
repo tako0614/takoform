@@ -378,6 +378,14 @@ describe("takoform.com site derivation", () => {
       .toContain("dist/guide.html must render English visible body text");
     expect(inspectRenderedSitePages([pages[0], { ...pages[1], html: guide.replace('id="guide"', 'id="過去の見出し"') }]))
       .toEqual([]);
+    expect(inspectRenderedSitePages([pages[0], { ...pages[1], html: guide.replace("</body>", '<aside aria-label="広告"></aside></body>') }]))
+      .toContain("dist/guide.html must render English accessible names without Markdown syntax: 広告");
+    expect(inspectRenderedSitePages([pages[0], { ...pages[1], html: guide.replace("</body>", "<aside aria-label='&#x5E83;&#21578;'></aside></body>") }]))
+      .toContain("dist/guide.html must render English accessible names without Markdown syntax: 広告");
+    expect(inspectRenderedSitePages([pages[0], { ...pages[1], html: guide.replace("Guide</h1>", 'Guide <a class="header-anchor" href="#guide" aria-label="Permalink to &quot;Guide {#guide}&quot;"></a></h1>') }]))
+      .toContain('dist/guide.html must render English accessible names without Markdown syntax: Permalink to "Guide {#guide}"');
+    expect(inspectRenderedSitePages([pages[0], { ...pages[1], html: guide.replace("Guide</h1>", 'Guide <a class="header-anchor" href="#guide" aria-label="Permalink to &quot;`0.x`&quot;"></a></h1>') }]))
+      .toContain('dist/guide.html must render English accessible names without Markdown syntax: Permalink to "`0.x`"');
     pages[0] = { ...pages[0], html: home.replace('href="/guide"', 'href="/guide#missing"') };
     expect(inspectRenderedSitePages(pages)).toContain(
       "dist/index.html links to missing fragment /guide#missing",

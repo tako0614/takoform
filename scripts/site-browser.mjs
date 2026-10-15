@@ -209,6 +209,10 @@ async function run() {
       await page.evaluate(() => document.fonts.ready);
       const visibleText = await page.locator("body").innerText();
       assert.doesNotMatch(visibleText, /[\u3040-\u30ff\u3400-\u9fff]/u, `${route}: visible page content is English`);
+      const accessibleNames = await page.locator("[aria-label], [title], [alt], [placeholder]").evaluateAll((elements) => elements.flatMap(
+        (element) => ["aria-label", "title", "alt", "placeholder"].map((name) => element.getAttribute(name) ?? ""),
+      ));
+      assert.deepEqual(accessibleNames.filter((name) => /[\u3040-\u30ff\u3400-\u9fff]|\{#[^}]*\}|`/u.test(name)), [], `${route}: accessible names are English without Markdown syntax`);
       assert.equal(await page.locator(".VPNavBarTranslations, .VPNavScreenTranslations").count(), 0, `${route}: canonical site has no language switch`);
       const path = new URL(page.url()).pathname;
       const version = documentVersion(path);

@@ -773,6 +773,18 @@ function readableText(markup) {
     .trim();
 }
 
+// Decode the entities VitePress emits in attribute values; unknown named
+// entities stay literal so a check still sees them.
+function attributeText(value) {
+  const named = { amp: "&", lt: "<", gt: ">", quot: "\"", apos: "'", nbsp: " " };
+  return value
+    .replace(/&#x([\da-f]+);/giu, (_, hex) => String.fromCodePoint(Number.parseInt(hex, 16)))
+    .replace(/&#(\d+);/gu, (_, decimal) => String.fromCodePoint(Number(decimal)))
+    .replace(/&([a-z]+);/giu, (entity, name) => named[name.toLowerCase()] ?? entity)
+    .replace(/\s+/gu, " ")
+    .trim();
+}
+
 function decodedFragment(hash) {
   try {
     return decodeURIComponent(hash.slice(1));
@@ -815,6 +827,13 @@ export function inspectRenderedSitePages(pages, servedPaths = new Set()) {
     const visibleBody = body.replace(/<(script|style|template)\b[^>]*>[\s\S]*?<\/\1>/giu, " ");
     if (japaneseTitle.test(readableText(visibleBody))) {
       problems.push(`${page.path} must render English visible body text`);
+    }
+    // Accessible names live in attributes but are read aloud like prose.
+    for (const match of body.matchAll(/\s(?:aria-label|title|alt|placeholder)=(?:"([^"]*)"|'([^']*)')/gu)) {
+      const name = attributeText(match[1] ?? match[2]);
+      if (japaneseTitle.test(name) || /\{#[^}]*\}|`/u.test(name)) {
+        problems.push(`${page.path} must render English accessible names without Markdown syntax: ${name}`);
+      }
     }
     const head = page.html.match(/<head\b[^>]*>([\s\S]*?)<\/head>/u)?.[1] ?? "";
     const metadata = [...head.matchAll(/<meta\b[^>]*>/gu)].map((match) => match[0]);
