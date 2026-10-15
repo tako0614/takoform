@@ -19,3 +19,17 @@ export function searchResults(index, query, scope, limit = 16) {
     },
   }).slice(0, limit);
 }
+
+export const SEARCH_RESULT_LIMIT = 16;
+
+/** Return at most `limit` filtered results and whether more matched. */
+export function searchResultPage(index, query, scope, limit = SEARCH_RESULT_LIMIT) {
+  // One extra match tells the reader whether the list was cut at the limit.
+  const matches = searchResults(index, query, scope, limit + 1);
+  return { results: matches.slice(0, limit), truncated: matches.length > limit };
+}
+
+export function resultCountLabel(count, truncated) {
+  if (truncated) return `Top ${count} results`;
+  return count === 1 ? "1 result" : `${count} results`;
+}
