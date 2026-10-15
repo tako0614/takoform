@@ -3,7 +3,7 @@ import localSearchIndex from "@localSearchIndex";
 import MiniSearch, { type SearchResult } from "minisearch";
 import { useRoute, useRouter } from "vitepress";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { defaultSearchScope, resultVersion, searchResults } from "../../search-scope.mjs";
+import { defaultSearchScope, resultCountLabel, resultVersion, searchResultPage } from "../../search-scope.mjs";
 
 type Scope = "all" | "v1" | "v2";
 type IndexedResult = SearchResult & { title?: string; titles?: string[] };
@@ -19,9 +19,20 @@ const scope = ref<Scope>(defaultSearchScope(route.path) as Scope);
 const index = ref<Index | null>(null);
 const state = ref<"loading" | "ready" | "error">("loading");
 const selected = ref(0);
-const results = computed(() => index.value
-  ? searchResults(index.value, query.value, scope.value) as IndexedResult[]
-  : []);
+const page = computed(() => index.value
+  ? searchResultPage(index.value, query.value, scope.value) as { results: IndexedResult[]; truncated: boolean }
+  : { results: [], truncated: false });
+const results = computed(() => page.value.results);
+const emptyMessage = computed(() => scope.value === "all"
+  ? text.emptyAll
+  : text.emptyIn(text[scope.value]));
+// One region stays mounted so screen readers announce every change of state,
+// including moves between the result list and the empty state.
+const status = computed(() => {
+  if (state.value === "loading") return text.loading;
+  if (state.value === "error" || !query.value.trim()) return "";
+  return results.value.length ? resultCountLabel(results.value.length, page.value.truncated) : emptyMessage.value;
+});
 
 const text = {
   search: "Search documentation",
@@ -34,8 +45,9 @@ const text = {
   loading: "Loading search index…",
   error: "Search index could not be loaded. Close and try again.",
   prompt: "Enter a search term.",
-  empty: "No results in this scope. Try all versions.",
-  count: (n: number) => `${n} results`,
+  emptyIn: (scopeLabel: string) => `No results in ${scopeLabel}.`,
+  emptyAll: "No results. Try a shorter or different term.",
+  searchAll: "Search all versions",
   common: "Common",
 };
 
@@ -99,6 +111,11 @@ function navigate(result: IndexedResult, event?: MouseEvent) {
   event?.preventDefault();
   close();
   void router.go(result.id);
+}
+
+function searchAllVersions() {
+  scope.value = "all";
+  input.value?.focus();
 }
 
 function revealSelectedResult() {
@@ -166,12 +183,17 @@ onBeforeUnmount(() => {
         <option value="v2">{{ text.v2 }}</option>
       </select>
     </div>
-    <p v-if="state === 'loading'" class="VersionSearch-message" role="status">{{ text.loading }}</p>
+    <p class="VersionSearch-status" role="status">{{ status }}</p>
+    <p v-if="state === 'loading'" class="VersionSearch-message" aria-hidden="true">{{ text.loading }}</p>
     <p v-else-if="state === 'error'" class="VersionSearch-message" role="alert">{{ text.error }}</p>
     <p v-else-if="!query.trim()" class="VersionSearch-message">{{ text.prompt }}</p>
-    <p v-else-if="!results.length" class="VersionSearch-message" role="status">{{ text.empty }}</p>
+    <template v-else-if="!results.length">
+      <p class="VersionSearch-message" aria-hidden="true">{{ emptyMessage }}</p>
+      <button v-if="scope !== 'all'" type="button" class="VersionSearch-widen"
+        @click="searchAllVersions">{{ text.searchAll }}</button>
+    </template>
     <template v-else>
-      <p class="VersionSearch-count" role="status">{{ text.count(results.length) }}</p>
+      <p class="VersionSearch-count" aria-hidden="true">{{ resultCountLabel(results.length, page.truncated) }}</p>
       <ul id="version-search-results" class="VersionSearch-results" role="listbox"
         :aria-label="text.search">
         <li v-for="(result, i) in results" :id="`version-search-result-${i}`" :key="result.id"
@@ -207,13 +229,17 @@ onBeforeUnmount(() => {
 .VersionSearch-scope label { flex: none; color: var(--vp-c-text-2); font-size: .875rem; }
 .VersionSearch-scope select { min-width: 0; min-height: 44px; padding: .35rem .5rem; color: var(--vp-c-text-1); background: var(--vp-c-bg-soft); border: 1px solid var(--vp-c-divider); border-radius: 6px; }
 .VersionSearch-message, .VersionSearch-count { padding: 1rem; color: var(--vp-c-text-2); }
+.VersionSearch-status { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.VersionSearch-widen { min-height: 44px; margin: -.25rem 1rem 1rem; padding: 0 1rem; color: var(--vp-c-brand-1); font-weight: 600; border: 1px solid var(--vp-c-brand-1); border-radius: 6px; }
+.VersionSearch-widen:hover { background: var(--vp-c-brand-soft); }
 .VersionSearch-count { padding-bottom: .25rem; font-size: .8rem; }
 .VersionSearch-results { max-height: 26rem; overflow-y: auto; padding: .25rem; }
 .VersionSearch-results li { border-radius: 6px; }
 .VersionSearch-results li.selected { background: var(--vp-c-bg-soft); }
 .VersionSearch-results a { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .15rem .7rem; padding: .7rem .75rem; color: var(--vp-c-text-1); text-decoration: none; }
 .VersionSearch-results a:focus-visible, .VersionSearch-head button:focus-visible, .VersionSearch-scope select:focus-visible { outline: 2px solid var(--vp-c-brand-1); outline-offset: -2px; }
+.VersionSearch-widen:focus-visible { outline: 2px solid var(--vp-c-brand-1); outline-offset: 2px; }
 .VersionSearch-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .VersionSearch-tag { color: var(--vp-c-text-2); font-size: .75rem; }
-.VersionSearch-results small { grid-column: 1 / -1; color: var(--vp-c-text-2); }
+.VersionSearch-results small { grid-column: 1 / -1; min-width: 0; color: var(--vp-c-text-2); white-space: normal; overflow-wrap: anywhere; }
 </style>
