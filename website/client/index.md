@@ -33,6 +33,146 @@ An Idempotency-Key is not reusable merely because a request body happens to matc
 
 Keep Resource `generation`, `observedGeneration`, and `observedAt` distinct from Operation state. Operation success means the Form-defined management action completed; it is not a general application-health guarantee.
 
+## Follow one change in code {#loop}
+
+These two functions apply the table above to one recorded intent. They are a reference for your own client, not a library: `applyChange` sends the request and replays it only inside the replay window, and `followOperation` follows the accepted Operation to its end and reads the Resource. After a restart, call `followOperation` with the saved Operation ID instead of sending the change again.
+
+```js
+const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
+const isProblem = (response) => response.headers
+  .get("content-type")?.startsWith("application/problem+json");
+// Retry-After is seconds or an HTTP date; else use the default.
+const delay = (response, seconds) => {
+  const value = response?.headers.get("retry-after") ?? "";
+  const ms = /^\d+$/u.test(value)
+    ? Number(value) * 1000 : Date.parse(value) - Date.now();
+  return ms > 0 ? ms : seconds * 1000;
+};
+
+// Send one recorded intent and follow it to its result.
+// `http(method, path, headers, body)` sends one request to the API
+// root with your Host's authentication; `save` stores the intent
+// durably. The intent holds method, path, headers, body, key,
+// firstSentAt, and replayWindowMs.
+async function applyChange(http, save, intent) {
+  await save(intent);
+  const deadline = intent.firstSentAt + intent.replayWindowMs;
+  if (Date.now() >= deadline) return { result: "unknown", intent };
+  let response;
+  let value;
+  let uncertain = false;
+  for (let attempt = 0; ; attempt++) {
+    response = undefined;
+    value = undefined;
+    try {
+      response = await http(intent.method, intent.path,
+        { ...intent.headers, "Idempotency-Key": intent.key },
+        intent.body);
+      const api = response.ok
+        || (response.status < 500 && isProblem(response));
+      if (api) value = await response.json();
+    } catch {
+      // Lost or unreadable: the Host may have accepted the change.
+    }
+    if (value !== undefined && response.status !== 429) break;
+    // Lost, 429, 5xx, or a non-API answer: resend the same request
+    // with the same key, only before the window ends.
+    uncertain ||= response?.status !== 429;
+    const wait = delay(response, 2 ** attempt);
+    if (Date.now() + wait >= deadline) {
+      return { result: "unknown", intent };
+    }
+    await sleep(wait);
+  }
+  if (!response.ok) {
+    if (value.code === "private_inputs_unverifiable") {
+      // An earlier send of this change was accepted; follow it
+      // when the Host names it, otherwise reconcile.
+      if (!value.operationId) return { result: "unknown", intent };
+      await save({ ...intent, operationId: value.operationId });
+      return followOperation(http, value.operationId);
+    }
+    const denied = [401, 403, 404, 410].includes(response.status);
+    if (uncertain && denied) {
+      // Access changed after an uncertain send: keep the intent.
+      return { result: "unknown", intent };
+    }
+    // Not accepted. A 409 code such as generation_conflict says
+    // what to read before you decide on a new intent.
+    const conflict = response.status === 409;
+    const result = conflict ? "conflict" : "rejected";
+    return { result, problem: value };
+  }
+  await save({ ...intent, operationId: value.id,
+    resourceUid: value.resourceUid,
+    generation: value.generation,
+    retainUntil: value.retainUntil,
+    location: response.headers.get("location") });
+  return followOperation(http, value.id, value, response);
+}
+
+// Follow a saved Operation to its end; also use it after a restart.
+async function followOperation(http, id, operation, response,
+  until = Date.now() + 10 * 60_000) {
+  while (!["succeeded", "failed"].includes(operation?.status)) {
+    if (operation?.status === "waiting_input") {
+      // Replenish the private inputs of this same Operation.
+      return { result: "waiting_input", operation };
+    }
+    const left = until - Date.now();
+    if (left <= 0) return { result: "pending", id };
+    await sleep(Math.min(delay(response, 1), left));
+    try {
+      response = await http("GET", `/operations/${id}`);
+      if ([401, 403, 404, 410].includes(response.status)) {
+        return { result: "unknown", id }; // Reconcile instead.
+      }
+      if (response.ok) operation = await response.json();
+    } catch {
+      // A lost or unreadable read is safe to repeat.
+    }
+  }
+  const uid = operation.resourceUid;
+  const read = await http("GET", `/resources/${uid}`)
+    .then((answer) => (answer.ok ? answer.json() : null))
+    .catch(() => null);
+  return { result: operation.status, operation, resource: read };
+}
+```
+
+- `save` runs before the first send and again with the Operation ID, Resource UID, accepted generation, `retainUntil`, and `Location`: the records listed in [Record intent before sending](#intent).
+- A request that throws, a `5xx`, or an answer that is not the API's JSON leaves acceptance uncertain, so the same request is resent with the same key; a `429` is resent after its `Retry-After`, given in seconds or as a date. Every resend stops before `firstSentAt + replayWindowMs`; after that the result is `unknown`, so you reconcile instead of starting a new intent.
+- `private_inputs_unverifiable` means an earlier send of this change was accepted: the loop saves and follows the Operation the Problem names, or returns `unknown` when it names none. `401`, `403`, `404`, or `410` after an uncertain send proves nothing either way and also returns `unknown`, as [When authentication changes](#auth-change) explains.
+- Any other `409` was not accepted, even when its Problem names another Operation, as `resource_busy` does. For `generation_conflict`, read the Resource and, if you still want the change, record a new intent with the current generation and a new key.
+- `followOperation` honors `Retry-After` without sleeping past its bound, repeats lost or unreadable reads, returns `waiting_input` so you can replenish private inputs on the same Operation, returns `unknown` when the Operation can no longer be read, and returns `pending` with the ID after ten minutes so you can resume later. A `failed` result still returns the Resource, so you can see `phase: error`.
+
+Supply `http` from the Host's Discovery response and authentication, and record each intent before calling `applyChange`. This example assumes a Host that declares Bearer authentication and no Offerings; add `offering` to the body when the Host advertises them.
+
+```js
+const http = (method, path, headers = {}, body) =>
+  fetch(`${discovery.baseUrl}${path}`, {
+    method,
+    headers: { ...headers, Authorization: `Bearer ${token}` },
+    body: body === undefined ? undefined : JSON.stringify(body),
+    signal: AbortSignal.timeout(30_000),
+  });
+
+const result = await applyChange(http, save, {
+  method: "POST",
+  path: "/resources",
+  headers: { "Content-Type": "application/json" },
+  body: {
+    form: "https://forms.publisher.example/key-value-entry/1.0.0",
+    space: "default",
+    name: "greeting",
+    spec: { key: "greeting", value: "hello" },
+  },
+  key: crypto.randomUUID(),
+  firstSentAt: Date.now(),
+  replayWindowMs: discovery.limits.replayWindowSeconds * 1000,
+});
+```
+
 ## When authentication changes {#auth-change}
 
 The Host authenticates and authorizes each request. Follow its authentication documentation to learn whether credential rotation preserves the same stable principal and permissions. A different principal has a different Idempotency-Key scope; do not use a new principal's key to “retry” a request accepted under the old one.

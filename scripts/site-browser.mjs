@@ -416,6 +416,9 @@ async function run() {
       await visit("/host-api/");
       assert.ok(await page.locator("#run-check ~ div[class*='language-js'] pre").first().evaluate((pre) => pre.scrollWidth <= pre.clientWidth),
         `${colorScheme}: the Host check script fits without horizontal scrolling on desktop`);
+      await visit("/client/");
+      assert.deepEqual(await page.locator("#loop ~ div[class*='language-js'] pre").evaluateAll((blocks) => blocks.map((pre) => pre.scrollWidth <= pre.clientWidth)),
+        [true, true], `${colorScheme}: the client loop and its usage fit without horizontal scrolling on desktop`);
       for (const path of ["/spec/host-api/v1", "/spec/host-api/v2/http"]) {
         await visit(path);
         assert.ok(await page.locator(".mirror-notice a").evaluate((link) => {
