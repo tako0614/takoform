@@ -26,7 +26,7 @@ Check the API version and exact Form support of the Host and client you use.
 
 Refer to the [v2 glossary](/glossary) for terminology.
 
-- **Users:** Follow the fictional HTTP walkthrough in [Getting started](/start/), then read the fuller [request/response examples](/spec/host-api/v2/examples).
+- **Users:** Follow the fictional HTTP walkthrough in [Getting started](/start/), choose a client that explicitly supports v2 with [Using v2](/use/), then read the fuller [request/response examples](/spec/host-api/v2/examples).
 - **Form authors:** Use [Form requirements](/spec/host-api/v2/forms) to define `spec`, `observed`, `output`, and failure behavior.
-- **Client implementers:** Read the [client design guide](/client/) for intent records, replay deadlines, Operations, and generation conflicts; then consult the [HTTP retry contract](/spec/host-api/v2/http#retry).
+- **Client implementers:** Read [Implementing a client](/client/) for intent records, replay deadlines, Operations, and generation conflicts; then consult the [HTTP retry contract](/spec/host-api/v2/http#retry).
 - **Host implementers:** Start with the [Host implementation guide](/host-api/) for durability, then read the overview, HTTP API, and each implemented Form.

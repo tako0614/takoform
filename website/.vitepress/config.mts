@@ -131,7 +131,7 @@ const contractSidebar = [
 const v2Sidebar = [
   { text: "Host API v2", link: "/v2/" },
   {
-    text: "Host API v2",
+    text: "API specification",
     items: [
       { text: "Overview", link: "/spec/host-api/v2/" },
       { text: "HTTP API", link: "/spec/host-api/v2/http" },
@@ -145,11 +145,11 @@ const v2Sidebar = [
     items: [
       { text: "Getting started", link: "/start/" },
       { text: "Common model", link: "/model/" },
-      { text: "Client design", link: "/client/" },
+      { text: "Implementing a client", link: "/client/" },
       { text: "Create a Form", link: "/authoring/" },
       { text: "Using v2", link: "/use/" },
       { text: "Implementing a Host", link: "/host-api/" },
-      { text: "Implementation guides", link: "/guides/" },
+      { text: "Guides by role", link: "/guides/" },
       { text: "Glossary", link: "/glossary" },
     ],
   },

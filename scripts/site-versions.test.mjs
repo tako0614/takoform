@@ -99,6 +99,16 @@ describe("version-separated documentation navigation", () => {
     checkEnglishLabels(rootSidebar["/v1/"]);
     checkEnglishLabels(rootSidebar["/v2/"]);
     expect(rootSidebar["/v1/"][0].text).toBe("Host API v1");
+    expect(rootSidebar["/v2/"][0].text).toBe("Host API v2");
+    for (const version of ["/v1/", "/v2/"]) {
+      const labels = rootSidebar[version].map((item) => item.text);
+      expect(new Set(labels).size, `${version} sidebar labels are distinct`).toBe(labels.length);
+    }
+    const v2Guides = Object.fromEntries(rootSidebar["/v2/"].find((item) => item.text === "Guides").items
+      .map((item) => [item.link, item.text]));
+    expect(v2Guides["/client/"]).toBe("Implementing a client");
+    expect(v2Guides["/host-api/"]).toBe("Implementing a Host");
+    expect(v2Guides["/guides/"]).toBe("Guides by role");
     expect(rootSidebar["/reference/"]).toBeUndefined();
     expect(config.lang).toBe("en");
     expect(config.locales).toBeUndefined();
