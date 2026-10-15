@@ -1,9 +1,9 @@
 ---
-title: Guides
+title: Guides by role
 description: Choose a v2 learning path for users, Form authors, client implementers, or Host implementers.
 ---
 
-# Guides {#guides}
+# Guides by role {#guides}
 
 These guides explain how to apply the fixed Host API v2 contract by role. The Go SDK in this repository targets v1; check version support with the independent client and Host you plan to use. Examples are illustrative, and local artifact checks do not establish that a v2 Host is deployed.
 
