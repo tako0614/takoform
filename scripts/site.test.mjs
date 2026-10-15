@@ -72,6 +72,12 @@ describe("takoform.com site derivation", () => {
       "Takoform-Expected-Generation: 2",
       "HTTP/1.1 202 Accepted",
     ]) expect(start).toContain(line);
+    const glossary = readFileSync("website/glossary.md", "utf8");
+    expect(start, "the walkthrough points to the glossary").toContain("(/glossary)");
+    for (const id of ["space", "idempotency-key", "operation", "generation-observedgeneration"]) {
+      expect(start, `the walkthrough links /glossary#${id}`).toContain(`(/glossary#${id})`);
+      expect(glossary, `the glossary defines #${id}`).toContain(`{#${id}}`);
+    }
     const nextHeading = start.indexOf("## Where to go next {#next}");
     expect(nextHeading, "the walkthrough ends with next steps").toBeGreaterThan(-1);
     const next = start.slice(nextHeading);
