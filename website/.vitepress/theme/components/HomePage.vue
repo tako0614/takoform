@@ -24,7 +24,8 @@ const copy = {
   exampleLink: "Read the full walkthrough",
   readingIntro: "The guides below use v2. Choose v1 or v2 in the header when reading an existing implementation's API documentation.",
   readings: [
-    { path: "/client/", label: "Use the API", text: "Connect a client, send changes and handle their results. For Terraform or OpenTofu, use a provider that supports the chosen API and Forms." },
+    { path: "/use/", label: "Use the API", text: "Choose a client library, CLI or Terraform/OpenTofu provider, then confirm it explicitly supports v2 and the Host and Form you plan to use." },
+    { path: "/client/", label: "Build a client", text: "Send changes and handle their results reliably: record intent before sending, replay lost responses safely, follow Operations and handle generation conflicts." },
     { path: "/authoring/", label: "Define a Form", text: "Specify the resource's inputs, observable behavior and usage contract so others can implement it." },
     { path: "/host-api/", label: "Implement a Host", text: "Connect the API to an execution backend and preserve accepted operations through failures and restarts." },
   ],

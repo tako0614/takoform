@@ -10,9 +10,10 @@ These guides explain how to apply the fixed Host API v2 contract by role. The Go
 ## Users {#users}
 
 1. Start with [Getting started](/start/) to distinguish a Form from a Host.
-2. Check the chosen Host operator's guidance for Discovery, authentication, and Space access.
-3. Read the exact Form URL and check that Host's `support` response.
-4. Follow the [request/response examples](/spec/host-api/v2/examples) through Create, Operation tracking, and Delete.
+2. Read [Using v2](/use/) to choose a client or Infrastructure as Code provider that explicitly supports v2.
+3. Check the chosen Host operator's guidance for Discovery, authentication, and Space access.
+4. Read the exact Form URL and check that Host's `support` response.
+5. Follow the [request/response examples](/spec/host-api/v2/examples) through Create, Operation tracking, and Delete.
 
 ## Form authors {#form-authors}
 
