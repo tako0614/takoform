@@ -150,6 +150,13 @@ describe("takoform.com site derivation", () => {
     expect(component).toContain("A common HTTP API for resource management.");
     expect(component).toContain("Forms, Hosts and clients");
     expect(component).toContain("POST /apis/forms.takoform.com/v2/resources");
+    // The overview's response agrees with the walkthrough's first accepted Operation.
+    const startGuide = readFileSync("website/start/index.md", "utf8");
+    for (const fragment of ['"id": "op_create_1"', '"resourceUid": "r_1"', '"action": "create"', '"generation": 1',
+      '"status": "queued"', '"effect": "none"', "HTTP/1.1 202 Accepted", "Retry-After: 1"]) {
+      expect(component, fragment).toContain(fragment);
+      expect(startGuide.replace(/,\s+/gu, ",\n  "), fragment).toContain(fragment);
+    }
     for (const target of [
       "/start/#discover-support",
       "/start/#create-read",

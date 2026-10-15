@@ -109,6 +109,14 @@
   tab-size: 2;
 }
 .home-example code { font-family: inherit; }
+.home-page .home-example__label {
+  margin-block: var(--home-space-sm) var(--home-space-xs);
+  color: var(--home-muted);
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+.home-page .home-example__label:first-child { margin-block-start: 0; }
 .home-example figcaption {
   margin-block-start: var(--home-space-xs);
   color: var(--home-muted);

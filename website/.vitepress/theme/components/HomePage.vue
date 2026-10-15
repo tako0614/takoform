@@ -13,8 +13,9 @@ const copy = {
   ],
   portability: "A shared API gives clients a consistent management protocol. Before using a resource, check that the Host supports the particular Form and review its available capacity, access requirements and terms.",
   exampleIntro: "In this v2 example, a client asks a Host to store a key/value entry. The Form identifies the resource's behavior; spec supplies its configuration.",
-  exampleCaption: "Illustrative Host API v2 request. The Host and Form use example domains, not live services.",
-  requestLabel: "Create request",
+  exampleCaption: "Illustrative Host API v2 request and the Host's answer, with the response's other headers and timestamps omitted. The Host and Form use example domains, not live services.",
+  requestLabel: "Request",
+  responseLabel: "Response (abridged): the accepted Operation, polled at its Location until it finishes",
   steps: [
     { name: "Check support", path: "/start/#discover-support", text: "Read the Host's connection and authentication details, then check support for the exact Form URL." },
     { name: "Submit the change", path: "/start/#create-read", text: "POST the resource request. The Host returns an Operation so the client can follow the accepted change." },
@@ -42,6 +43,17 @@ Idempotency-Key: 946eec36-4a6a-41de-8f3c-e83d2c58c246
   "space": "default",
   "name": "greeting",
   "spec": { "key": "greeting", "value": "hello" }
+}`;
+const response = `HTTP/1.1 202 Accepted
+Retry-After: 1
+
+{
+  "id": "op_create_1",
+  "resourceUid": "r_1",
+  "action": "create",
+  "generation": 1,
+  "status": "queued",
+  "effect": "none"
 }`;
 </script>
 
@@ -80,7 +92,11 @@ Idempotency-Key: 946eec36-4a6a-41de-8f3c-e83d2c58c246
         <p>{{ copy.exampleIntro }}</p>
         <div class="home-example">
           <figure>
-            <pre tabindex="0" :aria-label="copy.requestLabel"><code>{{ request }}</code></pre>
+            <p class="home-example__label">{{ copy.requestLabel }}</p>
+            <!-- The request scrolls on narrow screens, so it takes focus. -->
+            <pre tabindex="0"><code>{{ request }}</code></pre>
+            <p class="home-example__label">{{ copy.responseLabel }}</p>
+            <pre><code>{{ response }}</code></pre>
             <figcaption>{{ copy.exampleCaption }}</figcaption>
           </figure>
           <ol class="home-steps">

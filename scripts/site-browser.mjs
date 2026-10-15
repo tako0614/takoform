@@ -393,11 +393,13 @@ async function run() {
       assert.deepEqual(await page.locator(".home-steps h3 a").evaluateAll((links) => links.map((link) => link.getAttribute("href"))), [
         "/start/#discover-support", "/start/#create-read", "/start/#create-read", "/start/#update",
       ], "each lifecycle step opens its walkthrough section");
-      assert.ok(await page.locator(".home-example pre").evaluate((element) => element.scrollWidth <= element.clientWidth), "the create request fits without horizontal scrolling");
+      assert.deepEqual(await page.locator(".home-example pre").evaluateAll((blocks) => blocks.map((pre) => pre.scrollWidth <= pre.clientWidth)),
+        [true, true], "the create request and its response fit without horizontal scrolling");
       const exampleRequest = readFileSync(join(root, "website/start/index.md"), "utf8")
         .match(/^POST .+ HTTP\/1\.1$/mu)?.[0];
       assert.ok(exampleRequest, "the getting-started guide includes a create request");
-      assert.ok((await page.locator(".home-example pre").textContent()).includes(exampleRequest), "home uses the guide's illustrative create request");
+      assert.ok((await page.locator(".home-example pre").first().textContent()).includes(exampleRequest), "home uses the guide's illustrative create request");
+      assert.match(await page.locator(".home-example pre").nth(1).textContent(), /^HTTP\/1\.1 202 Accepted\n/u, "home shows the accepted Operation the request returns");
       const primary = page.locator('.version-context select');
       const bounds = await primary.boundingBox();
       assert.ok(bounds && bounds.y >= 0 && bounds.y + bounds.height <= 800, `${colorScheme}: API selection must fit first viewport`);
