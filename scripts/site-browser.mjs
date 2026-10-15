@@ -14,7 +14,7 @@ import {
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const v2Routes = ["/v2/", "/spec/host-api/v2/", "/spec/host-api/v2/http", "/spec/host-api/v2/forms", "/spec/host-api/v2/examples", "/spec/host-api/v2/migration"];
-const routes = ["/", "/v1/", "/spec/host-api/v1", "/schemas/", "/site", "/start/", "/model/", "/client/", "/authoring/", "/use/", "/host-api/", "/guides/", "/glossary", ...v2Routes];
+const routes = ["/", "/v1/", "/spec/host-api/v1", "/schemas/", "/site", "/start/", "/model/", "/client/", "/authoring/", "/use/", "/host-api/", "/guides/", "/glossary", "/404.html", ...v2Routes];
 const widths = [320, 375, 414, 768];
 const sidebarRoutes = [...new Set([
   ...v2Routes,
@@ -90,7 +90,10 @@ async function startPreview(directory) {
     const target = [path, `${path}.html`, `${path.replace(/\/$/u, "")}/index.html`]
       .find((candidate) => files.has(candidate));
     if (target === undefined) {
-      response.writeHead(404).end();
+      // Like the Pages host, answer unknown paths with the built not-found page.
+      const notFound = files.get("/404.html");
+      response.writeHead(404, notFound ? { "Content-Type": types[".html"] } : {});
+      response.end(request.method === "HEAD" ? undefined : notFound);
       return;
     }
     response.writeHead(200, { "Content-Type": types[extname(target)] ?? "application/octet-stream" });
@@ -183,6 +186,7 @@ async function run() {
     browser = await chromium.launch({ executablePath, headless: true });
     const context = await browser.newContext({ reducedMotion: "reduce", colorScheme: "light" });
     const networkFailures = [];
+    const expectedNotFound = new Set();
     await context.route("**/*", (route) => {
       if (new URL(route.request().url()).origin === origin) return route.continue();
       networkFailures.push(`unexpected external request: ${route.request().url()}`);
@@ -201,7 +205,9 @@ async function run() {
     page.setDefaultTimeout(10000);
     page.on("pageerror", (error) => networkFailures.push(error.message));
     page.on("response", (response) => {
-      if (response.status() >= 400) networkFailures.push(`${response.status()}: ${response.url()}`);
+      if (response.status() >= 400 && !(response.status() === 404 && expectedNotFound.has(new URL(response.url()).pathname))) {
+        networkFailures.push(`${response.status()}: ${response.url()}`);
+      }
     });
     page.on("requestfailed", (request) => networkFailures.push(`failed request: ${request.url()}`));
     const visit = async (route) => {
@@ -307,6 +313,25 @@ async function run() {
     await page.keyboard.press("Escape");
     await page.waitForFunction(() => !document.querySelector(".VersionSearch"));
     assert.ok(await page.locator(".VPNavBarSearch button").evaluate((button) => document.activeElement === button), "closing search returns focus to its trigger");
+    await visit("/404.html");
+    assert.deepEqual(await page.locator(".not-found a").evaluateAll((links) => links.map((link) => link.getAttribute("href"))), [
+      "/", "/start/", "/v2/", "/v1/",
+    ], "the not-found page links to the overview, the walkthrough and both versions");
+    // A missing page under a versioned prefix belongs to no version.
+    const missing = "/spec/host-api/v1/missing";
+    expectedNotFound.add(missing);
+    assert.equal((await page.goto(origin + missing, { waitUntil: "networkidle" }))?.status(), 404, "unknown paths answer 404");
+    await page.locator(".not-found h1").filter({ hasText: "Page not found" }).waitFor();
+    assert.equal(await page.locator(".version-context select").inputValue(), "shared", "a missing /spec/ page does not claim a version");
+    await page.locator(".not-found__search").click();
+    await page.locator(".VersionSearch input").waitFor();
+    assert.ok(await page.locator(".VersionSearch input").evaluate((input) => document.activeElement === input), "the not-found page opens search");
+    assert.equal(await page.locator("#version-search-scope").inputValue(), "all", "search from a missing page covers all versions");
+    await page.keyboard.press("Escape");
+    await page.waitForFunction(() => !document.querySelector(".VersionSearch"));
+    assert.ok(await page.locator(".not-found__search").evaluate((button) => document.activeElement === button), "closing search returns focus to the not-found page");
+    await page.locator(".version-context select").selectOption("v1");
+    await page.waitForURL((url) => url.pathname === "/v1/", { timeout: 10000 });
     await page.setViewportSize({ width: 320, height: 900 });
     await visit("/");
     await checkDisclosure(page, ".VPNavBarHamburger");

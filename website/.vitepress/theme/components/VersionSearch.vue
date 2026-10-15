@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import localSearchIndex from "@localSearchIndex";
 import MiniSearch, { type SearchResult } from "minisearch";
-import { useRoute, useRouter } from "vitepress";
+import { useData, useRoute, useRouter } from "vitepress";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { defaultSearchScope, resultCountLabel, resultVersion, searchResultPage } from "../../search-scope.mjs";
 
@@ -15,7 +15,8 @@ const router = useRouter();
 const dialog = ref<HTMLDialogElement | null>(null);
 const input = ref<HTMLInputElement | null>(null);
 const query = ref("");
-const scope = ref<Scope>(defaultSearchScope(route.path) as Scope);
+const { page: pageData } = useData();
+const scope = ref<Scope>(pageData.value.isNotFound ? "all" : defaultSearchScope(route.path) as Scope);
 const index = ref<Index | null>(null);
 const state = ref<"loading" | "ready" | "error">("loading");
 const selected = ref(0);
