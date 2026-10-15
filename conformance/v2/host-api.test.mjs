@@ -232,3 +232,293 @@ test("the Host guide's runnable example passes against a conforming Host", async
   expect(readFileSync(new URL("./host-api.mjs", import.meta.url), "utf8"))
     .toContain(`"${failure[1]}", "${failure[2]}"`);
 });
+
+test("the client guide's loop follows changes against an asynchronous Host", async () => {
+  const guide = readFileSync(new URL("../../website/client/index.md", import.meta.url), "utf8");
+  const [loop, usage] = [...guide.slice(guide.indexOf("{#loop}")).matchAll(/```js\n([\s\S]*?)```/gu)]
+    .slice(0, 2).map((match) => match[1]);
+  const sleepLine = "const sleep = (ms) => new Promise((done) => setTimeout(done, ms));";
+  expect(loop).toStartWith(sleepLine);
+
+  // The fake Host settles mutations at once; answer them as an asynchronous Host would.
+  const host = makeHost();
+  const pending = new Set();
+  const asynchronous = async ({ method, url, headers, body }) => {
+    const response = await host({ method, url, headers, body });
+    const path = url.slice(root.length);
+    if (method !== "GET" && response.status === 200) {
+      const operation = await response.json();
+      pending.add(operation.id);
+      return json({ ...operation, status: "running", effect: "unknown" }, 202,
+        { Location: response.headers.get("location"), "Retry-After": "2" });
+    }
+    if (method === "GET" && path.startsWith("/operations/") && pending.delete(path.slice(12))) {
+      const operation = await response.json();
+      return json({ ...operation, status: "running", effect: "unknown" }, 200, { "Retry-After": "3" });
+    }
+    return response;
+  };
+  const sent = [];
+  const fetch = async (url, init) => {
+    sent.push({ method: init.method, url, headers: init.headers, signal: init.signal });
+    return asynchronous({ method: init.method, url, headers: init.headers,
+      body: init.body === undefined ? undefined : JSON.parse(init.body) });
+  };
+  const saved = [];
+  const save = async (record) => { saved.push(record); };
+  const waits = [];
+  const discovery = { baseUrl: root, limits: { replayWindowSeconds: 3600 } };
+  // The stub yields like a timer would and turns runaway retrying into a failure.
+  const program = loop.replace(sleepLine, `const sleep = async (ms) => {
+    waits.push(ms);
+    if (waits.length > 200) throw new Error("runaway retries");
+    await new Promise((done) => setImmediate(done));
+  };`)
+    + usage.replace('"https://forms.publisher.example/key-value-entry/1.0.0"', JSON.stringify(form))
+    + "\nreturn { applyChange, followOperation, http, result };";
+  const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
+  const { applyChange, followOperation, http, result } = await new AsyncFunction(
+    "fetch", "save", "discovery", "token", "crypto", "waits", program)(
+    fetch, save, discovery, "guide-token", globalThis.crypto, waits);
+
+  // Accepted with 202, followed through Retry-After to success, then the Resource is read.
+  expect(result.result).toBe("succeeded");
+  expect(result.resource.generation).toBe(1);
+  expect(waits).toEqual([2000, 3000]);
+  expect(saved[1]).toMatchObject({ operationId: result.operation.id, resourceUid: result.resource.uid,
+    generation: 1, retainUntil: result.operation.retainUntil,
+    location: `${root}/operations/${result.operation.id}` });
+  expect(sent.every(({ headers, signal }) => headers.Authorization === "Bearer guide-token" && signal)).toBe(true);
+  const uid = result.resource.uid;
+
+  const update = (key, value, generation, extra = {}) => ({ method: "PUT", path: `/resources/${uid}`,
+    headers: { "Content-Type": "application/json", "Takoform-Expected-Generation": String(generation) },
+    body: { spec: { value } }, key, firstSentAt: Date.now(), replayWindowMs: 3_600_000, ...extra });
+  const send = (transport, intent) => { waits.length = 0; return applyChange(transport, save, intent); };
+
+  // A response lost after acceptance is replayed with the same key and finds the same Operation.
+  let drop = 1;
+  const lossy = async (...args) => {
+    const response = await http(...args);
+    if (args[0] === "PUT" && drop-- > 0) throw new Error("response lost after acceptance");
+    return response;
+  };
+  const first = update("guide-update-000001", "welcome", 1);
+  const replayed = await send(lossy, first);
+  expect(replayed.result).toBe("succeeded");
+  expect(replayed.resource.generation).toBe(2);
+  expect((await send(http, first)).operation.id).toBe(replayed.operation.id);
+
+  // A 5xx error page is uncertain: the same request is resent and applied once.
+  let failures = 1;
+  const flaky = async (...args) => (args[0] === "PUT" && failures-- > 0
+    ? new Response("<html>bad gateway</html>", { status: 502 }) : http(...args));
+  const afterOutage = await send(flaky, update("guide-update-000002", "after outage", 2));
+  expect(afterOutage.result).toBe("succeeded");
+  expect(afterOutage.resource.generation).toBe(3);
+
+  // A temporarily unavailable Host answers with a Problem; that is still retried.
+  let busy = 1;
+  const unavailable = async (...args) => (args[0] === "PUT" && busy-- > 0
+    ? problem(503, "temporarily_unavailable") : http(...args));
+  expect((await send(unavailable, update("guide-update-000008", "retried", 3))).resource.generation).toBe(4);
+
+  // A first answer that refuses access is a rejection, not an uncertain change.
+  const refused = await send(async () => problem(403, "forbidden"), update("guide-update-000009", "x", 4));
+  expect(refused).toEqual({ result: "rejected", problem: expect.objectContaining({ code: "forbidden" }) });
+
+  // Not accepted: a stale generation is a conflict without an Operation.
+  const stale = await send(http, update("guide-update-000003", "stale", 1));
+  expect(stale.result).toBe("conflict");
+  expect(stale.problem.code).toBe("generation_conflict");
+
+  // Past the replay window nothing is sent.
+  const before = sent.length;
+  const expired = await send(http, update("guide-update-000004", "late", 4, { firstSentAt: Date.now() - 3_600_000 }));
+  expect(expired.result).toBe("unknown");
+  expect(sent.length).toBe(before);
+
+  // Access revoked after an uncertain send keeps the intent unresolved.
+  let lost = false;
+  const revoked = async () => {
+    if (!lost) { lost = true; throw new Error("lost"); }
+    return problem(401, "unauthenticated");
+  };
+  expect((await send(revoked, update("guide-update-000005", "x", 4))).result).toBe("unknown");
+
+  // A Problem naming an accepted Operation is followed instead of being treated as a rejection.
+  const named = async (method, path, ...rest) => (method === "PUT"
+    ? json({ type: "about:blank", title: "conflict", status: 409, code: "private_inputs_unverifiable",
+      operationId: result.operation.id }, 409)
+    : http(method, path, ...rest));
+  expect((await send(named, update("guide-update-000006", "x", 4))).result).toBe("succeeded");
+
+  // Another unfinished Operation named by resource_busy is not this change.
+  const busyOther = async (method, path, ...rest) => (method === "PUT"
+    ? json({ type: "about:blank", title: "busy", status: 409, code: "resource_busy", operationId: "op-other" }, 409)
+    : http(method, path, ...rest));
+  const busyResult = await send(busyOther, update("guide-update-000018", "x", 4));
+  expect(busyResult.result).toBe("conflict");
+  expect(busyResult.problem.code).toBe("resource_busy");
+  expect(saved.some((record) => record.operationId === "op-other")).toBe(false);
+
+  // waiting_input, a vanished Operation, and an unfinished one are returned to the caller.
+  const waiting = async (method, path, ...rest) => (method === "PUT"
+    ? json({ id: "op-w", resourceUid: uid, status: "waiting_input" }, 202, { Location: `${root}/operations/op-w` })
+    : http(method, path, ...rest));
+  expect((await send(waiting, update("guide-update-000007", "x", 4))).result).toBe("waiting_input");
+  const gone = async (method, path, ...rest) => (path.startsWith("/operations/")
+    ? problem(410, "gone") : http(method, path, ...rest));
+  expect(await followOperation(gone, "op-old")).toEqual({ result: "unknown", id: "op-old" });
+  expect(await followOperation(http, "op-later", { status: "running" }, undefined, Date.now() - 1))
+    .toEqual({ result: "pending", id: "op-later" });
+
+  // Rate limiting is not uncertainty: resend after Retry-After (seconds or a date).
+  let limited = 2;
+  const throttled = async (...args) => {
+    if (args[0] !== "PUT" || limited <= 0) return http(...args);
+    const retry = limited-- === 2 ? "5" : new Date(Date.now() + 7000).toUTCString();
+    return json({ type: "about:blank", title: "slow down", status: 429, code: "rate_limited" }, 429,
+      { "Retry-After": retry });
+  };
+  const throttledResult = await send(throttled, update("guide-update-000010", "throttled", 4));
+  expect(throttledResult.resource.generation).toBe(5);
+  expect(waits[0]).toBe(5000);
+  expect(waits[1]).toBeGreaterThan(4000);
+  expect(waits[1]).toBeLessThanOrEqual(7000);
+  let once429 = true;
+  const thenRefused = async () => {
+    if (once429) { once429 = false; return problem(429, "rate_limited"); }
+    return problem(403, "forbidden");
+  };
+  expect((await send(thenRefused, update("guide-update-000011", "x", 5))).result).toBe("rejected");
+
+  // Answers that are not the API's JSON leave acceptance uncertain and are resent.
+  for (const [label, page] of [["proxy 400", new Response("<html>", { status: 400 })],
+    ["non-JSON 200", new Response("<html>portal</html>", { status: 200 })]]) {
+    let odd = 1;
+    const strange = async (...args) => (args[0] === "PUT" && odd-- > 0 ? page : http(...args));
+    const settled = await send(strange, update(`guide-update-${label.replace(/\W/gu, "")}`, label, 5 + (label === "non-JSON 200")));
+    expect(settled.result, label).toBe("succeeded");
+  }
+
+  // Unreadable polls are repeated; a lost read or a 5xx does not end the wait.
+  let pollFaults = 2;
+  const unsteady = async (method, path, ...rest) => {
+    if (path.startsWith("/operations/") && pollFaults > 0) {
+      if (pollFaults-- === 2) throw new Error("poll lost");
+      return new Response("busy", { status: 503 });
+    }
+    return http(method, path, ...rest);
+  };
+  expect((await send(unsteady, update("guide-update-000012", "unsteady", 7))).result).toBe("succeeded");
+  for (const status of [401, 403, 404, 410]) {
+    waits.length = 0;
+    const denied = async (method, path, ...rest) => (path.startsWith("/operations/")
+      ? problem(status, "denied") : http(method, path, ...rest));
+    expect(await followOperation(denied, "op-denied"), String(status)).toEqual({ result: "unknown", id: "op-denied" });
+  }
+  // A gateway's JSON error while polling is not the Operation's state.
+  let gateway = 1;
+  const gatewayJson = async (method, path, ...rest) => (path.startsWith("/operations/") && gateway-- > 0
+    ? new Response(JSON.stringify({ status: "failed" }), { status: 504, headers: { "content-type": "application/json" } })
+    : http(method, path, ...rest));
+  waits.length = 0;
+  expect((await followOperation(gatewayJson, replayed.operation.id)).result).toBe("succeeded");
+
+  // A Host that never answers is resent only until the replay window ends.
+  let attempts = 0;
+  const silent = async () => { attempts++; throw new Error("no answer"); };
+  expect((await send(silent, update("guide-update-000013", "x", 8, { replayWindowMs: 10_000 }))).result).toBe("unknown");
+  expect(attempts).toBeLessThanOrEqual(5);
+
+  // A failed Operation is final and still returns the Resource.
+  const failing = async (method, path, ...rest) => (path.startsWith("/operations/")
+    ? json({ id: "op-f", resourceUid: uid, status: "failed", effect: "partial" })
+    : http(method, path, ...rest));
+  const failedResult = await followOperation(failing, "op-f");
+  expect(failedResult.result).toBe("failed");
+  expect(failedResult.resource.uid).toBe(uid);
+
+  // A proxy's plain JSON error is not the API's Problem, so it is resent too.
+  let plain = 1;
+  const plainJson = async (...args) => (args[0] === "PUT" && plain-- > 0
+    ? new Response(JSON.stringify({ error: "blocked by proxy" }),
+      { status: 400, headers: { "content-type": "application/json" } })
+    : http(...args));
+  expect((await send(plainJson, update("guide-update-000016", "plain", 8))).result).toBe("succeeded");
+
+  // A 404 after an uncertain send, even after a 429, proves nothing.
+  const afterLossThen = (status, ...before) => {
+    const answers = [...before];
+    return async () => {
+      const next = answers.shift();
+      if (next === "lost") throw new Error("lost");
+      return next ?? problem(status, "not_found");
+    };
+  };
+  expect((await send(afterLossThen(404, "lost"), update("guide-update-000019", "x", 9))).result).toBe("unknown");
+  expect((await send(afterLossThen(404, problem(429, "rate_limited"), "lost"), update("guide-update-000020", "x", 9))).result)
+    .toBe("unknown");
+
+  expect((await send(afterLossThen(404, "lost", problem(429, "rate_limited")), update("guide-update-000022", "x", 9))).result)
+    .toBe("unknown");
+
+  // A Resource read that fails after a finished Operation leaves the Resource out.
+  const unreadable = async (method, path, ...rest) => (method === "GET" && path.startsWith("/resources/")
+    ? Promise.reject(new Error("read lost")) : http(method, path, ...rest));
+  const unread = await followOperation(unreadable, replayed.operation.id);
+  expect(unread.result).toBe("succeeded");
+  expect(unread.resource).toBeNull();
+
+  // By default, polling waits at most ten minutes before returning pending.
+  waits.length = 0;
+  const longWait = { headers: new Headers({ "Retry-After": "86400" }) };
+  await followOperation(http, "op-default-bound", { status: "running" }, longWait);
+  expect(waits[0]).toBeGreaterThan(9 * 60_000);
+  expect(waits[0]).toBeLessThanOrEqual(10 * 60_000);
+
+  // A Retry-After date in the past falls back to the default wait.
+  let pastLimit = 1;
+  const past = async (...args) => (args[0] === "PUT" && pastLimit-- > 0
+    ? json({ type: "about:blank", title: "slow", status: 429, code: "rate_limited" }, 429,
+      { "Retry-After": new Date(Date.now() - 60_000).toUTCString() })
+    : http(...args));
+  await send(past, update("guide-update-000021", "after past date", 9));
+  expect(waits[0]).toBe(1000);
+
+  // Unverifiable private inputs, and a 403 or 410 after an uncertain send, prove nothing.
+  let lost403 = false;
+  const forbiddenAfterLoss = async () => {
+    if (!lost403) { lost403 = true; throw new Error("lost"); }
+    return problem(403, "forbidden");
+  };
+  expect((await send(forbiddenAfterLoss, update("guide-update-000017", "x", 9))).result).toBe("unknown");
+  const unverifiable = async () => problem(409, "private_inputs_unverifiable");
+  expect((await send(unverifiable, update("guide-update-000014", "x", 9))).result).toBe("unknown");
+  let lost410 = false;
+  const goneAfterLoss = async () => {
+    if (!lost410) { lost410 = true; throw new Error("lost"); }
+    return problem(410, "gone");
+  };
+  expect((await send(goneAfterLoss, update("guide-update-000015", "x", 9))).result).toBe("unknown");
+
+  // Following a Problem's Operation saves its ID first; a long Retry-After never outlasts the bound.
+  expect(saved.findLast((record) => record.key === "guide-update-000006")?.operationId).toBe(result.operation.id);
+  waits.length = 0;
+  const patient = { headers: new Headers({ "Retry-After": "86400" }) };
+  await followOperation(http, "op-patient", { status: "running" }, patient, Date.now() + 60_000);
+  expect(waits[0]).toBeLessThanOrEqual(60_000);
+
+  // A completed delete returns no Resource.
+  const deleted = await send(http, { method: "DELETE", path: `/resources/${uid}`,
+    headers: { "Takoform-Expected-Generation": "10" }, key: "guide-delete-000001",
+    firstSentAt: Date.now(), replayWindowMs: 3_600_000 });
+  expect(deleted.result).toBe("succeeded");
+  expect(deleted.resource).toBeNull();
+
+  // After a restart, a saved Operation ID is enough to resume.
+  const resumed = await followOperation(http, replayed.operation.id);
+  expect(resumed.result).toBe("succeeded");
+  expect(resumed.operation.id).toBe(replayed.operation.id);
+});
