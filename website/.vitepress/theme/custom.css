@@ -4,6 +4,12 @@ body {
   overflow-x: clip;
 }
 
+/* VitePress labels code blocks with --vp-c-text-3, which is about 2.9:1 on
+   the light code background and 3.4:1 on the dark one. text-2 meets 4.5:1. */
+:root {
+  --vp-code-lang-color: var(--vp-c-text-2);
+}
+
 :where(a, button, input, summary):focus-visible {
   outline: 2px solid var(--vp-c-brand-1);
   outline-offset: 3px;

@@ -225,6 +225,7 @@ onBeforeUnmount(() => {
 .VersionSearch::backdrop { background: var(--vp-backdrop-bg-color); }
 .VersionSearch-head { display: flex; align-items: center; border-bottom: 1px solid var(--vp-c-divider); }
 .VersionSearch-head input { min-width: 0; min-height: 3rem; flex: 1; padding: .75rem 1rem; background: transparent; outline-offset: -3px; }
+.VersionSearch-head input::placeholder { color: var(--vp-c-text-2); }
 .VersionSearch-head button { min-width: 3rem; min-height: 3rem; font-size: 1.5rem; }
 .VersionSearch-scope { display: flex; align-items: center; gap: .75rem; padding: .7rem 1rem; border-bottom: 1px solid var(--vp-c-divider); }
 .VersionSearch-scope label { flex: none; color: var(--vp-c-text-2); font-size: .875rem; }

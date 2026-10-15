@@ -104,6 +104,19 @@ async function startPreview(directory) {
   return { server, origin: `http://127.0.0.1:${server.address().port}` };
 }
 
+// WCAG 2 contrast ratio for two opaque rgb()/rgba() computed colours.
+function contrastRatio(foreground, background) {
+  const luminance = (color) => {
+    const [r, g, b] = color.match(/[\d.]+/gu).slice(0, 3).map((value) => {
+      const channel = Number(value) / 255;
+      return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const [lighter, darker] = [luminance(foreground), luminance(background)].sort((a, b) => b - a);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
 function inspectGeometry() {
   const documentWidth = document.documentElement.clientWidth;
   const issues = [];
@@ -374,6 +387,11 @@ async function run() {
         return element.matches(":focus-visible") && style.outlineStyle !== "none" && parseFloat(style.outlineWidth) >= 2;
       }), `${colorScheme}: API selection must have a keyboard focus indicator`);
       await page.screenshot({ path: `/tmp/takoform-docs-home-${colorScheme}.png`, fullPage: true });
+      await visit("/start/");
+      const labelContrast = contrastRatio(...await page.locator(".vp-doc div[class*='language-'] > span.lang").first().evaluate(
+        (label) => [getComputedStyle(label).color, getComputedStyle(label.parentElement).backgroundColor],
+      ));
+      assert.ok(labelContrast >= 4.5, `${colorScheme}: code block language labels meet 4.5:1 (got ${labelContrast.toFixed(2)})`);
       for (const path of ["/spec/host-api/v1", "/spec/host-api/v2/http"]) {
         await visit(path);
         assert.ok(await page.locator(".mirror-notice a").evaluate((link) => {
@@ -383,6 +401,10 @@ async function run() {
       }
       await visit("/spec/host-api/v1");
       await page.locator(".VPNavBarSearch button").click();
+      const placeholderContrast = contrastRatio(...await page.locator(".VersionSearch input").evaluate(
+        (input) => [getComputedStyle(input, "::placeholder").color, getComputedStyle(input.closest("dialog")).backgroundColor],
+      ));
+      assert.ok(placeholderContrast >= 4.5, `${colorScheme}: the search placeholder meets 4.5:1 (got ${placeholderContrast.toFixed(2)})`);
       await page.locator(".VersionSearch input").fill("Snapshot");
       await page.locator(".VersionSearch-results a").first().waitFor();
       assert.deepEqual(await page.evaluate(inspectGeometry), [], `${colorScheme}: search geometry`);
