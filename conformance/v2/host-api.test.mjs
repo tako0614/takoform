@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
 
 import { runHostApiV2 } from "./host-api.mjs";
 
@@ -196,4 +197,38 @@ test.each([
   expect(runHostApiV2({ origin: "https://host.example.test", transport,
     fixture: { ...fixture, form: invalidForm } })).rejects.toThrow("v2 HTTP baseline fixture.form");
   expect(sent).toBe(0);
+});
+
+
+test("the Host guide's runnable example passes against a conforming Host", async () => {
+  const guide = readFileSync(new URL("../../website/host-api/index.md", import.meta.url), "utf8");
+  const code = guide.slice(guide.indexOf("{#run-check}")).match(/```js\n([\s\S]*?)```/u)?.[1];
+  expect(code).toStartWith('import { runHostApiV2 } from "./conformance/v2/host-api.mjs";\n');
+  const script = code.replace(/^import .*\n/u, "")
+    .replace('"https://host.example"', JSON.stringify(new URL(root).origin))
+    .replace('"https://forms.publisher.example/key-value-entry/1.0.0"', JSON.stringify(form))
+    .replace('"https://forms.publisher.example/unknown/1.0.0"', JSON.stringify(unknownForm))
+    .replace("pollDelayMs: 1000", "pollDelayMs: 0");
+  const host = makeHost();
+  const sent = [];
+  const fetch = (url, init) => {
+    sent.push(init.headers);
+    return host({ method: init.method, url, headers: init.headers,
+      body: init.body === undefined ? undefined : JSON.parse(init.body) });
+  };
+  const logged = [];
+  const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
+  await new AsyncFunction("runHostApiV2", "fetch", "process", "console", script)(
+    runHostApiV2, fetch, { env: { HOST_TOKEN: "guide-token" } }, { log: (value) => logged.push(value) });
+  expect(logged).toEqual([{
+    baseline: "passed", fullConformance: false,
+    gaps: { restart: "not-tested", faultInjection: "not-tested", concurrentRequests: "not-tested",
+      crossPrincipal: "not-tested", optionalFeatures: "not-tested", formSpecific: "not-tested" },
+  }]);
+  expect(sent[0].Authorization).toBeUndefined();
+  expect(sent.slice(1).every((headers) => headers.Authorization === "Bearer guide-token")).toBe(true);
+  for (const gap of Object.keys(logged[0].gaps)) expect(guide).toContain(`${gap}: 'not-tested'`);
+  const failure = guide.match(/`v2 HTTP baseline ([a-z-]+): ([^`]+)`/u);
+  expect(readFileSync(new URL("./host-api.mjs", import.meta.url), "utf8"))
+    .toContain(`"${failure[1]}", "${failure[2]}"`);
 });

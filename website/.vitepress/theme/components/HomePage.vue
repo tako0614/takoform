@@ -27,7 +27,7 @@ const copy = {
     { path: "/use/", label: "Use the API", text: "Choose a client library, CLI or Terraform/OpenTofu provider, then confirm it explicitly supports v2 and the Host and Form you plan to use." },
     { path: "/client/", label: "Build a client", text: "Send changes and handle their results reliably: record intent before sending, replay lost responses safely, follow Operations and handle generation conflicts." },
     { path: "/authoring/", label: "Define a Form", text: "Specify the resource's inputs, observable behavior and usage contract so others can implement it." },
-    { path: "/host-api/", label: "Implement a Host", text: "Connect the API to an execution backend and preserve accepted operations through failures and restarts." },
+    { path: "/host-api/", label: "Implement a Host", text: "Connect the API to an execution backend, preserve accepted operations through failures and restarts, then check your Host against the baseline probe." },
   ],
   scope: "This site documents Takoform's common API and concepts. Individual Form specifications are published by their authors; Hosts and client tools document their own supported features.",
 };

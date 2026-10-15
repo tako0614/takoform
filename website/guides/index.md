@@ -25,7 +25,7 @@ Use the [client guide](/client/) to understand Discovery, support, Idempotency-K
 
 ## Host implementers {#host-implementers}
 
-Read the [overview](/spec/host-api/v2/), [HTTP API](/spec/host-api/v2/http), and [Form requirements](/spec/host-api/v2/forms). Design authentication and Space authorization, Resource UIDs and generations, Idempotency-Key handling, Operation records, observed state, and post-restart recovery as one durability boundary.
+Read the [overview](/spec/host-api/v2/), [HTTP API](/spec/host-api/v2/http), and [Form requirements](/spec/host-api/v2/forms). Design authentication and Space authorization, Resource UIDs and generations, Idempotency-Key handling, Operation records, observed state, and post-restart recovery as one durability boundary; the [Host implementation guide](/host-api/) walks through it. Then [check your Host](/host-api/#check) against the baseline probe and plan the restart and fault experiments it leaves to you.
 
 ## Moving from v1 {#migration}
 

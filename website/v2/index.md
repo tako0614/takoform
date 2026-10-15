@@ -19,7 +19,7 @@ The overview, HTTP API, and Form requirements are normative. Examples and migrat
 
 The Go SDK in this repository implements v1. For v2, this repository provides
 the contract, design guides and a limited caller-driven
-[HTTP baseline probe](https://github.com/tako0614/takoform/tree/main/conformance/v2).
+[HTTP baseline probe](/host-api/#check).
 Check the API version and exact Form support of the Host and client you use.
 
 ## Suggested reading order {#reading}
@@ -29,4 +29,4 @@ Refer to the [v2 glossary](/glossary) for terminology.
 - **Users:** Follow the fictional HTTP walkthrough in [Getting started](/start/), choose a client that explicitly supports v2 with [Using v2](/use/), then read the fuller [request/response examples](/spec/host-api/v2/examples).
 - **Form authors:** Use [Form requirements](/spec/host-api/v2/forms) to define `spec`, `observed`, `output`, and failure behavior.
 - **Client implementers:** Read [Implementing a client](/client/) for intent records, replay deadlines, Operations, and generation conflicts; then consult the [HTTP retry contract](/spec/host-api/v2/http#retry).
-- **Host implementers:** Start with the [Host implementation guide](/host-api/) for durability, then read the overview, HTTP API, and each implemented Form.
+- **Host implementers:** Start with the [Host implementation guide](/host-api/) for durability, then read the overview, HTTP API, and each implemented Form. [Check your Host](/host-api/#check) against the baseline probe once its endpoints respond.

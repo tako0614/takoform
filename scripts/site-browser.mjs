@@ -392,6 +392,9 @@ async function run() {
         (label) => [getComputedStyle(label).color, getComputedStyle(label.parentElement).backgroundColor],
       ));
       assert.ok(labelContrast >= 4.5, `${colorScheme}: code block language labels meet 4.5:1 (got ${labelContrast.toFixed(2)})`);
+      await visit("/host-api/");
+      assert.ok(await page.locator("#run-check ~ div[class*='language-js'] pre").first().evaluate((pre) => pre.scrollWidth <= pre.clientWidth),
+        `${colorScheme}: the Host check script fits without horizontal scrolling on desktop`);
       for (const path of ["/spec/host-api/v1", "/spec/host-api/v2/http"]) {
         await visit(path);
         assert.ok(await page.locator(".mirror-notice a").evaluate((link) => {

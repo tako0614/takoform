@@ -78,6 +78,12 @@ describe("takoform.com site derivation", () => {
       expect(start, `the walkthrough links /glossary#${id}`).toContain(`(/glossary#${id})`);
       expect(glossary, `the glossary defines #${id}`).toContain(`{#${id}}`);
     }
+    const hostGuide = readFileSync("website/host-api/index.md", "utf8");
+    expect(hostGuide).toContain("## Check your Host against the baseline {#check}");
+    expect(hostGuide).toContain("(/spec/host-api/v2/http#conformance)");
+    for (const entry of ["website/guides/index.md", "website/v2/index.md", "website/conformance/index.md"]) {
+      expect(readFileSync(entry, "utf8"), `${entry} leads Host implementers to the baseline check`).toContain("(/host-api/#check)");
+    }
     const nextHeading = start.indexOf("## Where to go next {#next}");
     expect(nextHeading, "the walkthrough ends with next steps").toBeGreaterThan(-1);
     const next = start.slice(nextHeading);
