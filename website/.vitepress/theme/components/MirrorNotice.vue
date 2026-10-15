@@ -22,7 +22,7 @@ withDefaults(
       {{ normative ? `Normative source (English original):` : `Explanatory source (English original):` }}
       <a v-if="url" :href="url"><code>{{ source }}</code></a>
       <code v-else>{{ source }}</code>
-      <template v-if="!normative"> Not a specification requirement.</template>
+      <template v-if="!normative"> — not a specification requirement.</template>
     </p>
   </aside>
 </template>
@@ -41,5 +41,23 @@ withDefaults(
 
 .mirror-notice p {
   margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The notice sits outside .vp-doc, so VitePress's prose link style does not
+   reach it; keep the source link recognisable as a link. */
+.mirror-notice a {
+  color: var(--vp-c-brand-1);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.mirror-notice a:hover {
+  text-decoration-thickness: 2px;
+}
+
+.mirror-notice code {
+  color: inherit;
+  font-size: 0.875em;
 }
 </style>

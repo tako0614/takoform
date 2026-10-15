@@ -86,12 +86,13 @@ does not download a browser or require a live Host.
 Checks cover 320, 375, 414 and 768 px layouts, including the overview's
 walkthrough link within the first 900 px at each width; version-specific
 sidebars; keyboard disclosures and focus return; scoped search, with its empty,
-truncated and widened states at 375 px; legacy redirects; English accessible
-names at runtime; and desktop light/dark themes, where the lifecycle step
-targets and the unclipped create request are also checked. HTTP errors,
-JavaScript errors and unexpected external requests fail the check. Inspect
-actual light/dark rendering when evaluating the visual result. The portable
-`bun run check` does not require a browser binary.
+truncated and widened states at 375 px; the not-found page, including a missing
+page under a versioned path; legacy redirects; English accessible names at
+runtime; and desktop light/dark themes, where the lifecycle step targets, the
+unclipped create request and recognisable specification source links are also
+checked. HTTP errors, JavaScript errors and unexpected external requests fail
+the check. Inspect actual light/dark rendering when evaluating the visual
+result. The portable `bun run check` does not require a browser binary.
 
 [design.md](../design.md) records the visual direction. `.hallmark/` records
 design history; those records are neither published assets nor evidence that
