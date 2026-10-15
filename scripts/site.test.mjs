@@ -115,6 +115,11 @@ describe("takoform.com site derivation", () => {
     expect(component).toContain("A common HTTP API for resource management.");
     expect(component).toContain("Forms, Hosts and clients");
     expect(component).toContain("POST /apis/forms.takoform.com/v2/resources");
+    for (const target of [
+      "/start/#discover-support",
+      "/start/#create-read",
+      "/start/#update",
+    ]) expect(component).toContain(target);
   });
   test("separates version sidebars and keeps shared pages out of their sequences", async () => {
     const config = (await import("../website/.vitepress/config.mts")).default;

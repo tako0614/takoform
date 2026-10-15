@@ -42,6 +42,34 @@
   line-height: 1.6;
 }
 .home-page .home-introduction { margin-block-start: var(--home-space-md); }
+.home-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--home-space-xs) var(--home-space-md);
+  margin: var(--home-space-md) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.home-action {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  max-width: 100%;
+  color: var(--vp-c-brand-1);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  white-space: nowrap;
+}
+.home-action:hover { text-decoration-thickness: 2px; }
+.home-action--primary {
+  padding-inline: var(--home-space-md);
+  border: 1px solid var(--vp-c-brand-1);
+  border-radius: 6px;
+  text-decoration: none;
+}
+.home-action--primary:hover { background: var(--vp-c-brand-soft); }
 .home-section { margin-block-start: var(--home-space-xl); }
 .home-section h2 {
   margin-block-end: var(--home-space-sm);
@@ -89,10 +117,27 @@
 }
 .home-steps {
   margin: 0;
-  padding-inline-start: var(--home-space-md);
+  padding-inline-start: var(--home-space-lg);
+  list-style: decimal;
 }
-.home-steps li + li { margin-block-start: var(--home-space-md); }
+.home-steps li::marker {
+  color: var(--home-muted);
+  font-family: var(--vp-font-family-mono);
+  font-weight: 600;
+}
+.home-steps li + li { margin-block-start: var(--home-space-sm); }
 .home-steps h3 { font-size: 1rem; font-weight: 650; }
+.home-step-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  max-width: 100%;
+  color: var(--vp-c-brand-1);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  white-space: nowrap;
+}
+.home-step-link:hover { text-decoration-thickness: 2px; }
 .home-steps p { color: var(--home-muted); }
 .home-reading-link {
   display: inline-flex;
@@ -123,6 +168,7 @@
   .home-page__inner { padding-inline: var(--home-space-lg); }
   .home-roles > div { grid-template-columns: minmax(6rem, 1fr) minmax(0, 5fr); }
 }
-@media (min-width: 64rem) {
-  .home-example { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); }
+/* Two columns only once the request's longest line fits without scrolling. */
+@media (min-width: 66rem) {
+  .home-example { grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); }
 }
