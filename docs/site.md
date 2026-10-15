@@ -48,8 +48,9 @@ it includes the site checks and build alongside the Go and record checks.
 
 `check:site` compares derived pages and schema bytes. `build:site` checks the
 rendered pages for metadata, language, document authority, duplicate IDs,
-ARIA references, internal routes and fragments, and reachability from the
-overview. A successful build does not establish publication or Host support.
+ARIA references, English accessible names without `{#id}` or backtick syntax,
+internal routes and fragments, and reachability from the overview. A
+successful build does not establish publication or Host support.
 
 The v2 walkthrough uses fictional HTTP exchanges. Its examples are not run
 against a real Host. The Go documentation tests validate the retained v1
@@ -64,10 +65,12 @@ neutral. [versions.mjs](../website/.vitepress/versions.mjs) assigns each route
 to a version for navigation and search. A version change uses the destination
 entry when there is no corresponding page and does not carry unrelated fragments.
 
-All visible site text and controls are English. Former `/en/` pages redirect
-to their canonical root URLs. Previously published fragment IDs, including
-Japanese IDs, remain valid. Both API versions display their English normative
-source separately from explanation. Public JSON paths and bytes remain fixed.
+All visible site text, controls and accessible names are English. Heading
+permalinks are named from the rendered heading text, so a custom `{#id}` never
+reaches a screen reader. Former `/en/` pages redirect to their canonical root
+URLs. Previously published fragment IDs, including Japanese IDs, remain valid.
+Both API versions display their English normative source separately from
+explanation. Public JSON paths and bytes remain fixed.
 
 Presentation changes also use the explicit browser lane:
 
@@ -80,12 +83,15 @@ installed Chrome or Chromium with an isolated profile. If the browser is not
 autodetected, set `TAKOFORM_BROWSER` to its absolute executable path. The lane
 does not download a browser or require a live Host.
 
-Checks cover 320, 375, 414 and 768 px layouts, version-specific sidebars,
-keyboard disclosures, focus return, scoped search, legacy redirects and desktop
-light/dark themes. HTTP errors, JavaScript errors and unexpected external
-requests fail the check. Inspect actual light/dark rendering when evaluating
-the visual result. The portable `bun run check` does not require a browser
-binary.
+Checks cover 320, 375, 414 and 768 px layouts, including the overview's
+walkthrough link within the first 900 px at each width; version-specific
+sidebars; keyboard disclosures and focus return; scoped search, with its empty,
+truncated and widened states at 375 px; legacy redirects; English accessible
+names at runtime; and desktop light/dark themes, where the lifecycle step
+targets and the unclipped create request are also checked. HTTP errors,
+JavaScript errors and unexpected external requests fail the check. Inspect
+actual light/dark rendering when evaluating the visual result. The portable
+`bun run check` does not require a browser binary.
 
 [design.md](../design.md) records the visual direction. `.hallmark/` records
 design history; those records are neither published assets nor evidence that
