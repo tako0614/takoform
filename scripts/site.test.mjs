@@ -78,6 +78,15 @@ describe("takoform.com site derivation", () => {
       expect(start, `the walkthrough links /glossary#${id}`).toContain(`(/glossary#${id})`);
       expect(glossary, `the glossary defines #${id}`).toContain(`{#${id}}`);
     }
+    const use = readFileSync("website/use/index.md", "utf8");
+    for (const id of ["host", "client-responsibilities", "infrastructure-as-code", "examples-status"]) {
+      expect(use, `Using v2 keeps #${id}`).toMatch(new RegExp(`\\{#${id}\\}|id="${id}"`, "u"));
+    }
+    expect(use).toContain("README.md#choose-a-provider-version");
+    expect(use).not.toContain("Do not treat it as a v2 Provider");
+    for (const page of ["website/v1/index.md", "website/site.md"]) {
+      expect(readFileSync(page, "utf8"), `${page} links the Provider's version table`).toContain("README.md#choose-a-provider-version");
+    }
     const hostGuide = readFileSync("website/host-api/index.md", "utf8");
     expect(hostGuide).toContain("## Check your Host against the baseline {#check}");
     expect(hostGuide).toContain("(/spec/host-api/v2/http#conformance)");

@@ -1,22 +1,29 @@
 ---
 title: Using v2
-description: Understand how API clients and Infrastructure as Code tools can use Host API v2, and what support to verify.
+description: What you need to manage Resources through Host API v2, how to check a Host, and which client to use in your situation.
 ---
 
 # Using v2 {#use}
 
-Host API v2 is a fixed HTTP contract that client software can call when it implements v2. A command-line tool, library, or Infrastructure as Code integration may act as that client. The Go SDK in this repository targets v1. Independent client adapters document their own version support; check the selected Host, Form, and client before use.
+To manage a Resource through Host API v2 you need three things: a Host operator who gives you the Host's origin, credentials, and a Space you may use; the exact Form URL for the kind of Resource you want; and a client that speaks v2 with that Host's authentication. Takoform itself runs no Host. Check them in that order.
 
-## What a client must do {#client-responsibilities}
+## 1. Check what the Host offers {#host}
 
-A client reads the Host's Discovery response for its `baseUrl` and authentication scheme. It builds requests from a Form URL and complete `spec`, chooses a Space it is authorized to use, and follows the resulting Operation. Update/Delete requests carry the Resource generation that was read; after a change, the client checks `observedGeneration`. See the [client guide](/client/) and [illustrative examples](/spec/host-api/v2/examples).
+Read the Host's Discovery document at `/.well-known/takoform/v2` for its API root, authentication, and `replayWindowSeconds`, then ask its `support` endpoint about the exact Form URL. [Getting started](/start/#discover-support) shows both requests and responses. `supported: true` means the Host implements that Form; with `privateInputs: false` it does not cover uses of the Form that need private inputs. Support does not grant you access or capacity, which the Host operator's own documentation and terms decide.
 
-## Infrastructure as Code {#infrastructure-as-code}
+## 2. Choose how to call it {#infrastructure-as-code}
 
-An IaC provider must keep its state consistent with v2's generation conditions, Operations, reconciliation after lost responses, and deletion outcomes—not just compare declared and remote values. Before using Terraform or OpenTofu, verify that the provider explicitly supports Host API v2 and the selected Host and Form URL.
+| Your situation | What to use |
+| --- | --- |
+| Trying the API or scripting a few calls | Any HTTP client. Every request in [Getting started](/start/) is a complete HTTP exchange you can adapt. |
+| Building a client, CLI, or integration | [Implementing a client](/client/), for intent records, replay deadlines, and conflicts. |
+| Terraform or OpenTofu | A Provider that explicitly supports Host API v2 and your Form. The [Takoform Provider's version table](https://github.com/tako0614/terraform-provider-takoform/blob/main/README.md#choose-a-provider-version) states which Host API each of its versions speaks. |
+| A Host that speaks v1 | The [v1 documentation](/v1/); the Go Host client in this repository speaks v1. |
 
-The existing Takoform Provider linked from this site targets v1. Do not treat it as a v2 Provider. For the earlier provider path, see the [v1 specification](/spec/host-api/v1) and the [Provider's v1 guide](https://github.com/tako0614/terraform-provider-takoform).
+## 3. Track every change to its result {#client-responsibilities}
 
-## Examples and implementation status {#examples-status}
+Each accepted create, update, or delete returns an Operation. Send each new change with a new `Idempotency-Key`, follow the Operation until it finishes, then read the Resource and compare `generation` with `observedGeneration`. After a lost response, resend the identical request with the same key, but only within the `replayWindowSeconds` you read before the first send, counted from that send; after that, check any known Operation and the Resource to reconcile instead of resending. Update and Delete carry the generation you read; a `409 generation_conflict` means it has moved on and no Operation was created, so read again and decide what you still intend.
 
-The [v2 request/response examples](/spec/host-api/v2/examples) are non-normative and use a fictional Host and Form. They are not production endpoints or a provider. Before use, check the Host operator's authentication, access, and Form support information, plus the version-specific support statement for each client.
+<a id="examples-status"></a>
+
+The [request/response examples](/spec/host-api/v2/examples) show each of these outcomes. An Infrastructure as Code tool needs the same discipline in its state: lost responses, generation conflicts, and deletion outcomes must reconcile against Operations, not just a comparison of declared and remote values.
