@@ -72,6 +72,13 @@ describe("takoform.com site derivation", () => {
       "Takoform-Expected-Generation: 2",
       "HTTP/1.1 202 Accepted",
     ]) expect(start).toContain(line);
+    const nextHeading = start.indexOf("## Where to go next {#next}");
+    expect(nextHeading, "the walkthrough ends with next steps").toBeGreaterThan(-1);
+    const next = start.slice(nextHeading);
+    for (const target of [
+      "(/client/)", "(/authoring/)", "(/host-api/)",
+      "(/spec/host-api/v2/forms#author-checklist)", "{#host-implementers}",
+    ]) expect(next).toContain(target);
   });
   test("renders canonical v2 contract links in authoring and client guides", async () => {
     const { createMarkdownRenderer } = await import("vitepress");
