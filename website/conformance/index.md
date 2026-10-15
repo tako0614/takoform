@@ -12,7 +12,7 @@ A report describes whether the named data or implementation satisfies the
 requirements under test. A valid package, for example, does not establish that
 its Form is usable on a particular Host.
 
-The [v1 conformance specification](/spec/conformance) defines the retained requirements. The repository also provides a caller-driven v2 HTTP probe for a supplied disposable Form.
+The [v1 conformance specification](/spec/conformance) defines the retained requirements. The repository also provides a [caller-driven v2 HTTP probe](/host-api/#check) for a supplied disposable Form.
 
 ## What each result covers {#claim-を分けて読む}
 
