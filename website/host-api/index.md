@@ -55,7 +55,7 @@ Once these obligations are met, the choice of worker, database, and queue arrang
    - You demonstrate: the same rules for your other Forms.
 3. **Keys, generations, and principals**
    - Probe checks: same-key replay returns the original Operation; a changed body under that key returns `409 idempotency_conflict`; a stale generation returns `409 generation_conflict` and changes nothing.
-   - You demonstrate: concurrent requests with matching keys, and isolation between principals.
+   - You demonstrate: [concurrent requests with matching keys, and isolation between principals](#isolation-experiment).
 4. **Response loss and process restart**
    - Probe checks: nothing.
    - You demonstrate: the [restart experiment](#restart-experiment) at the last three points in [Recover at each restart or lost-ack point](#recovery).
@@ -144,7 +144,7 @@ A passing run prints what the baseline did not cover:
 
 A failing run throws at the first broken step and names the step and the rule, for example `v2 HTTP baseline create-replay: same key created another Operation`. Messages never include response bodies or credentials. `v2 HTTP baseline discovery: transport, status, or body failed` on the first step usually means the request never completed: check the origin, TLS certificate, and network before the API. If a run stops partway, the disposable Resource may remain; delete it through your Host's API.
 
-`fullConformance` is always `false`. Treat `gaps` as the remaining Section 10 work: the [restart experiment and fault injection](#restart-experiment) below, concurrent and cross-principal requests, every optional feature you advertise, and each Form's own behavior. To check a Form's results as well, add `expectedSpec` or an `assertResource(resource)` function that returns `true` to the fixture.
+`fullConformance` is always `false`. Treat `gaps` as the remaining Section 10 work: the [restart experiment and fault injection](#restart-experiment) below, [concurrent and cross-principal requests](#isolation-experiment), every optional feature you advertise, and each Form's own behavior. To check a Form's results as well, add `expectedSpec` or an `assertResource(resource)` function that returns `true` to the fixture.
 
 ### Demonstrate restart and partial failure {#restart-experiment}
 
@@ -163,3 +163,20 @@ Section 10 names three restart points, the last three rows of [Recover at each r
 Repeat the stops without step 3 as well: the restarted Host should resume the accepted Operation on its own, as [Bind execution to the original Operation](#dispatch) describes.
 
 For partial failure, make the backend fail after it has changed part of what one Operation manages. Once the Host has proven which part changed, the Operation ends `failed` with `effect: partial`; until then it stays `reconciling` with `effect: unknown`. Once the Operation has failed, the Resource is in `phase: error`, and its `observed`, `output`, and `observedGeneration` do not claim the failed change. The Host's mapping to the partly changed object is internal, so show it through recovery: a PUT or DELETE on the same UID, as the Form defines, repairs or removes that object, and only then does the recovery Operation report `succeeded`. [Unknown backend result, proven partial effect, and same-UID cleanup](/spec/host-api/v2/examples#unknown-backend-result-proven-partial-effect-and-same-uid-cleanup) shows the HTTP exchanges for one such case.
+
+### Demonstrate concurrency and principal isolation {#isolation-experiment}
+
+The probe sends one request at a time with one credential, so the rest of obligation 3 needs tests you run yourself against a disposable Space. Send valid requests throughout, so that only the behavior under test can refuse them, and resend any `429` (after its `Retry-After`) or `503` with the same key.
+
+For concurrency:
+
+1. **Same request, same key.** Send ten copies of one create request in parallel, then ten copies of one update, then ten of one delete; all update copies share one key, all delete copies share another, and each batch carries the current generation. Wait for each Operation to finish before the next batch. Every answer in a batch names the same Operation, and for create the same Resource UID; the generation advances once per change; the backend never holds a duplicate object, and holds none after the delete. The Host checks the key before the generation, so a copy that arrives after acceptance still gets the original Operation rather than a generation conflict.
+2. **Different bodies, one key.** Send two valid create bodies that differ only by name under one new key at once. One is accepted; the other gets `409 idempotency_conflict` with no effect.
+3. **Two updates, one Resource.** Send two updates at once, each with its own key and the same `Takoform-Expected-Generation`. Exactly one is accepted and the generation rises by exactly 1; the other gets `409 resource_busy` or `409 generation_conflict` with no effect. To see `resource_busy` on its own, send a new-key update at the current generation while the accepted update is still unfinished.
+4. **One key, another path.** Reuse a create's key for an update of the Resource it created. The request differs, so it gets `409 idempotency_conflict`.
+
+For principals, use credentials for two different stable principals, A and B. A single-owner Host with one principal can skip items 1 and 2.
+
+1. **Same key, other principal.** Create a Resource as A with a key you record, then send A's identical request as B with the same key. B's request is judged in B's own key scope: it never returns A's Operation and never gets `idempotency_conflict`. Without access to A's Space, expect `403` or `404`; in a shared Space, expect `409 name_conflict`. Then send that key with a create into a Space and name B may use; B gets its own new Operation and UID.
+2. **Reading and changing across principals.** As B, read, list, update, and delete A's Resource, and read its Operation. Unless B is authorized for it, reads return `403` or `404`, the list neither includes it nor reveals it through counts or cursors, mutations are refused with the generation unchanged, and no response body carries A's Resource information.
+3. **Rotation and revocation.** Rotate A's credential as the Host's authentication documentation describes and, within the replay window, confirm that A's replay still finds its Operation. Then revoke A's authorization for the Space while keeping the credential valid: a replay gets `403` or `404` without revealing the earlier result.
