@@ -7,7 +7,7 @@ description: Follow one fictional KeyValueEntry through Discovery, support, crea
 
 Host API v2 separates the Form that defines a Resource's meaning, the Host that implements supported Forms, and the client that manages Resources. The HTTP walkthrough below uses the fictional Host `host.example` and Form URL `https://forms.publisher.example/key-value-entry/1.0.0`. It does not identify a reachable service or published Form. See the [full request/response transcript](/spec/host-api/v2/examples) for all fields and failure branches, and the [glossary](/glossary) for key terms used below.
 
-The Go Host client in this repository is v1-only; verify v2 support with the client and Host you plan to use.
+Any HTTP client can send these requests. To build a client or use an Infrastructure as Code tool instead, see [Using v2](/use/).
 
 ## 1. Discover the Host and check Form support {#discover-support}
 

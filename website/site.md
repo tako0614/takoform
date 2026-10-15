@@ -34,4 +34,4 @@ sources are linked from their specification pages. Previously published
 
 - [Schema index](/schemas/)
 - [Source code](https://github.com/tako0614/takoform)
-- [OpenTofu / Terraform HCL quick start](https://github.com/tako0614/terraform-provider-takoform/blob/main/README.md#quick-start)
+- [Takoform Provider for OpenTofu / Terraform](https://github.com/tako0614/terraform-provider-takoform/blob/main/README.md#choose-a-provider-version)

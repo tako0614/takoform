@@ -26,4 +26,4 @@ this contract; the separate v2 specification does not change v1 requirements.
 
 - [Schema index](/schemas/) — Published JSON schemas.
 - [Conformance](/spec/conformance) and [verification tools](/conformance/) — What checks cover and where they stop.
-- [OpenTofu / Terraform Provider guide](https://github.com/tako0614/terraform-provider-takoform/blob/main/README.md#quick-start) — Connect to a v1 Host using the Provider.
+- [Takoform Provider versions](https://github.com/tako0614/terraform-provider-takoform/blob/main/README.md#choose-a-provider-version) — Which OpenTofu / Terraform Provider version speaks your Host API version.

@@ -5,7 +5,7 @@ description: Design client recovery around durable intent records, replay deadli
 
 # Implementing a v2 client {#client}
 
-This guide describes v2 client behavior; the Go Host client in this repository speaks v1. Confirm v2 support in the client you choose. Read a v2 Host's Discovery response for `baseUrl`, authentication guidance, and `replayWindowSeconds`; build each request from the Form specification at its exact URL. Check `support`, Space authorization, and operation outcome as separate facts.
+This guide is for building a v2 client; the Go Host client in this repository speaks v1. Read a v2 Host's Discovery response for `baseUrl`, authentication guidance, and `replayWindowSeconds`; build each request from the Form specification at its exact URL. Check `support`, Space authorization, and operation outcome as separate facts.
 
 ## Record intent before sending {#intent}
 

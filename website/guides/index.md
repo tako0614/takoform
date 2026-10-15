@@ -5,15 +5,13 @@ description: Choose a v2 learning path for users, Form authors, client implement
 
 # Guides by role {#guides}
 
-These guides explain how to apply the fixed Host API v2 contract by role. The Go SDK in this repository targets v1; check version support with the independent client and Host you plan to use. Examples are illustrative, and local artifact checks do not establish that a v2 Host is deployed.
+Each section is a reading path for one role, from the first page to the normative text that settles the details.
 
 ## Users {#users}
 
-1. Start with [Getting started](/start/) to distinguish a Form from a Host.
-2. Read [Using v2](/use/) to choose a client or Infrastructure as Code provider that explicitly supports v2.
-3. Check the chosen Host operator's guidance for Discovery, authentication, and Space access.
-4. Read the exact Form URL and check that Host's `support` response.
-5. Follow the [request/response examples](/spec/host-api/v2/examples) through Create, Operation tracking, and Delete.
+1. Start with [Getting started](/start/) to see one Resource from Discovery to delete.
+2. Follow [Using v2](/use/) to check your Host and Form, then choose how to call the API.
+3. Use the [request/response examples](/spec/host-api/v2/examples) for lost responses, conflicts, and partial failure.
 
 ## Form authors {#form-authors}
 
