@@ -58,10 +58,10 @@ Once these obligations are met, the choice of worker, database, and queue arrang
    - You demonstrate: concurrent requests with matching keys, and isolation between principals.
 4. **Response loss and process restart**
    - Probe checks: nothing.
-   - You demonstrate: the restart experiment at each point in [Recover at each restart or lost-ack point](#recovery).
+   - You demonstrate: the [restart experiment](#restart-experiment) at the last three points in [Recover at each restart or lost-ack point](#recovery).
 5. **Partial failure**
    - Probe checks: nothing.
-   - You demonstrate: with fault injection, that partial effects stay visible and recoverable on the same UID.
+   - You demonstrate: with [fault injection](#restart-experiment), that partial effects stay visible and recoverable on the same UID.
 6. **Optional features**
    - Probe checks: when advertised, that your selected Offering is listed and kept; with private inputs, that Discovery and `support` both declare them.
    - You demonstrate: each advertised feature's refusal, retry, and secret non-disclosure rules.
@@ -144,4 +144,22 @@ A passing run prints what the baseline did not cover:
 
 A failing run throws at the first broken step and names the step and the rule, for example `v2 HTTP baseline create-replay: same key created another Operation`. Messages never include response bodies or credentials. `v2 HTTP baseline discovery: transport, status, or body failed` on the first step usually means the request never completed: check the origin, TLS certificate, and network before the API. If a run stops partway, the disposable Resource may remain; delete it through your Host's API.
 
-`fullConformance` is always `false`. Treat `gaps` as the remaining Section 10 work: the restart experiment, fault injection, concurrent and cross-principal requests, every optional feature you advertise, and each Form's own behavior. To check a Form's results as well, add `expectedSpec` or an `assertResource(resource)` function that returns `true` to the fixture.
+`fullConformance` is always `false`. Treat `gaps` as the remaining Section 10 work: the [restart experiment and fault injection](#restart-experiment) below, concurrent and cross-principal requests, every optional feature you advertise, and each Form's own behavior. To check a Form's results as well, add `expectedSpec` or an `assertResource(resource)` function that returns `true` to the fixture.
+
+### Demonstrate restart and partial failure {#restart-experiment}
+
+The probe cannot stop your Host's process, so obligations 4 and 5 need a test you run yourself. Give a test build of your Host a hook that stops the process at a chosen point, for example an environment variable naming the step after which it exits. Section 10 requires a real process restart: rebuilding a handle inside the same process does not count.
+
+Section 10 names three restart points, the last three rows of [Recover at each restart or lost-ack point](#recovery): right after acceptance is recorded, after the backend request may have been sent, and after backend success but before the terminal status is recorded. For each point, and for create, update, and delete:
+
+1. Send the request with a key you record and stop the Host at that point. If your Host already answered `202` before dispatching in the background, discard that response as if it were lost.
+2. Start a new Host process.
+3. Resend the identical request with the same key, within the replay window.
+4. Check that the replay returns the same Operation ID and Resource UID, and that restart and replay produced no second backend object, no object under another name, and no repeated effect.
+5. While the result is still unknown, the Operation stays `reconciling`, and a different mutation on that UID, sent with a new key and the current generation, gets `409 resource_busy`. Have the test build hold its readback so you can observe this state.
+6. Follow the Operation to its end and compare the Resource's `observed` with the backend. After a delete, the Resource returns `404` or `410`, it is gone from the list, and the backend object is gone.
+7. Restart once more after the terminal status is recorded and confirm the Operation is unchanged.
+
+Repeat the stops without step 3 as well: the restarted Host should resume the accepted Operation on its own, as [Bind execution to the original Operation](#dispatch) describes.
+
+For partial failure, make the backend fail after it has changed part of what one Operation manages. Once the Host has proven which part changed, the Operation ends `failed` with `effect: partial`; until then it stays `reconciling` with `effect: unknown`. Once the Operation has failed, the Resource is in `phase: error`, and its `observed`, `output`, and `observedGeneration` do not claim the failed change. The Host's mapping to the partly changed object is internal, so show it through recovery: a PUT or DELETE on the same UID, as the Form defines, repairs or removes that object, and only then does the recovery Operation report `succeeded`. [Unknown backend result, proven partial effect, and same-UID cleanup](/spec/host-api/v2/examples#unknown-backend-result-proven-partial-effect-and-same-uid-cleanup) shows the HTTP exchanges for one such case.
