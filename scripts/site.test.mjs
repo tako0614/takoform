@@ -107,11 +107,14 @@ describe("takoform.com site derivation", () => {
     expect(source).toContain("title: Takoform\n");
     expect(source).toContain("titleTemplate: false");
     const component = readFileSync("website/.vitepress/theme/components/HomePage.vue", "utf8");
-    for (const target of [
-      "/client/",
-      "/authoring/",
-      "/host-api/",
-    ]) expect(component).toContain(target);
+    const readings = Object.fromEntries([...component.matchAll(/\{ path: "([^"]+)", label: "([^"]+)", text:/gu)]
+      .map(([, path, label]) => [label, path]));
+    expect(readings).toEqual({
+      "Use the API": "/use/",
+      "Build a client": "/client/",
+      "Define a Form": "/authoring/",
+      "Implement a Host": "/host-api/",
+    });
     expect(component).toContain('<h1 id="home-title">Takoform</h1>');
     expect(component).toContain("Form");
     expect(component).toContain("Host");
