@@ -5,7 +5,7 @@ description: Follow one fictional KeyValueEntry through Discovery, support, crea
 
 # Getting started with v2 {#start}
 
-Host API v2 separates the Form that defines a Resource's meaning, the Host that implements supported Forms, and the client that manages Resources. The HTTP walkthrough below uses the fictional Host `host.example` and Form URL `https://forms.publisher.example/key-value-entry/1.0.0`. It does not identify a reachable service or published Form. See the [full request/response transcript](/spec/host-api/v2/examples) for all fields and failure branches.
+Host API v2 separates the Form that defines a Resource's meaning, the Host that implements supported Forms, and the client that manages Resources. The HTTP walkthrough below uses the fictional Host `host.example` and Form URL `https://forms.publisher.example/key-value-entry/1.0.0`. It does not identify a reachable service or published Form. See the [full request/response transcript](/spec/host-api/v2/examples) for all fields and failure branches, and the [glossary](/glossary) for key terms used below.
 
 The Go Host client in this repository is v1-only; verify v2 support with the client and Host you plan to use.
 
@@ -52,7 +52,7 @@ Use Discovery's `baseUrl` and follow its authentication documentation. `support`
 
 ## 2. Create, then read the Operation and Resource {#create-read}
 
-The client chooses the Form URL, an authorized Space, name, a Form-conforming `spec`, and a fresh Idempotency-Key for each new operation. The Host issues the Resource UID and Operation ID.
+The client chooses the Form URL, an authorized [Space](/glossary#space), name, a Form-conforming `spec`, and a fresh [Idempotency-Key](/glossary#idempotency-key) for each new operation. The Host issues the Resource UID and [Operation](/glossary#operation) ID.
 
 ```http
 POST /apis/forms.takoform.com/v2/resources HTTP/1.1
@@ -119,7 +119,7 @@ Cache-Control: no-store
 }
 ```
 
-`spec` is the accepted desired value; `observed` is what the Host last checked. Matching `generation` and `observedGeneration` means this generation is observed in the example. Operation success or `phase: idle` alone does not establish application health.
+`spec` is the accepted desired value; `observed` is what the Host last checked. Matching [`generation` and `observedGeneration`](/glossary#generation-observedgeneration) means this generation is observed in the example. Operation success or `phase: idle` alone does not establish application health.
 
 ## 3. Update the full spec with a generation condition {#update}
 
