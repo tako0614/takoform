@@ -332,6 +332,9 @@ async function run() {
     assert.ok(await page.locator(".not-found__search").evaluate((button) => document.activeElement === button), "closing search returns focus to the not-found page");
     await page.locator(".version-context select").selectOption("v1");
     await page.waitForURL((url) => url.pathname === "/v1/", { timeout: 10000 });
+    await visit("/spec/host-api/v2/examples");
+    assert.match(await page.locator(".mirror-notice").innerText(), /^Explanatory source \(English original\): .+ — not a specification requirement\.$/u,
+      "explanatory pages say they are not specification requirements");
     await page.setViewportSize({ width: 320, height: 900 });
     await visit("/");
     await checkDisclosure(page, ".VPNavBarHamburger");
@@ -371,6 +374,13 @@ async function run() {
         return element.matches(":focus-visible") && style.outlineStyle !== "none" && parseFloat(style.outlineWidth) >= 2;
       }), `${colorScheme}: API selection must have a keyboard focus indicator`);
       await page.screenshot({ path: `/tmp/takoform-docs-home-${colorScheme}.png`, fullPage: true });
+      for (const path of ["/spec/host-api/v1", "/spec/host-api/v2/http"]) {
+        await visit(path);
+        assert.ok(await page.locator(".mirror-notice a").evaluate((link) => {
+          const style = getComputedStyle(link);
+          return style.textDecorationLine.includes("underline") && style.color !== getComputedStyle(link.closest("p")).color;
+        }), `${colorScheme} ${path}: the normative source link looks like a link`);
+      }
       await visit("/spec/host-api/v1");
       await page.locator(".VPNavBarSearch button").click();
       await page.locator(".VersionSearch input").fill("Snapshot");
