@@ -87,6 +87,8 @@ describe("takoform.com site derivation", () => {
     for (const page of ["website/v1/index.md", "website/site.md"]) {
       expect(readFileSync(page, "utf8"), `${page} links the Provider's version table`).toContain("README.md#choose-a-provider-version");
     }
+    expect(authoring.indexOf("{#publish}"), "publishing comes before checking a Host").toBeLessThan(authoring.indexOf("{#check}"));
+    expect(readFileSync("website/guides/index.md", "utf8")).toContain("(/authoring/#publish)");
     const hostGuide = readFileSync("website/host-api/index.md", "utf8");
     expect(hostGuide).toContain("## Check your Host against the baseline {#check}");
     expect(hostGuide).toContain("(/spec/host-api/v2/http#conformance)");

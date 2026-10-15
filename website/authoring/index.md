@@ -6,7 +6,7 @@ title: Create a Form
 
 A Takoform v2 Form defines the settings and behavior for one kind of Host-managed Resource. Start by stating what the Resource owns; then make its inputs, observations, operations, and failure recovery precise. A Host does not fetch code from a published Form URL. It explicitly implements the Forms it supports.
 
-This guide walks through designing and checking a fictional `KeyValueEntry` Form. It is a teaching example, not a claim that the Form is published or supported by any Host.
+This guide walks through designing, publishing, and checking a fictional `KeyValueEntry` Form. It is a teaching example, not a claim that the Form is published or supported by any Host.
 
 ## 1. Define the Resource and its boundary {#purpose}
 
@@ -64,9 +64,19 @@ Turn the table above into a human-readable normative specification. A reader sho
 
 This example has no references, Interfaces, Bindings, artifacts, or private inputs. If you add JSON Schema or another machine-readable aid, test that it agrees with the normative text. See [Form requirements](/spec/host-api/v2/forms#what-a-form-specification-must-define) and the [author checklist](/spec/host-api/v2/forms#author-checklist) for the full contract.
 
-## 5. Check a Host's support and try the API {#check}
+## 5. Publish the Form at its exact URL {#publish}
 
-Ask the Host operator for the API root, Space, and authentication method. The following shell example assumes those values are set. Since the Form URL is fictional, a real Host may not support it.
+Before publishing, confirm that the specification answers every question in the [author checklist](/spec/host-api/v2/forms#author-checklist).
+
+Then serve the human-readable normative specification at the Form URL. That is all [publication](/spec/host-api/v2/#compatibility) requires: no package, signature, or registration. Following the [URL rules](/spec/host-api/v2/forms#publication), the URL must be an ASCII absolute HTTPS URL, with non-ASCII characters percent-encoded and no user information, query, or fragment. Its full string is the Form's identity, and Hosts and clients do not follow redirects, change case, or add a trailing slash to match it, so check that the exact string you publish serves the page. [Step 1](#purpose) covers version-shaped paths and new URLs for changed contracts.
+
+Keep the contract at that URL fixed. Layout, navigation, and explanations may improve there, but a change in normative behavior needs a new URL and must not be presented as an editorial clarification. Machine-readable aids such as JSON Schema stay supplemental unless the specification makes one normative, and implementers may keep copies of the page to compare revisions.
+
+Publishing registers the Form nowhere, and takoform.com keeps no Form catalog. A Host must not fetch or execute a Form URL it receives in a request to learn the contract: a Host operator implements a Form explicitly and then reports it through `support`. Give the exact URL to the Host operators you want to implement it and to the clients who will request it. A Host must not depend on your site to manage or recover existing Resources, but keep the page served, because implementers and clients read it. For a complete specification to model yours on, see the [KeyValueEntry Form](/spec/host-api/v2/forms#key-value-entry).
+
+## 6. Check a Host's support and try the API {#check}
+
+Once a Host operator has implemented your Form, check it the way a client will. Ask the Host operator for the API root, Space, and authentication method. The following shell example assumes those values are set. Since the Form URL is fictional, a real Host may not support it.
 
 ```sh
 export BASE_URL='https://host.example.test/api-root-returned-by-discovery'
