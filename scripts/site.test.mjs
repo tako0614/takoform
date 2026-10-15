@@ -94,6 +94,8 @@ describe("takoform.com site derivation", () => {
     expect(hostGuide).toContain("(/spec/host-api/v2/http#conformance)");
     expect(hostGuide).toContain("### Demonstrate restart and partial failure {#restart-experiment}");
     expect(hostGuide.match(/\(#restart-experiment\)/gu)?.length, "obligations 4 and 5 and the gaps lead to the procedure").toBe(3);
+    expect(hostGuide).toContain("### Demonstrate concurrency and principal isolation {#isolation-experiment}");
+    expect(hostGuide.match(/\(#isolation-experiment\)/gu)?.length, "obligation 3 and the gaps lead to the procedure").toBe(2);
     for (const entry of ["website/guides/index.md", "website/v2/index.md", "website/conformance/index.md"]) {
       expect(readFileSync(entry, "utf8"), `${entry} leads Host implementers to the baseline check`).toContain("(/host-api/#check)");
     }
