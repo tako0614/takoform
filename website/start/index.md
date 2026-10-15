@@ -178,6 +178,18 @@ Retry-After: 1
 
 Read `op_delete_1` and confirm success. A later Resource GET may return `410 Gone` if this Host retains a deletion marker or `404 Not Found` otherwise. Use the Operation as the evidence of the deletion result; do not infer backend effects from 404/410 alone. For the complete message shapes and recovery alternatives, see the [HTTP API](/spec/host-api/v2/http) and [full examples](/spec/host-api/v2/examples).
 
-## Host implementers {#host-implementers}
+## Where to go next {#next}
+
+The walkthrough followed the successful path. Each role has its own guide for what keeps that path reliable when responses are lost, generations conflict, or processes restart.
+
+### Building a client {#client-implementers}
+
+Persist an intent record before sending, so after a lost response the identical request can be resent with its original key within the Host's replay window instead of starting a second change. The [client guide](/client/) covers replay deadlines, generation conflicts, and authorization changes.
+
+### Creating a Form {#form-authors}
+
+[Create a Form](/authoring/) designs the same fictional KeyValueEntry Form from the author's side: its `spec`, `observed` state, `output`, and recovery from partial failure. The [Form requirements](/spec/host-api/v2/forms) are normative; finish with their [author checklist](/spec/host-api/v2/forms#author-checklist).
+
+### Implementing a Host {#host-implementers}
 
 An accepted Operation, its Idempotency-Key mapping, Resource UID and generation, and last verified observation must remain traceable across process restart. If a worker continues work after the HTTP handler returns, it must distinguish queued, running, and unknown outcomes on recovery. See the [Host implementation guide](/host-api/).
