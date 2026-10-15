@@ -1,6 +1,10 @@
 <script setup lang="ts">
 const copy = {
   introduction: "Takoform describes how clients create, inspect, update and delete resources on a server. A Form defines a kind of resource. A Host is the server that implements it and provides the API.",
+  actions: [
+    { path: "/start/", label: "Walk through the v2 API", primary: true },
+    { path: "/guides/", label: "Guides by role", primary: false },
+  ],
   model: "A database and a worker need different settings and expose different ways to use them. Forms describe those differences. The Host API provides a common way to submit changes, follow their progress and handle conflicts or retries.",
   roles: [
     { name: "Form", text: "Defines inputs, outputs, behavior and connections. Its author describes what independent implementations must agree on." },
@@ -12,10 +16,10 @@ const copy = {
   exampleCaption: "Illustrative Host API v2 request. The Host and Form use example domains, not live services.",
   requestLabel: "Create request",
   steps: [
-    { name: "Check support", text: "Read the Host's connection and authentication details, then check support for the exact Form URL." },
-    { name: "Submit the change", text: "POST the resource request. The Host returns an Operation so the client can follow the accepted change." },
-    { name: "Read the result", text: "Follow the Operation to completion, then read the Resource's observed state and output. Acceptance alone does not mean the resource is ready to use." },
-    { name: "Update or delete", text: "Use the Resource UID and its current generation. If a response is lost, retry the original request with the same key within the Host's replay window." },
+    { name: "Check support", path: "/start/#discover-support", text: "Read the Host's connection and authentication details, then check support for the exact Form URL." },
+    { name: "Submit the change", path: "/start/#create-read", text: "POST the resource request. The Host returns an Operation so the client can follow the accepted change." },
+    { name: "Read the result", path: "/start/#create-read", text: "Follow the Operation to completion, then read the Resource's observed state and output. Acceptance alone does not mean the resource is ready to use." },
+    { name: "Update or delete", path: "/start/#update", text: "Use the Resource UID and the generation you last read, with a new Idempotency-Key for each change. If a response is lost, resend that exact request with its original key within the Host's replay window." },
   ],
   exampleLink: "Read the full walkthrough",
   readingIntro: "The guides below use v2. Choose v1 or v2 in the header when reading an existing implementation's API documentation.",
@@ -47,6 +51,15 @@ Idempotency-Key: 946eec36-4a6a-41de-8f3c-e83d2c58c246
         <h1 id="home-title">Takoform</h1>
         <p class="home-overview__lead" lang="en">A common HTTP API for resource management.</p>
         <p class="home-introduction">{{ copy.introduction }}</p>
+        <ul class="home-actions">
+          <li v-for="action in copy.actions" :key="action.path">
+            <a
+              class="home-action"
+              :class="{ 'home-action--primary': action.primary }"
+              :href="action.path"
+            >{{ action.label }}</a>
+          </li>
+        </ul>
       </header>
 
       <section class="home-section home-model" aria-labelledby="home-model-title">
@@ -71,7 +84,7 @@ Idempotency-Key: 946eec36-4a6a-41de-8f3c-e83d2c58c246
           </figure>
           <ol class="home-steps">
             <li v-for="step in copy.steps" :key="step.name">
-              <h3>{{ step.name }}</h3>
+              <h3><a class="home-step-link" :href="step.path">{{ step.name }}</a></h3>
               <p>{{ step.text }}</p>
             </li>
           </ol>

@@ -238,6 +238,10 @@ async function run() {
       for (const route of routes) {
         await visit(route);
         assert.deepEqual(await page.evaluate(inspectGeometry), [], `${width}px ${route}`);
+        if (route === "/") {
+          const start = await page.locator('.home-actions a[href="/start/"]').boundingBox();
+          assert.ok(start && start.y + start.height <= 900, `${width}px: the walkthrough link is in the first viewport`);
+        }
         if (width === 375 && ["/", "/spec/host-api/v2/http"].includes(route)) {
           const name = route === "/" ? "home-en" : "http-v2";
           await page.screenshot({ path: `/tmp/takoform-docs-${name}-375.png`, fullPage: true });
@@ -305,6 +309,10 @@ async function run() {
       ]);
       assert.equal(await page.locator(".home-roles dt").count(), 3);
       assert.equal(await page.locator(".home-steps li").count(), 4);
+      assert.deepEqual(await page.locator(".home-steps h3 a").evaluateAll((links) => links.map((link) => link.getAttribute("href"))), [
+        "/start/#discover-support", "/start/#create-read", "/start/#create-read", "/start/#update",
+      ], "each lifecycle step opens its walkthrough section");
+      assert.ok(await page.locator(".home-example pre").evaluate((element) => element.scrollWidth <= element.clientWidth), "the create request fits without horizontal scrolling");
       const exampleRequest = readFileSync(join(root, "website/start/index.md"), "utf8")
         .match(/^POST .+ HTTP\/1\.1$/mu)?.[0];
       assert.ok(exampleRequest, "the getting-started guide includes a create request");
