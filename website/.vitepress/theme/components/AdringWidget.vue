@@ -24,7 +24,7 @@ onBeforeUnmount(() => dispose?.());
 </script>
 
 <template>
-  <aside aria-label="広告" class="adring-placement">
+  <aside aria-label="Advertisement" class="adring-placement">
     <div ref="container" />
   </aside>
 </template>

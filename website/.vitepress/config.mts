@@ -55,6 +55,35 @@ function firstParagraph(srcDir, relativePath) {
 // declare authority and version status separately; navigation and indexes
 // are non-normative.
 
+// VitePress names each heading permalink from the heading's raw inline source,
+// so a custom `{#id}` (including retained Japanese fragment IDs) leaks into the
+// accessible name. Rename them from the rendered heading text instead, after
+// markdown-it-anchor has inserted the links.
+function nameHeadingPermalinks(md) {
+  md.core.ruler.after("anchor", "takoform_permalink_names", (state) => {
+    state.tokens.forEach((token, index) => {
+      if (token.type !== "heading_open") return;
+      const children = state.tokens[index + 1]?.children ?? [];
+      const permalink = children.find((child) =>
+        child.type === "link_open" &&
+        (child.attrGet("class") ?? "").split(/\s+/u).includes("header-anchor"),
+      );
+      if (permalink === undefined) return;
+      // VitePress keeps entity markup in text tokens; decode it once so the
+      // renderer's attribute escaping does not double-escape it.
+      const title = md.utils.unescapeAll(children
+        .map((child) => {
+          if (["text", "code_inline", "emoji"].includes(child.type)) return child.content;
+          return ["softbreak", "hardbreak"].includes(child.type) ? " " : "";
+        })
+        .join(""))
+        .replace(/\s+/gu, " ")
+        .trim();
+      permalink.attrSet("aria-label", title === "" ? "Permalink" : `Permalink to "${title}"`);
+    });
+  });
+}
+
 const repository = "https://github.com/tako0614/takoform";
 // The pinned esbuild 0.28 pair cannot downlevel object/array destructuring
 // during dependency pre-bundling. Keep the browser build target independent:
@@ -165,6 +194,7 @@ export default defineConfig({
       light: "github-light-high-contrast",
       dark: "github-dark-high-contrast",
     },
+    config: nameHeadingPermalinks,
   },
   // VitePress 1.6 builds the local-search MiniSearch index through a concurrent
   // mapper. MiniSearch assigns numeric document IDs in completion order, so a
