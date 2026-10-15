@@ -15,7 +15,7 @@ Each section is a reading path for one role, from the first page to the normativ
 
 ## Form authors {#form-authors}
 
-Publish a versioned Form URL and describe `spec`, `observed`, `output`, operation semantics, and recovery from partial failure. [Form requirements](/spec/host-api/v2/forms) are normative; the [examples](/spec/host-api/v2/examples) illustrate HTTP use with fictional data.
+Design the Form with [Create a Form](/authoring/): `spec`, `observed`, `output`, operation semantics, and recovery from partial failure. Then [publish it at its exact URL](/authoring/#publish) and give that URL to the Host operators who will implement it and the clients who will request it. [Form requirements](/spec/host-api/v2/forms) are normative; the [examples](/spec/host-api/v2/examples) illustrate HTTP use with fictional data.
 
 ## Client implementers {#client-implementers}
 
