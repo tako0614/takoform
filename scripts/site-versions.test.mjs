@@ -106,6 +106,7 @@ describe("version-separated documentation navigation", () => {
     }
     const v2Guides = Object.fromEntries(rootSidebar["/v2/"].find((item) => item.text === "Guides").items
       .map((item) => [item.link, item.text]));
+    expect(v2Guides["/model/"]).toBe("The v2 model");
     expect(v2Guides["/client/"]).toBe("Implementing a client");
     expect(v2Guides["/host-api/"]).toBe("Implementing a Host");
     expect(v2Guides["/guides/"]).toBe("Guides by role");
