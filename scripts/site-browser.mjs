@@ -326,6 +326,27 @@ async function run() {
     await page.keyboard.press("Escape");
     await page.waitForFunction(() => !document.querySelector(".VersionSearch"));
     assert.ok(await page.locator(".VPNavBarSearch button").evaluate((button) => document.activeElement === button), "closing search returns focus to its trigger");
+    // The live widget hides itself when it has nothing to show; the placement must not leave a blank box.
+    const placement = page.locator(".adring-placement");
+    assert.ok(await placement.isVisible(), "the ad placement keeps its space before the widget reports a state");
+    await placement.evaluate((element) => {
+      const widget = document.createElement("div");
+      widget.dataset.adringWidget = "card";
+      widget.dataset.adringState = "loading";
+      element.firstElementChild.append(widget);
+    });
+    const placementShown = () => placement.evaluate((element) => getComputedStyle(element).display !== "none");
+    assert.equal(await placementShown(), true, "a loading ad placement keeps its space");
+    for (const [state, shown] of [["empty", false], ["error", false], ["ready", true]]) {
+      await placement.evaluate((element, value) => { element.querySelector("[data-adring-widget]").dataset.adringState = value; }, state);
+      assert.equal(await placementShown(), shown, `an ad placement in state ${state} is ${shown ? "shown" : "collapsed"}`);
+    }
+    const blocked = await context.newPage();
+    await blocked.route("https://ar-cdn.net/**", (route) => route.abort());
+    await blocked.goto(`${origin}/start/`, { waitUntil: "networkidle" });
+    await blocked.locator(".adring-placement[hidden]").waitFor({ state: "attached" });
+    assert.equal(await blocked.locator(".adring-placement").evaluate((element) => getComputedStyle(element).display), "none", "a blocked ad script releases its space");
+    await blocked.close();
     await visit("/404.html");
     assert.deepEqual(await page.locator(".not-found a").evaluateAll((links) => links.map((link) => link.getAttribute("href"))), [
       "/", "/start/", "/v2/", "/v1/",
