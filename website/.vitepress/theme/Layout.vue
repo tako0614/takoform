@@ -6,6 +6,7 @@ import { onBeforeUnmount, onMounted } from "vue";
 import MirrorNotice from "./components/MirrorNotice.vue";
 import AdringWidget from "./components/AdringWidget.vue";
 import VersionContext from "./components/VersionContext.vue";
+import NotFoundPage from "./components/NotFoundPage.vue";
 
 const { Layout } = DefaultTheme;
 const { frontmatter } = useData();
@@ -29,6 +30,9 @@ onBeforeUnmount(() => window.removeEventListener("keydown", closeMobileNavigatio
   <Layout>
     <template #nav-bar-content-after>
       <VersionContext />
+    </template>
+    <template #not-found>
+      <NotFoundPage />
     </template>
     <template #layout-bottom>
       <AdringWidget />

@@ -294,11 +294,6 @@ export default defineConfig({
     returnToTopLabel: "Return to top",
     sidebarMenuLabel: "Menu",
     outlineTitle: "On this page",
-    notFound: {
-      title: "Page not found",
-      quote: "Check the URL or use search to find a page.",
-      linkText: "Home",
-    },
   },
   // The document remains English on both SSR and client navigation.
   // Generated specification bodies declare lang="en" independently.

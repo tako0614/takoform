@@ -1021,6 +1021,8 @@ export function inspectDist(root, distRoot = SITE_DIST) {
   }
 
   const expectedPageMetadata = new Map([
+    // VitePress renders 404.html with an empty app root; the not-found page's
+    // links are client-rendered and checked by the browser lane instead.
     [`${distRoot}/404.html`, {
       route: "/404",
       lang: "en",

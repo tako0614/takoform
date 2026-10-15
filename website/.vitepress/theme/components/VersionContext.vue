@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { useRoute, useRouter } from "vitepress";
+import { useData, useRoute, useRouter } from "vitepress";
 import { documentVersion, versionTarget } from "../../versions.mjs";
 
 withDefaults(defineProps<{ variant?: "control" | "status" }>(), {
@@ -9,9 +9,11 @@ withDefaults(defineProps<{ variant?: "control" | "status" }>(), {
 
 const route = useRoute();
 const router = useRouter();
+const { page } = useData();
 const changingVersion = ref(false);
 const currentPath = computed(() => route.path);
-const currentVersion = computed(() => documentVersion(currentPath.value));
+// A missing page belongs to no version, even under a versioned path prefix.
+const currentVersion = computed(() => page.value.isNotFound ? null : documentVersion(currentPath.value));
 
 const options = computed(() => [
   { version: "v1", label: "API v1" },
@@ -23,7 +25,7 @@ async function changeVersion(event: Event) {
   if (changingVersion.value || (version !== "v1" && version !== "v2")) return;
   changingVersion.value = true;
   try {
-    await router.go(versionTarget(currentPath.value, version));
+    await router.go(page.value.isNotFound ? `/${version}/` : versionTarget(currentPath.value, version));
   } finally {
     changingVersion.value = false;
   }
