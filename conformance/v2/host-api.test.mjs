@@ -522,3 +522,44 @@ test("the client guide's loop follows changes against an asynchronous Host", asy
   expect(resumed.result).toBe("succeeded");
   expect(resumed.operation.id).toBe(replayed.operation.id);
 });
+
+test("the client guide's update and delete intents follow the Resource's generation", async () => {
+  const guide = readFileSync(new URL("../../website/client/index.md", import.meta.url), "utf8");
+  const [loop, usage, changes] = [...guide.slice(guide.indexOf("{#loop}")).matchAll(/```js\n([\s\S]*?)```/gu)]
+    .slice(0, 3).map((match) => match[1]);
+  const host = makeHost();
+  const sent = [];
+  const fetch = async (url, init) => {
+    sent.push({ method: init.method, headers: init.headers, body: init.body });
+    return host({ method: init.method, url, headers: init.headers,
+      body: init.body === undefined ? undefined : JSON.parse(init.body) });
+  };
+  const program = loop.replace("const sleep = (ms) => new Promise((done) => setTimeout(done, ms));",
+    "const sleep = async () => { await new Promise((done) => setImmediate(done)); };")
+    + usage.replace('"https://forms.publisher.example/key-value-entry/1.0.0"', JSON.stringify(form))
+    + changes + "\nreturn { result, updated, deleted, change };";
+  const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
+  const saved = [];
+  const { result, updated, deleted, change } = await new AsyncFunction(
+    "fetch", "save", "discovery", "token", "crypto", program)(
+    fetch, async (record) => { saved.push(record); }, { baseUrl: root, limits: { replayWindowSeconds: 3600 } },
+    "guide-token", globalThis.crypto);
+
+  expect(result.resource.generation).toBe(1);
+  expect(updated.result).toBe("succeeded");
+  expect(updated.resource.generation).toBe(2);
+  expect(updated.resource.spec).toEqual({ key: "greeting", value: "welcome" });
+  expect(deleted.result).toBe("succeeded");
+  expect(deleted.resource).toBeNull();
+  const mutations = sent.filter(({ method }) => method === "PUT" || method === "DELETE");
+  expect(mutations.map(({ method, headers }) => [method, headers["Takoform-Expected-Generation"]]))
+    .toEqual([["PUT", "1"], ["DELETE", "2"]]);
+  const keys = sent.filter(({ method }) => method !== "GET").map(({ headers }) => headers["Idempotency-Key"]);
+  expect(new Set(keys).size, "every change uses its own key").toBe(3);
+  expect(mutations[1].headers["Content-Type"], "delete sends no Content-Type").toBeUndefined();
+  expect(mutations[1].body, "delete sends no body").toBeUndefined();
+  expect(saved.filter((record) => record.method !== "POST").every((record) => record.replayWindowMs === 3_600_000),
+    "changes carry the replay window in milliseconds").toBe(true);
+  expect(() => change(null, "DELETE"), "a change needs a Resource that was read").toThrow("Read the Resource first.");
+});
+
