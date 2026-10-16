@@ -264,6 +264,9 @@ async function run() {
         if (route === "/") {
           const start = await page.locator('.home-actions a[href="/start/"]').boundingBox();
           assert.ok(start && start.y + start.height <= 900, `${width}px: the walkthrough link is in the first viewport`);
+          assert.deepEqual(await page.locator(".home-example pre").evaluateAll((blocks) => blocks
+            .filter((pre) => pre.scrollWidth > pre.clientWidth && pre.tabIndex !== 0).map((pre) => pre.textContent.split("\n")[0])), [],
+          `${width}px: an example that scrolls sideways can be scrolled from the keyboard`);
         }
         if (width === 375 && ["/", "/spec/host-api/v2/http"].includes(route)) {
           const name = route === "/" ? "home-en" : "http-v2";
@@ -394,12 +397,14 @@ async function run() {
         "/start/#discover-support", "/start/#create-read", "/start/#create-read", "/start/#update",
       ], "each lifecycle step opens its walkthrough section");
       assert.deepEqual(await page.locator(".home-example pre").evaluateAll((blocks) => blocks.map((pre) => pre.scrollWidth <= pre.clientWidth)),
-        [true, true], "the create request and its response fit without horizontal scrolling");
+        [true, true, true], "the create request, its response and the Resource fit without horizontal scrolling");
       const exampleRequest = readFileSync(join(root, "website/start/index.md"), "utf8")
         .match(/^POST .+ HTTP\/1\.1$/mu)?.[0];
       assert.ok(exampleRequest, "the getting-started guide includes a create request");
       assert.ok((await page.locator(".home-example pre").first().textContent()).includes(exampleRequest), "home uses the guide's illustrative create request");
       assert.match(await page.locator(".home-example pre").nth(1).textContent(), /^HTTP\/1\.1 202 Accepted\n/u, "home shows the accepted Operation the request returns");
+      assert.match(await page.locator(".home-example pre").nth(2).textContent(), /^GET \S+\/resources\/r_1 HTTP\/1\.1\n\nHTTP\/1\.1 200 OK\n[\s\S]*"observedGeneration": 1,/u,
+        "home ends at the Resource the Operation produced");
       const primary = page.locator('.version-context select');
       const bounds = await primary.boundingBox();
       assert.ok(bounds && bounds.y >= 0 && bounds.y + bounds.height <= 800, `${colorScheme}: API selection must fit first viewport`);
