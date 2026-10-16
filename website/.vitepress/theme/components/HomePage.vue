@@ -13,13 +13,13 @@ const copy = {
   ],
   portability: "A shared API gives clients a consistent management protocol. Before using a resource, check that the Host supports the particular Form and review its available capacity, access requirements and terms.",
   exampleIntro: "In this v2 example, a client asks a Host to store a key/value entry. The Form identifies the resource's behavior; spec supplies its configuration.",
-  exampleCaption: "Illustrative Host API v2 request and the Host's answer, with the response's other headers and timestamps omitted. The Host and Form use example domains, not live services.",
   requestLabel: "Request",
   responseLabel: "Response (abridged): the accepted Operation, polled at its Location until it finishes",
+  resultLabel: "Result (abridged): the Resource, read after the Operation succeeds",
   steps: [
     { name: "Check support", path: "/start/#discover-support", text: "Read the Host's connection and authentication details, then check support for the exact Form URL." },
     { name: "Submit the change", path: "/start/#create-read", text: "POST the resource request. The Host returns an Operation so the client can follow the accepted change." },
-    { name: "Read the result", path: "/start/#create-read", text: "Follow the Operation to completion, then read the Resource's observed state and output. Acceptance alone does not mean the resource is ready to use." },
+    { name: "Read the result", path: "/start/#create-read", text: "Follow the Operation to completion, then read the Resource. Neither acceptance nor a succeeded Operation alone means the resource is ready to use." },
     { name: "Update or delete", path: "/start/#update", text: "Use the Resource UID and the generation you last read, with a new Idempotency-Key for each change. If a response is lost, resend that exact request with its original key within the Host's replay window." },
   ],
   exampleLink: "Read the full walkthrough",
@@ -54,6 +54,19 @@ Retry-After: 1
   "generation": 1,
   "status": "queued",
   "effect": "none"
+}`;
+const result = `GET /apis/forms.takoform.com/v2/resources/r_1 HTTP/1.1
+
+HTTP/1.1 200 OK
+
+{
+  "uid": "r_1",
+  "generation": 1,
+  "observedGeneration": 1,
+  "spec": { "key": "greeting", "value": "hello" },
+  "observed": {
+    "entryExists": true, "key": "greeting", "value": "hello"
+  }
 }`;
 </script>
 
@@ -93,11 +106,17 @@ Retry-After: 1
         <div class="home-example">
           <figure>
             <p class="home-example__label">{{ copy.requestLabel }}</p>
-            <!-- The request scrolls on narrow screens, so it takes focus. -->
+            <!-- The request and the Resource scroll on narrow screens, so they take focus. -->
             <pre tabindex="0"><code>{{ request }}</code></pre>
             <p class="home-example__label">{{ copy.responseLabel }}</p>
             <pre><code>{{ response }}</code></pre>
-            <figcaption>{{ copy.exampleCaption }}</figcaption>
+            <p class="home-example__label">{{ copy.resultLabel }}</p>
+            <pre tabindex="0"><code>{{ result }}</code></pre>
+            <figcaption>
+              <code>spec</code> is the accepted desired value and <code>observed</code> is what the Host last checked;
+              <code>observedGeneration</code> equals <code>generation</code>, so <code>observed</code> reflects the current generation.
+              Illustrative Host API v2 exchanges with other headers, fields and timestamps omitted; the Host and Form use example domains, not live services.
+            </figcaption>
           </figure>
           <ol class="home-steps">
             <li v-for="step in copy.steps" :key="step.name">

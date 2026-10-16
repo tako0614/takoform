@@ -123,6 +123,7 @@
   font-size: 0.875rem;
   line-height: 1.7;
 }
+.home-example figcaption code { font-family: var(--vp-font-family-mono); font-size: 0.8125rem; }
 .home-steps {
   margin: 0;
   padding-inline-start: var(--home-space-lg);

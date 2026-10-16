@@ -181,6 +181,18 @@ describe("takoform.com site derivation", () => {
       expect(component, fragment).toContain(fragment);
       expect(startGuide.replace(/,\s+/gu, ",\n  "), fragment).toContain(fragment);
     }
+    // Its result is the walkthrough's first Resource read, abridged.
+    const read = "GET /apis/forms.takoform.com/v2/resources/r_1 HTTP/1.1";
+    expect(component).toContain(read);
+    expect(startGuide).toContain(read);
+    const homeBody = component.match(/const result = `GET [^\n]+\n\nHTTP\/1\.1 200 OK\n\n(\{[\s\S]*?\n\})`;/u)?.[1];
+    const guideBody = startGuide.match(/\n(\{\n  "uid": "r_1"[\s\S]*?\n\})\n/u)?.[1];
+    expect(homeBody, "home shows a Resource body").toBeDefined();
+    expect(guideBody, "the walkthrough reads the Resource").toBeDefined();
+    const homeResult = JSON.parse(homeBody);
+    const guideResult = JSON.parse(guideBody);
+    expect(Object.keys(homeResult)).toEqual(["uid", "generation", "observedGeneration", "spec", "observed"]);
+    for (const [field, value] of Object.entries(homeResult)) expect(guideResult[field], field).toEqual(value);
     for (const target of [
       "/start/#discover-support",
       "/start/#create-read",
