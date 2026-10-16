@@ -127,6 +127,17 @@ describe("takoform.com site derivation", () => {
     expect(v1Text, "the v1 entry embeds the Form Definition").toContain("const exampleDefinition");
     expect(v1Text, "the v1 entry embeds the package example with its checked output").toContain("changed payload rejected: true");
     expect(v1Text, "only the formpackage regions are embedded").not.toContain("package formpackage_test");
+    const v1Source = readFileSync(v1Path, "utf8");
+    const packageFormat = readFileSync("formpackage/model.go", "utf8").match(/VersionlessFamilyPackageAPIVersion\s*=\s*"([^"]+)"/u)?.[1];
+    expect(v1Source, "the page names the package format the code uses").toContain(`\`${packageFormat}\``);
+    const packageSchema = `/schemas/${packageFormat.split("/").pop()}/package-index.schema.json`;
+    expect(v1Source.match(/\/schemas\/[^/)]+\/package-index\.schema\.json/gu), "the page links only that format's index schema")
+      .toEqual([packageSchema]);
+    expect(JSON.parse(readFileSync(`website/public${packageSchema}`, "utf8")).properties.apiVersion.const).toBe(packageFormat);
+    for (const fact of ["http.ErrUseLastResponse", "(/schemas/v1/form-definition.schema.json)",
+      "HTTPS unless it is a loopback development origin", "`Discover` must succeed before any other API call"]) {
+      expect(v1Source, fact).toContain(fact);
+    }
   }, 30_000);
   test("uses English page titles at the sole canonical root, including generated indexes", () => {
     const derived = buildSiteFiles(".");
