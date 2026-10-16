@@ -43,6 +43,14 @@ The example below, from [`hostclient/example_test.go`](https://github.com/tako06
 
 <<< @/../hostclient/example_test.go#client{go}
 
+`hostclient.New(endpoint, token, nil)` sends a non-empty `token` as `Authorization: Bearer <token>` on every request, including Discovery; the example's fixture needs none, so it passes `""`. With a nil HTTP client it refuses redirects, so the credential is never resent to a location the client did not negotiate.
+
+To author a v1 Form Package, write the Form Definition, then build and verify the package. This example from [`formpackage/example_test.go`](https://github.com/tako0614/takoform/blob/main/formpackage/example_test.go) validates a synthetic Definition, computes its schema digest, writes the package index, verifies the package, and shows that a changed payload is rejected:
+
+<<< @/../formpackage/example_test.go#definition{go}
+
+<<< @/../formpackage/example_test.go#authoring{go}
+
 ## Verification and tools {#tools}
 
 - [Schema index](/schemas/) — Published JSON schemas.
