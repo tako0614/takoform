@@ -116,6 +116,14 @@ describe("takoform.com site derivation", () => {
       expect(html).toContain('href="/spec/host-api/v2/http.html');
       expect(html).not.toContain("Code snippet path not found");
     }
+    const v1Path = "website/v1/index.md";
+    const v1Html = markdown.render(readFileSync(v1Path, "utf8"), { path: join(process.cwd(), v1Path) });
+    expect(v1Html, "the v1 entry embeds the tested Go client example").toContain("ExampleClient_ApplyResource");
+    expect(v1Html).not.toContain("Code snippet path not found");
+    const v1Text = v1Html.replace(/<[^>]+>/gu, "");
+    expect(v1Text, "the v1 entry embeds the client example").toContain("client.ApplyResource(ctx, desired");
+    expect(v1Text, "only the #client region is embedded").not.toContain("func exampleHost");
+    expect(v1Text, "the embedded example keeps its checked output").toMatch(/discovery -(?:&gt;|>) availability -(?:&gt;|>) prepare -(?:&gt;|>) apply/u);
   }, 30_000);
   test("uses English page titles at the sole canonical root, including generated indexes", () => {
     const derived = buildSiteFiles(".");
