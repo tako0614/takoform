@@ -15,7 +15,8 @@ import (
 
 // #region client
 func ExampleClient_ApplyResource() {
-	// A loopback HTTP fixture, not a real resource host. See the helper below.
+	// A loopback HTTP fixture, not a real resource host: see exampleHost in
+	// hostclient/example_test.go.
 	server, desired, calls := exampleHost()
 	defer server.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
