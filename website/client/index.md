@@ -173,6 +173,32 @@ const result = await applyChange(http, save, {
 });
 ```
 
+Update and delete name the Resource by UID and carry the generation you read. Build each one from a Resource you have just read: the `resource` of a `succeeded` or `failed` result, or a fresh `GET /resources/{uid}`; after any other result, follow the outcome table first. Each is a new change with its own key, and update sends the complete `spec`, because it replaces the whole document rather than patching it. After a restart, resend the intent you saved instead of building it again, which would create a new key.
+
+```js
+const change = (resource, method, body) => {
+  if (!resource) throw new Error("Read the Resource first.");
+  return {
+    method,
+    path: `/resources/${resource.uid}`,
+    headers: {
+      ...(body && { "Content-Type": "application/json" }),
+      "Takoform-Expected-Generation": String(resource.generation),
+    },
+    body,
+    key: crypto.randomUUID(),
+    firstSentAt: Date.now(),
+    replayWindowMs: discovery.limits.replayWindowSeconds * 1000,
+  };
+};
+
+const updated = await applyChange(http, save,
+  change(result.resource, "PUT",
+    { spec: { key: "greeting", value: "welcome" } }));
+const deleted = await applyChange(http, save,
+  change(updated.resource, "DELETE"));
+```
+
 ## When authentication changes {#auth-change}
 
 The Host authenticates and authorizes each request. Follow its authentication documentation to learn whether credential rotation preserves the same stable principal and permissions. A different principal has a different Idempotency-Key scope; do not use a new principal's key to “retry” a request accepted under the old one.
