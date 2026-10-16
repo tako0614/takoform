@@ -124,6 +124,9 @@ describe("takoform.com site derivation", () => {
     expect(v1Text, "the v1 entry embeds the client example").toContain("client.ApplyResource(ctx, desired");
     expect(v1Text, "only the #client region is embedded").not.toContain("func exampleHost");
     expect(v1Text, "the embedded example keeps its checked output").toMatch(/discovery -(?:&gt;|>) availability -(?:&gt;|>) prepare -(?:&gt;|>) apply/u);
+    expect(v1Text, "the v1 entry embeds the Form Definition").toContain("const exampleDefinition");
+    expect(v1Text, "the v1 entry embeds the package example with its checked output").toContain("changed payload rejected: true");
+    expect(v1Text, "only the formpackage regions are embedded").not.toContain("package formpackage_test");
   }, 30_000);
   test("uses English page titles at the sole canonical root, including generated indexes", () => {
     const derived = buildSiteFiles(".");
