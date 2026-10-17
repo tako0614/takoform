@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { documentVersion } from "../website/.vitepress/versions.mjs";
@@ -406,6 +406,36 @@ describe("takoform.com site derivation", () => {
     const order = guides.items.map((item) => item.link).filter((link) => roles.some(([, , path]) => path === link));
     expect(order).toEqual(roles.map(([, , path]) => path));
   });
+  test("each guide's page footer follows its role path", () => {
+    const pager = (route) => {
+      const path = `website${route.endsWith("/") ? `${route}index` : route}.md`;
+      expect(existsSync(path), `${route} is a guide page`).toBe(true);
+      const front = Bun.YAML.parse(readFileSync(path, "utf8").split(/^---$/mu)[1]);
+      return { prev: front.prev ?? null, next: front.next ?? null };
+    };
+    // Within each role path in Guides by role, a guide's "Next page" is the
+    // path's next step and its "Previous page" the path's previous step, or
+    // Guides by role for a path's first step. Getting started opens several
+    // paths, so it leads from the Host API v2 entry to Guides by role. The
+    // specification pages keep the specification's own reading order.
+    const guides = readFileSync("website/guides/index.md", "utf8");
+    const sections = guides.split(/^## /mu).slice(1).filter((section) => /^\d+\. \[/mu.test(section));
+    const guidesStep = { text: "Guides by role", link: "/guides/" };
+    for (const section of sections) {
+      const steps = [...section.matchAll(/^\d+\. \[([^\]]+)\]\(([^)#]+)[^)]*\)/gmu)]
+        .map(([, text, link]) => ({ text, link }));
+      for (const [index, step] of steps.entries()) {
+        if (step.link.startsWith("/spec/") || step.link === "/start/" || steps.findIndex((other) => other.link === step.link) < index) continue;
+        const { prev, next } = pager(step.link);
+        const role = section.split("\n")[0];
+        if (index + 1 < steps.length) expect(next, `${step.link} next in ${role}`).toEqual(steps[index + 1]);
+        expect(prev, `${step.link} previous in ${role}`).toEqual(steps[index - 1] ?? guidesStep);
+      }
+    }
+    expect(pager("/start/")).toEqual({ prev: { text: "Host API v2", link: "/v2/" }, next: guidesStep });
+    expect(pager("/guides/").prev).toEqual({ text: "Getting started", link: "/start/" });
+  });
+
   test("separates version sidebars and keeps shared pages out of their sequences", async () => {
     const config = (await import("../website/.vitepress/config.mts")).default;
     expect(config.locales?.en).toBeUndefined();

@@ -1,6 +1,12 @@
 ---
 title: Implementing a v2 client
 description: Design client recovery around durable intent records, replay deadlines, Operations, generations, and authorization changes.
+prev:
+  text: Getting started
+  link: /start/
+next:
+  text: HTTP API
+  link: /spec/host-api/v2/http
 ---
 
 # Implementing a v2 client {#client}

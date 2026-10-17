@@ -1,6 +1,12 @@
 ---
 title: The v2 model
 description: Understand what Forms, Hosts, Resources, Operations, and generations represent in Host API v2.
+prev:
+  text: Guides by role
+  link: /guides/
+next:
+  text: Create a Form
+  link: /authoring/
 ---
 
 # The v2 model {#model}
