@@ -122,6 +122,69 @@ describe("takoform.com site derivation", () => {
       "(/spec/host-api/v2/forms#author-checklist)", "{#host-implementers}",
     ]) expect(next).toContain(target);
   });
+  test("wraps code lines under their own indentation without changing their text", async () => {
+    const { createMarkdownRenderer, disposeMdItInstance } = await import("vitepress");
+    const config = (await import("../website/.vitepress/config.mts")).default;
+    disposeMdItInstance();
+    const markdown = await createMarkdownRenderer(join(process.cwd(), "website"), config.markdown);
+    const source = {
+      json: ["{", '  "spec": { "key": "a" },', '    "deep": "9ebd0fcad6f25f513a8146de9ddda412e2d38ca2",', '  "at": "2026-10-04T12:00:00Z"', "}"],
+      go: ["func main() {", "\t\tdefer client.Close()", "  \tx := op_create_1", "}"],
+      sh: ['curl -X POST "$BASE_URL/resources?space=a&name=b" \\', "  -H 'a: b'"],
+      text: ["  a/b.c"],
+      "": ["bare/path.x"],
+    };
+    const html = markdown.render(Object.entries(source).map(([lang, lines]) => ["```" + lang, ...lines, "```"].join("\n")).join("\n\n")
+      + "\n\n```js\n  // [!code focus]\n  run()\n```");
+    disposeMdItInstance();
+    const blocks = html.split('<div class="language-').slice(1);
+    const text = (fragment) => fragment.replace(/<[^>]*>/gu, "")
+      .replace(/&#x([0-9a-f]+);/giu, (_, hex) => String.fromCodePoint(Number.parseInt(hex, 16)))
+      .replaceAll("&quot;", '"').replaceAll("&#39;", "'").replaceAll("&lt;", "<").replaceAll("&gt;", ">").replaceAll("&amp;", "&");
+    const lines = (block) => [...block.matchAll(/<span class="line[^"]*"[^>]*>(.*?)<\/span>(?=\n<span class="line|<\/code>)/gu)].map((match) => match[1]);
+    // Every line keeps its text, so copying and search are unchanged.
+    for (const [index, lang] of Object.keys(source).entries()) expect(lines(blocks[index]).map(text)).toEqual(source[lang]);
+    // Plain text and blocks without a language keep their layout and tab stop.
+    for (const index of [3, 4]) expect(blocks[index]).toContain('tabindex="0"');
+    for (const index of [3, 4]) expect(blocks[index]).not.toContain("takoform");
+    for (const index of [0, 1, 2]) expect(blocks[index]).toContain("takoform-wrap");
+    for (const index of [0, 1, 2]) expect(blocks[index]).not.toContain("tabindex");
+    // The hang covers the indentation plus two columns, rounded up to a tab stop.
+    const hangs = blocks.slice(0, 3).flatMap((block) => [...block.matchAll(/<span class="line"(?: style="--takoform-hang:(\d+)ch")?>/gu)].map((match) => match[1] ?? ""));
+    expect(hangs).toEqual(["", "4", "8", "4", "", "", "12", "8", "", "", "4"]);
+    // Indentation stays with the first character, and a shell continuation
+    // with the word before it.
+    const kept = [...html.matchAll(/<span class="takoform-keep">(.*?)<\/span><\/span>/gu)].map((match) => text(match[1]));
+    expect(kept).toEqual(['  "', '    "', '  "', "\t\td", "  \tx", '" \\', "  -", "  r"]);
+    // Break hints follow path, query and expression punctuation and every 16
+    // hex digits, outside the kept spans.
+    const hinted = (block) => lines(block).map((line) => text(line.replaceAll("<wbr>", "|")));
+    expect(hinted(blocks[0])[2]).toBe('    "deep": "9ebd0fcad6f25f51|3a8146de9ddda412|e2d38ca2",');
+    expect(hinted(blocks[0])[3]).toBe('  "at": "2026-|10-|04T12:00:00Z"');
+    expect(hinted(blocks[1])[1]).toBe("\t\tdefer client.|Close()");
+    expect(hinted(blocks[1])[2]).toBe("  \tx := op_|create_|1");
+    expect(hinted(blocks[2])[0]).toBe('curl -X POST "$BASE_|URL/|resources?|space=|a&|name=|b" \\');
+    // VitePress notations still run before the wrapping.
+    expect(blocks[5]).toContain("has-focused-lines");
+    expect(blocks[5]).not.toContain("[!code");
+  });
+
+  test("uses no code-block feature that wrapped lines would misalign", () => {
+    // Line numbers, highlighted lines and diff notations position each line
+    // themselves, and -vue blocks swap {{ }} for placeholders that splitting a
+    // line would break; the site uses none of them.
+    const config = readFileSync("website/.vitepress/config.mts", "utf8");
+    expect(config).not.toMatch(/lineNumbers/u);
+    const sources = [...new Set([...HAND_AUTHORED_PAGE_SOURCES, ...MIRRORED_SPEC_DOCUMENTS])].map((path) => [path, readFileSync(path, "utf8")]);
+    const fence = /^ *(?:`{3,}|~{3,}) *([^\s`~]*)(.*)$/gmu;
+    for (const [path, body] of sources) {
+      for (const [, info, rest] of body.matchAll(fence)) {
+        expect(`${info}${rest}`, `${path} uses no line numbers, highlighted lines or -vue blocks`).not.toMatch(/:line-numbers|-vue\b|\{/u);
+      }
+      expect(body, `${path} uses no line notations`).not.toMatch(/\[!code /u);
+    }
+  });
+
   test("keeps words in table code whole and breaks only after separators or in long pieces", async () => {
     // createMarkdownRenderer caches one renderer per process; use a fresh one
     // with the site's markdown config, then leave none behind for other tests.

@@ -192,6 +192,64 @@ function midWordCode(selector) {
   return [...new Set(broken)];
 }
 
+// Code blocks other than plain text wrap long lines instead of scrolling and
+// so take no tab stop. Each line's first character sits at its indentation
+// column (a tab advances to the next multiple of four); a wrapped continuation
+// starts right of it, so it reads as part of that line; and a row may end
+// inside a word only when that run of letters and digits is 16 or longer.
+// Plain-text blocks, which hold diagrams, do not wrap.
+function codeWrapProblems() {
+  const problems = [];
+  const alnum = /[A-Za-z0-9]/u;
+  const charRect = (node, offset) => {
+    const range = document.createRange();
+    range.setStart(node, offset);
+    range.setEnd(node, offset + 1);
+    return range.getBoundingClientRect();
+  };
+  for (const block of document.querySelectorAll('.vp-doc div[class*="language-"]')) {
+    const pre = block.querySelector("pre");
+    const name = pre.textContent.trim().split("\n")[0].slice(0, 60);
+    if (!pre.classList.contains("takoform-wrap")) {
+      if (getComputedStyle(pre).whiteSpace !== "pre") problems.push(`plain text wraps: ${name}`);
+      continue;
+    }
+    if (pre.scrollWidth > pre.clientWidth + 1) problems.push(`code scrolls sideways: ${name}`);
+    if (pre.hasAttribute("tabindex")) problems.push(`code that cannot scroll takes a tab stop: ${name}`);
+    const code = pre.querySelector("code");
+    const probe = code.appendChild(document.createElement("span"));
+    probe.textContent = "0".repeat(10);
+    const column = probe.getBoundingClientRect().width / 10;
+    probe.remove();
+    const origin = code.getBoundingClientRect().left + parseFloat(getComputedStyle(code).paddingLeft);
+    const lineHeight = parseFloat(getComputedStyle(code).lineHeight);
+    for (const line of block.querySelectorAll(".line")) {
+      const chars = [];
+      const walker = document.createTreeWalker(line, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode())
+        for (let offset = 0; offset < node.length; offset++) chars.push([node, offset]);
+      const visible = chars.filter(([node, offset]) => !/[ \t]/u.test(node.data[offset]));
+      if (!visible.length) continue;
+      const text = line.textContent.trim().slice(0, 60);
+      const indent = [...line.textContent.match(/^[ \t]*/u)[0]]
+        .reduce((total, character) => character === "\t" ? total + 4 - total % 4 : total + 1, 0);
+      const first = charRect(...visible[0]);
+      if (Math.abs(first.left - origin - indent * column) > 1) problems.push(`indentation shifted: ${text}`);
+      if (line.getBoundingClientRect().height < lineHeight * 1.5) continue;
+      const rects = chars.map((char) => charRect(...char));
+      const continuation = rects.filter((rect, index) => rect.top > first.top + lineHeight / 2 && visible.includes(chars[index]));
+      if (Math.min(...continuation.map((rect) => rect.left)) < first.left + column * 1.5) problems.push(`continuation not indented: ${text}`);
+      for (const [index, [node, offset]] of chars.entries()) {
+        if (index === 0 || rects[index].top <= rects[index - 1].top + lineHeight / 2 || chars[index - 1][0] !== node) continue;
+        if (!alnum.test(node.data[offset - 1]) || !alnum.test(node.data[offset])) continue;
+        const run = node.data.slice(0, offset).match(/[A-Za-z0-9]*$/u)[0] + node.data.slice(offset).match(/^[A-Za-z0-9]*/u)[0];
+        if (run.length < 16) problems.push(`breaks inside "${run}": ${text}`);
+      }
+    }
+  }
+  return problems;
+}
+
 async function checkDisclosure(page, selector) {
   const trigger = page.locator(selector);
   await trigger.focus();
@@ -351,6 +409,7 @@ async function run() {
         await visit(route);
         assert.deepEqual(await page.evaluate(midWordCode, ".vp-doc td code"), [], `${width}px ${route}: table identifiers stay whole`);
         assert.deepEqual(await page.evaluate(unreachableTableControls), [], `${width}px ${route}: scrolling tables are keyboard-reachable`);
+        assert.deepEqual(await page.evaluate(codeWrapProblems), [], `${width}px ${route}: long code lines wrap under their own line`);
         if (width === 1280) assert.equal(await page.locator(".vp-doc table").evaluateAll((tables) =>
           tables.filter((table) => table.scrollWidth > table.clientWidth + 1).length), 0, `1280px ${route}: tables fit without scrolling`);
       }
