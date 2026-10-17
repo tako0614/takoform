@@ -24,11 +24,11 @@ body {
    into "valu|e". breakTableCode in config.mts adds break hints after
    separators instead, and wraps pieces over 20 characters and hex digest
    pieces in a span that may still break anywhere as a last resort. */
-.vp-doc td code {
+.vp-doc :is(td, th) code {
   overflow-wrap: break-word;
 }
 
-.vp-doc td code .table-break-anywhere {
+.vp-doc :is(td, th) code .table-break-anywhere {
   overflow-wrap: anywhere;
 }
 
@@ -89,7 +89,14 @@ body {
    tables); narrower padding keeps that overflow small. */
 @media (max-width: 480px) {
   .vp-doc :is(th, td) {
-    padding: 8px 10px;
+    padding: 8px;
+  }
+
+  /* On a phone a camelCase name in table code may wrap between its words
+     (breakTableCode in config.mts); wider tables keep it whole. Generated
+     content is not copied. */
+  .vp-doc :is(td, th) code .takoform-camel::before {
+    content: "\200b";
   }
 }
 

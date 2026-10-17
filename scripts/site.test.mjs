@@ -237,26 +237,38 @@ describe("takoform.com site derivation", () => {
       `| \`/schemas/v1\` | \`${long}\` |`,
       "| `capabilities.privateInputs:true` | `a<b&c_d` |",
       "| `initial send time + replayWindowSeconds` | x |",
+      "| `definitionVersion` `APIVersion` `URLs` `iOS` `ETag` `Page<Offering>` `a<=b` | Unknown/expired, 1/2, km/h and Resource/Operation [ab/cd](/spec/) Tom &amp; Jerry/Spike |",
+      "| `maximumConcurrentOperationsPerSpace` | x |",
       "", `Outside a table: \`${url}\``,
     ].join("\n"));
     disposeMdItInstance();
-    // Words stay whole; code may wrap only after an inner run of separators.
+    // Words stay whole; code may wrap only after an inner run of separators,
+    // and on a phone between the words of a camelCase name.
+    const camel = '<span class="takoform-camel"></span>';
+    const anywhere = (piece) => `<span class="table-break-anywhere">${piece}</span>`;
     expect(html).toContain("<code>value</code>");
-    expect(html).toContain("<code>privateInputs</code>");
+    expect(html).toContain(`<code>private${camel}Inputs</code>`);
+    expect(html).toContain(`<code>definition${camel}Version</code> <code>API${camel}Version</code> <code>URLs</code> <code>iOS</code>`);
+    expect(html).toContain("<code>ETag</code> <code>Page&lt;<wbr>Offering&gt;</code> <code>a&lt;=b</code>");
+    // A long camelCase name keeps the last-resort break in each of its words.
+    expect(html).toContain(`<code>${["maximum", "Concurrent", "Operations", "Per", "Space"].map(anywhere).join(camel)}</code>`);
     expect(html).toContain("<code>waiting_<wbr>input</code>");
     expect(html).toContain("<code>409 private_<wbr>inputs_<wbr>unverifiable</code>");
     expect(html).toContain("<code>/schemas/<wbr>v1</code>");
-    expect(html).toContain("<code>capabilities.<wbr>privateInputs:<wbr>true</code>");
+    expect(html).toContain(`<code>capabilities.<wbr>private${camel}Inputs:<wbr>true</code>`);
     expect(html).toContain("<code>https://<wbr>forms.<wbr>publisher.<wbr>example/<wbr>key-<wbr>value-<wbr>entry/<wbr>1.<wbr>0.<wbr>0</code>");
-    expect(html).toContain("<code>a&lt;b&amp;c_<wbr>d</code>");
+    expect(html).toContain("<code>a&lt;<wbr>b&amp;c_<wbr>d</code>");
     // A long span of short words is not a long piece.
-    expect(html).toContain("<code>initial send time + replayWindowSeconds</code>");
+    expect(html).toContain(`<code>initial send time + replay${camel}Window${camel}Seconds</code>`);
+    // Prose may wrap after a slash between words, not between digits or in a
+    // short pair such as km/h, and entities stay escaped once.
+    expect(html).toContain('<td>Unknown/<wbr>expired, 1/2, km/h and Resource/<wbr>Operation <a href="/spec/">ab/<wbr>cd</a> Tom &amp; Jerry/<wbr>Spike</td>');
     // Only a piece over 20 characters or a hex digest piece may break anywhere.
-    const anywhere = (piece) => `<span class="table-break-anywhere">${piece}</span>`;
     expect(html).toContain(`<code>${anywhere(long)}</code>`);
     expect(html).toContain(`<code>sha256:<wbr>${["9ebd0fcad6f25f51", "3a8146de9ddda412", "e2d38ca2ac515f0d", "33b0e962ba1d2906"].map(anywhere).join("<wbr>")}</code>`);
     // The hints add no text, and inline code outside tables is unchanged.
     const text = html.replace(/<wbr>|<\/?span[^>]*>/gu, "");
+    expect(html.replace(/<wbr>|<span class="takoform-camel"><\/span>/gu, "")).toContain("<code>definitionVersion</code>");
     for (const token of [url, digest]) expect(text).toContain(`<code>${token}</code>`);
     expect(html).toContain(`Outside a table: <code>${url}</code>`);
   });
