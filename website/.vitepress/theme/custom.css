@@ -36,6 +36,13 @@ body {
   text-align: start;
 }
 
+/* The schema index's $id and digest wrap at break hints; repeat the code
+   padding on each line so continuation lines align with the first. */
+.schema-index .vp-doc li code {
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
 /* Tables that cannot fit a phone scroll sideways (WCAG 1.4.10 exempts data
    tables); narrower padding keeps that overflow small. */
 @media (max-width: 480px) {

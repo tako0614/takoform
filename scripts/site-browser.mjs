@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
 import { documentVersion } from "../website/.vitepress/versions.mjs";
 import {
-  inspectDist, inspectSite, SITE_DIST, HAND_AUTHORED_PAGE_SOURCES,
+  deriveSchemas, inspectDist, inspectSite, SITE_DIST, HAND_AUTHORED_PAGE_SOURCES,
   GENERATED_INDEX_PAGES, MIRRORED_SPEC_DOCUMENTS,
   siteRouteForPageSource, siteRouteForSpecDocument,
 } from "./site.mjs";
@@ -163,13 +163,13 @@ function unreachableTableControls() {
   return problems;
 }
 
-// Table code that wraps inside a word, such as "valu|e". A break is allowed at
-// a <wbr> hint (a text-node boundary), at a space, and inside a
+// Code that wraps inside a word, such as "valu|e". A break is allowed at a
+// <wbr> hint (a text-node boundary), at a space, and inside a
 // table-break-anywhere piece (over 20 characters or a hex digest piece).
-function midWordTableCode() {
+function midWordCode(selector) {
   const alnum = /[A-Za-z0-9]/u;
   const broken = [];
-  for (const code of document.querySelectorAll(".vp-doc td code")) {
+  for (const code of document.querySelectorAll(selector)) {
     if (code.getClientRects().length < 2) continue;
     const chars = [];
     const walker = document.createTreeWalker(code, NodeFilter.SHOW_TEXT);
@@ -327,7 +327,7 @@ async function run() {
       for (const route of routes) {
         await visit(route);
         assert.deepEqual(await page.evaluate(inspectGeometry), [], `${width}px ${route}`);
-        assert.deepEqual(await page.evaluate(midWordTableCode), [], `${width}px ${route}: table identifiers stay whole`);
+        assert.deepEqual(await page.evaluate(midWordCode, ".vp-doc td code"), [], `${width}px ${route}: table identifiers stay whole`);
         assert.deepEqual(await page.evaluate(unreachableTableControls), [], `${width}px ${route}: scrolling tables are keyboard-reachable`);
         if (route === "/") {
           const start = await page.locator('.home-actions a[href="/start/"]').boundingBox();
@@ -349,11 +349,19 @@ async function run() {
       await page.setViewportSize({ width, height: 900 });
       for (const route of [...new Set([...routes, ...sidebarRoutes])]) {
         await visit(route);
-        assert.deepEqual(await page.evaluate(midWordTableCode), [], `${width}px ${route}: table identifiers stay whole`);
+        assert.deepEqual(await page.evaluate(midWordCode, ".vp-doc td code"), [], `${width}px ${route}: table identifiers stay whole`);
         assert.deepEqual(await page.evaluate(unreachableTableControls), [], `${width}px ${route}: scrolling tables are keyboard-reachable`);
         if (width === 1280) assert.equal(await page.locator(".vp-doc table").evaluateAll((tables) =>
           tables.filter((table) => table.scrollWidth > table.clientWidth + 1).length), 0, `1280px ${route}: tables fit without scrolling`);
       }
+      // The schema index lists each identity's $id and digest as code that
+      // wraps only at its hints; on desktop each takes at most two lines.
+      await visit("/schemas/");
+      const values = page.locator(".vp-doc li > code");
+      assert.equal(await values.count(), 2 * deriveSchemas(root).identities.length, `${width}px /schemas/: one $id and one digest per identity`);
+      assert.deepEqual(await page.evaluate(midWordCode, ".vp-doc li code"), [], `${width}px /schemas/: identities and digests stay whole`);
+      if (width === 1280) assert.deepEqual(await values.evaluateAll((codes) =>
+        codes.filter((code) => code.getClientRects().length > 2).map((code) => code.textContent)), [], "1280px /schemas/: each $id and digest fits two lines");
     }
     for (const width of [375, 1024, 1280]) {
       await page.setViewportSize({ width, height: 900 });

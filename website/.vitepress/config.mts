@@ -63,6 +63,7 @@ function firstParagraph(srcDir, relativePath) {
 // piece of a hex run, is wrapped in a table-break-anywhere span that may break
 // anywhere as a last resort; short words such as `sha256:` stay whole. <wbr>
 // and the span add no text, so copying and search see the original token.
+// scripts/site.mjs (breakableCode) gives the public schema index the same hints.
 const SEPARATOR_RUN = /(?<=[^\s/.:_-])[/.:_-]+(?=[^\s/.:_-])/gu;
 const HEX_RUN = /([0-9a-f]{16})(?=[0-9a-f])/gu;
 

@@ -17,6 +17,7 @@ import {
   buildSiteReproducibly,
   buildSiteFiles,
   deriveSchemas,
+  inspectSchemaIndexHtml,
   distPagePathForSource,
   inspectPublishedSourceAllowlist,
   inspectPublicDocumentAuthority,
@@ -475,6 +476,35 @@ describe("takoform.com site derivation", () => {
     expect(index).toContain("current-authoring guidance");
     expect(index).toContain("[schema role table](/spec/schemas/)");
     expect(buildSiteFiles(".").has("website/en/schemas/index.md")).toBe(false);
+  });
+
+  test("lists each schema identity once with its served path, digest and source", () => {
+    const index = buildSiteFiles(".").get("website/schemas/index.md")?.toString("utf8") ?? "";
+    // Break hints add no text: removing them restores each value exactly.
+    const text = index.replaceAll("<wbr>", "");
+    expect(index).not.toContain("| --- |");
+    for (const entry of schemas.identities) {
+      const item = `- <code>${entry.id}</code>` +
+        ` ·&nbsp;[schema<span class="visually-hidden"> ${entry.path}</span>](${entry.path})` +
+        `&nbsp;·&nbsp;[source<span class="visually-hidden"> ${entry.source}</span>](https://github.com/tako0614/takoform/blob/main/${entry.source})<br>\n` +
+        `  <code>${entry.sha256}</code>`;
+      expect(text.split(item).length - 1, entry.id).toBe(1);
+    }
+    expect(index).toContain("<code>sha256:<wbr>9ebd0fcad6f25f51<wbr>3a8146de9ddda412<wbr>e2d38ca2ac515f0d<wbr>33b0e962ba1d2906</code>");
+    expect(index).toContain("<code>https://<wbr>forms.<wbr>takoform.<wbr>com/<wbr>schemas/<wbr>artifacts/<wbr>v1alpha1/<wbr>artifact-<wbr>manifest.<wbr>schema.<wbr>json</code>");
+  });
+
+  test("checks that the rendered schema index shows every identity exactly once", () => {
+    const [entry] = schemas.identities;
+    const source = `https://github.com/tako0614/takoform/blob/main/${entry.source}`;
+    const item = `<li><code>${entry.id.replaceAll("/", "/<wbr>")}</code> · <a href="${entry.path}">schema</a> · ` +
+      `<a href="${source}" target="_blank">source</a><br><code>${entry.sha256.replace(":", ":<wbr>")}</code></li>`;
+    expect(inspectSchemaIndexHtml(item, [entry])).toEqual([]);
+    expect(inspectSchemaIndexHtml(item.replace(entry.sha256.slice(-4), "0000"), [entry]))
+      .toEqual([`schemas/index.html must show the digest of ${entry.id} exactly once`]);
+    expect(inspectSchemaIndexHtml(item + item, [entry])).toHaveLength(4);
+    expect(inspectSchemaIndexHtml(item.replace(`href="${entry.path}"`, "href=\"/\""), [entry]))
+      .toEqual([`schemas/index.html must show the schema link of ${entry.id} exactly once`]);
   });
 
   test("mirrors README.md as a directory index and keeps other names", () => {
