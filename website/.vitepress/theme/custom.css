@@ -38,24 +38,24 @@ body {
 
 /* Long code lines wrap instead of scrolling sideways: on a phone about a
    third of the guide and specification code lines hid their ends, such as a
-   Location header or a JSON value. wrappedCodeLines in config.mts marks the
-   blocks (plain text keeps its layout), records each line's hang, keeps the
-   indentation with the first character, and adds break hints. A wrapped
-   line's continuation rows start past its own indentation, and a thin rule
-   beside them tells them from a next line that starts at the same column; a
-   one-row line draws no rule. Copying is unchanged: it reads each line's
-   text. */
-.vp-doc pre.takoform-wrap,
-.vp-doc pre.takoform-wrap code {
+   Location header or a JSON value. code-wrap.mjs gives each line's hang,
+   kept characters and break hints, which wrappedCodeLines in config.mts
+   applies to highlighted blocks (plain text keeps its layout) and the home
+   page applies to its example. A wrapped line's continuation rows start past
+   its own indentation, and a thin rule beside them tells them from a next
+   line that starts at the same column; a one-row line draws no rule. Copying
+   is unchanged: it reads each line's text. */
+:is(.vp-doc, .home-example) pre.takoform-wrap,
+:is(.vp-doc, .home-example) pre.takoform-wrap code {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 
-.vp-doc pre.takoform-wrap code {
+:is(.vp-doc, .home-example) pre.takoform-wrap code {
   width: auto;
 }
 
-.vp-doc pre.takoform-wrap .line {
+:is(.vp-doc, .home-example) pre.takoform-wrap .line {
   display: inline-block;
   padding-inline-start: var(--takoform-hang, 4ch);
   text-indent: calc(-1 * var(--takoform-hang, 4ch));
@@ -64,7 +64,7 @@ body {
 /* Without the lh unit the size and position would be dropped and the
    gradient would fill every line, so older browsers draw no rule. */
 @supports (height: 1lh) {
-  .vp-doc pre.takoform-wrap .line {
+  :is(.vp-doc, .home-example) pre.takoform-wrap .line {
     background-image: linear-gradient(var(--vp-c-text-3), var(--vp-c-text-3));
     background-repeat: no-repeat;
     /* Inset 3px from the rows, which also leaves a one-row line's rule
@@ -74,7 +74,7 @@ body {
   }
 }
 
-.vp-doc pre.takoform-wrap .takoform-keep {
+:is(.vp-doc, .home-example) pre.takoform-wrap .takoform-keep {
   white-space: pre;
 }
 

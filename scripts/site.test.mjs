@@ -169,6 +169,40 @@ describe("takoform.com site derivation", () => {
     expect(blocks[5]).not.toContain("[!code");
   });
 
+  test("lays out one code line for wrapping: hang, kept characters and break hints", async () => {
+    const { codeLineLayout } = await import("../website/.vitepress/code-wrap.mjs");
+    const hinted = (text) => [...text].map((character, index) => (codeLineLayout(text).breaks.includes(index) ? "|" : "") + character).join("");
+    // Hints follow path, URL and expression punctuation, not a slash after a
+    // space or a colon inside a time, and every 16 hex digits.
+    expect(hinted("GET /apis/forms.takoform.com/v2/resources HTTP/1.1")).toBe("GET /apis/|forms.|takoform.|com/|v2/|resources HTTP/|1.|1");
+    expect(hinted('  "at": "2026-10-04T12:00:00Z"')).toBe('  "at": "2026-|10-|04T12:00:00Z"');
+    expect(hinted("\tdefer f(x)")).toBe("\tdefer f(|x)");
+    expect(hinted("9ebd0fcad6f25f513a8146de9ddda412ab")).toBe("9ebd0fcad6f25f51|3a8146de9ddda412|ab");
+    // The hang is the indentation plus two columns, rounded up to a tab stop,
+    // and the indentation stays with the first character.
+    expect(codeLineLayout("GET /")).toMatchObject({ hang: null, keep: [] });
+    expect(codeLineLayout('  "at": 1')).toMatchObject({ hang: 4, keep: [[0, 3]] });
+    expect(codeLineLayout("\tdefer f(x)")).toMatchObject({ hang: 8, keep: [[0, 2]] });
+    expect(codeLineLayout("  \tx()")).toMatchObject({ hang: 8, keep: [[0, 4]] });
+    expect(codeLineLayout("   ")).toEqual({ hang: null, keep: [], breaks: [] });
+    // A shell continuation stays with the word before it, unless that word is
+    // already kept with the indentation.
+    expect(codeLineLayout('curl -X POST "$URL" \\').keep).toEqual([[18, 21]]);
+    expect(codeLineLayout("  a \\").keep).toEqual([[0, 3]]);
+  });
+
+  test("splits a hand-written code block into segments that keep its text", async () => {
+    const { codeLineSegments } = await import("../website/.vitepress/code-wrap.mjs");
+    const source = 'POST /apis/forms.takoform.com/v2/resources HTTP/1.1\n\n{\n  "form": "https://forms.publisher.example/key-value-entry/1.0.0"\n}';
+    const lines = codeLineSegments(source);
+    expect(lines.map((line) => line.segments.map((segment) => segment.text).join("")).join("\n")).toBe(source);
+    expect(lines.map((line) => line.style)).toEqual([undefined, undefined, undefined, "--takoform-hang:4ch", undefined]);
+    expect(lines[3].segments.filter((segment) => segment.keep).map((segment) => segment.text)).toEqual(['  "']);
+    expect(lines[3].segments.filter((segment) => segment.hint).map((segment) => segment.text))
+      .toEqual(["forms.", "publisher.", "example/", "key-", "value-", "entry/", "1.", "0.", '0"']);
+    expect(lines[1].segments).toEqual([]);
+  });
+
   test("uses no code-block feature that wrapped lines would misalign", () => {
     // Line numbers, highlighted lines and diff notations position each line
     // themselves, and -vue blocks swap {{ }} for placeholders that splitting a

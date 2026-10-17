@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { defineConfig, type DefaultTheme } from "vitepress";
 import { fileURLToPath } from "node:url";
+import { codeLineLayout, HEX_RUN } from "./code-wrap.mjs";
 
 const configDirectory = path.dirname(fileURLToPath(import.meta.url));
 
@@ -65,7 +66,6 @@ function firstParagraph(srcDir, relativePath) {
 // and the span add no text, so copying and search see the original token.
 // scripts/site.mjs (breakableCode) gives the public schema index the same hints.
 const SEPARATOR_RUN = /(?<=[^\s/.:_-])[/.:_-]+(?=[^\s/.:_-])/gu;
-const HEX_RUN = /([0-9a-f]{16})(?=[0-9a-f])/gu;
 
 export function breakTableCode(md) {
   md.core.ruler.push("takoform_table_code_breaks", (state) => {
@@ -99,27 +99,13 @@ export function breakTableCode(md) {
   };
 }
 
-// Long code lines wrap instead of hiding their ends off to the side (see
-// custom.css). Plain-text blocks keep their layout, because some hold
-// diagrams; other blocks get the takoform-wrap class and, as they no longer
-// scroll, no tab stop. This runs in the code hook, after VitePress's notation
-// transformers have read their comments. Each change keeps the text, so
-// copying and search are unchanged:
-//
-// - A wrapped line hangs: its first row is pulled back by --takoform-hang and
-//   its continuation rows start that far in. The hang covers the leading
-//   indentation plus at least two columns, rounded up to the four-column tab
-//   size, because tab stops are measured from the block's edge: a first row
-//   that starts on a tab stop keeps its tabs at their usual width.
-// - Preserved white space is a wrap opportunity, so the indentation and the
-//   first character share a takoform-keep span that does not wrap; otherwise
-//   a long first token leaves the indentation alone on a blank row. A trailing
-//   shell continuation (" \") likewise stays with the word before it.
-// - <wbr> hints let a line wrap after the punctuation that joins parts of a
-//   path, URL, query or expression, and after every 16 digits of a hex run,
-//   before the browser breaks inside a word.
-const TAB_SIZE = 4;
-const CODE_BREAK_RUN = /(?<=[^\s/.:_\-?&=,([{])[/.:_\-?&=,([{]+(?=[^\s/.:_\-?&=,([{)\]}])/gu;
+// Long code lines wrap instead of hiding their ends off to the side; the
+// rules for one line are in code-wrap.mjs and the layout in custom.css.
+// Plain-text blocks keep their layout, because some hold diagrams; other
+// blocks get the takoform-wrap class and, as they no longer scroll, no tab
+// stop. This runs in the code hook, after VitePress's notation transformers
+// have read their comments. Each change keeps the text, so copying and search
+// are unchanged.
 const PLAIN_LANGUAGES = new Set(["", "text", "txt", "plain", "plaintext"]);
 const classes = (node) => [node.properties?.class ?? node.properties?.className ?? []].flat().join(" ").split(/\s+/u);
 const hastText = (node) => node.type === "text" ? node.value : (node.children ?? []).map(hastText).join("");
@@ -155,13 +141,7 @@ function keepTogether(line, start, end) {
   line.children = [...before, { type: "element", tagName: "span", properties: { class: "takoform-keep" }, children: kept }, ...after];
 }
 
-function hintBreaks(line, text) {
-  const positions = new Set([
-    // A time such as 12:00:00 stays whole.
-    ...[...text.matchAll(CODE_BREAK_RUN)].filter((match) => !/^\d:$/u.test(text.slice(match.index - 1, match.index + 1)) ||
-      !/^\d/u.test(text.slice(match.index + match[0].length))).map((match) => match.index + match[0].length),
-    ...[...text.matchAll(HEX_RUN)].map((match) => match.index + 16),
-  ]);
+function hintBreaks(line, positions) {
   let offset = 0;
   const visit = (parent, kept) => {
     for (let index = 0; index < parent.children.length; index++) {
@@ -172,7 +152,7 @@ function hintBreaks(line, text) {
       }
       const start = offset;
       offset += child.value.length;
-      const cuts = kept ? [] : [...positions].filter((at) => at > start && at <= offset).sort((left, right) => left - right);
+      const cuts = kept ? [] : positions.filter((at) => at > start && at <= offset);
       if (!cuts.length) continue;
       const pieces = [];
       let from = 0;
@@ -189,18 +169,12 @@ function hintBreaks(line, text) {
 }
 
 function wrapLine(line) {
-  const text = hastText(line);
-  const leading = text.match(/^[ \t]*/u)[0];
-  if (leading && leading.length < text.length) {
-    const indent = [...leading]
-      .reduce((column, character) => character === "\t" ? column + TAB_SIZE - column % TAB_SIZE : column + 1, 0);
-    const hang = `--takoform-hang:${Math.ceil((indent + 2) / TAB_SIZE) * TAB_SIZE}ch`;
-    line.properties.style = [line.properties.style?.replace(/;\s*$/u, ""), hang].filter(Boolean).join(";");
-    keepTogether(line, 0, leading.length + String.fromCodePoint(text.codePointAt(leading.length)).length);
+  const { hang, keep, breaks } = codeLineLayout(hastText(line));
+  if (hang !== null) {
+    line.properties.style = [line.properties.style?.replace(/;\s*$/u, ""), `--takoform-hang:${hang}ch`].filter(Boolean).join(";");
   }
-  const continuation = text.match(/[^ \t][ \t]+\\$/u);
-  if (continuation) keepTogether(line, continuation.index, text.length);
-  hintBreaks(line, text);
+  for (const [start, end] of keep) keepTogether(line, start, end);
+  hintBreaks(line, breaks);
 }
 
 export const wrappedCodeLines = {
