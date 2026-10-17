@@ -11,7 +11,7 @@ Any HTTP client can send these requests. To build a client or use an Infrastruct
 
 ## 1. Discover the Host and check Form support {#discover-support}
 
-A Form is a versioned specification URL published by its author; a Host is the service that implements it. The presence of a Form URL does not mean that a Host can execute it. First discover the Host's endpoint and authentication scheme, then ask that Host about the exact Form URL.
+A Form is a versioned specification URL published by its author; a Host is the service that implements it. The presence of a Form URL does not mean that a Host can execute it. First read the Host's [Discovery](/glossary#discovery) document for its endpoint and authentication scheme, then ask that Host about the exact Form URL.
 
 ```http
 GET /.well-known/takoform/v2 HTTP/1.1
@@ -52,7 +52,7 @@ Use Discovery's `baseUrl` and follow its authentication documentation. `support`
 
 ## 2. Create, then read the Operation and Resource {#create-read}
 
-The client chooses the Form URL, an authorized [Space](/glossary#space), name, a Form-conforming `spec`, and a fresh [Idempotency-Key](/glossary#idempotency-key) for each new operation. The Host issues the Resource UID and [Operation](/glossary#operation) ID.
+The client chooses the Form URL, an authorized [Space](/glossary#space), name, a Form-conforming `spec`, and a fresh [Idempotency-Key](/glossary#idempotency-key) for each new operation. The Host issues the Resource [UID](/glossary#uid) and [Operation](/glossary#operation) ID.
 
 ```http
 POST /apis/forms.takoform.com/v2/resources HTTP/1.1

@@ -75,9 +75,18 @@ describe("takoform.com site derivation", () => {
     ]) expect(start).toContain(line);
     const glossary = readFileSync("website/glossary.md", "utf8");
     expect(start, "the walkthrough points to the glossary").toContain("(/glossary)");
-    for (const id of ["space", "idempotency-key", "operation", "generation-observedgeneration"]) {
+    for (const id of ["discovery", "uid", "space", "idempotency-key", "operation", "generation-observedgeneration"]) {
       expect(start, `the walkthrough links /glossary#${id}`).toContain(`(/glossary#${id})`);
       expect(glossary, `the glossary defines #${id}`).toContain(`{#${id}}`);
+    }
+    // Each wire term explains itself in a few sentences and points to the
+    // HTTP API section that defines it.
+    for (const [id, section] of Object.entries({
+      discovery: "discovery", support: "support", offering: "offerings", "private-inputs": "private-inputs", uid: "resources",
+      phase: "resources", "status-effect": "operations", "replay-window": "retry", principal: "retry",
+    })) {
+      const entry = glossary.split(`{#${id}}`)[1]?.split("\n## ")[0] ?? "";
+      expect(entry, `#${id} links its normative section`).toContain(`(/spec/host-api/v2/http#${section})`);
     }
     const use = readFileSync("website/use/index.md", "utf8");
     for (const id of ["host", "client-responsibilities", "infrastructure-as-code", "examples-status"]) {
