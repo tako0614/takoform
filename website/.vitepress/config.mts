@@ -58,31 +58,50 @@ function firstParagraph(srcDir, relativePath) {
 
 // Table code keeps whole words (custom.css): a narrow column must not split
 // `value` into "valu|e". This rule gives code in table cells break
-// opportunities after inner runs of the separators / . : _ - (so
+// opportunities after inner runs of the separators / . : _ - < (so
 // `private_inputs_conflict` may wrap after an underscore) and every 16 digits
 // of a long hex run. A piece with a word over 20 characters, and each 16-digit
 // piece of a hex run, is wrapped in a table-break-anywhere span that may break
-// anywhere as a last resort; short words such as `sha256:` stay whole. <wbr>
-// and the span add no text, so copying and search see the original token.
-// scripts/site.mjs (breakableCode) gives the public schema index the same hints.
-const SEPARATOR_RUN = /(?<=[^\s/.:_-])[/.:_-]+(?=[^\s/.:_-])/gu;
+// anywhere as a last resort; short words such as `sha256:` stay whole.
+//
+// On a phone, where a table would otherwise scroll, a camelCase name may also
+// wrap between its words (`definition|Version`, `API|Version`): a
+// takoform-camel span marks the place, and custom.css turns it into a break
+// only on narrow screens, so desktop tables keep identifiers whole. Prose in
+// a cell may wrap after a slash between words ("Unknown/|expired"), which
+// browsers otherwise keep together.
+//
+// None of this adds text, so copying and search see the original. Fixed
+// normative tables can only be fitted this way, never by rewording them.
+// scripts/site.mjs (breakableCode) gives the public schema index the same
+// separator hints except "<", which no schema value contains.
+const SEPARATOR_RUN = /(?<=[^\s/.:_<-])[/.:_<-]+(?=[^\s/.:_<=-])/gu;
+const CAMEL_CASE_BOUNDARY = /(?<=\p{Ll}{2})(?=\p{Lu}\p{Ll})|(?<=\p{Lu}{2})(?=\p{Lu}\p{Ll}{2})/gu;
+const CAMEL_JOINT = '<span class="takoform-camel"></span>';
+const WORD_SLASH = /(?<=\p{L}{2})\/(?=\p{L}{2})/gu;
 
 export function breakTableCode(md) {
   md.core.ruler.push("takoform_table_code_breaks", (state) => {
     let cells = 0;
     for (const token of state.tokens) {
-      if (token.type === "td_open") cells++;
-      else if (token.type === "td_close") cells--;
+      if (token.type === "td_open" || token.type === "th_open") cells++;
+      else if (token.type === "td_close" || token.type === "th_close") cells--;
       else if (cells > 0 && token.type === "inline")
         for (const child of token.children ?? []) {
+          if (child.type === "text" && !child.content.includes("{{") && child.content.search(WORD_SLASH) !== -1) {
+            child.meta = { ...child.meta, takoformSlashes: true };
+          }
           if (child.type !== "code_inline" || child.meta?.takoformPieces) continue;
-          const pieces = child.content.replace(SEPARATOR_RUN, "$&\u0000").replace(HEX_RUN, "$1\u0000").split("\u0000");
+          // A piece is long when its whole run between separators is, so a long
+          // camelCase name keeps the last-resort break above phone widths.
+          const segments = child.content.replace(SEPARATOR_RUN, "$&\u0000").replace(HEX_RUN, "$1\u0000").split("\u0000");
           child.meta = {
             ...child.meta,
-            takoformPieces: pieces.map((text) => ({
-              text,
-              long: text.split(/\s+/u).some((word) => word.length > 20) || /^[0-9a-f]{16}$/u.test(text),
-            })),
+            takoformPieces: segments.flatMap((segment, index) => {
+              const long = segment.split(/\s+/u).some((word) => word.length > 20) || /^[0-9a-f]{16}$/u.test(segment);
+              return segment.split(CAMEL_CASE_BOUNDARY)
+                .map((text, part) => ({ text, long, joint: part ? CAMEL_JOINT : index ? "<wbr>" : "" }));
+            }),
           };
         }
     }
@@ -91,11 +110,17 @@ export function breakTableCode(md) {
   md.renderer.rules.code_inline = (tokens, index, options, env, self) => {
     const pieces = tokens[index].meta?.takoformPieces;
     if (!pieces) return render(tokens, index, options, env, self);
-    const html = pieces.map(({ text, long }) => {
+    const html = pieces.map(({ text, joint, long }) => {
       const escaped = md.utils.escapeHtml(text);
-      return long ? `<span class="table-break-anywhere">${escaped}</span>` : escaped;
+      return joint + (long ? `<span class="table-break-anywhere">${escaped}</span>` : escaped);
     });
-    return `<code${self.renderAttrs(tokens[index])}>${html.join("<wbr>")}</code>`;
+    return `<code${self.renderAttrs(tokens[index])}>${html.join("")}</code>`;
+  };
+  // Post-process VitePress's own text rendering, which keeps entities intact.
+  const renderText = md.renderer.rules.text;
+  md.renderer.rules.text = (tokens, index, options, env, self) => {
+    const html = renderText(tokens, index, options, env, self);
+    return tokens[index].meta?.takoformSlashes ? html.replace(WORD_SLASH, "/<wbr>") : html;
   };
 }
 

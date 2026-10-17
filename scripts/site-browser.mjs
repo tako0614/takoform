@@ -192,6 +192,24 @@ function midWordCode(selector) {
   return [...new Set(broken)];
 }
 
+// Table code that wraps between the words of a camelCase name, which only a
+// phone allows (breakTableCode in config.mts).
+function camelCaseBreaks() {
+  const breaks = [];
+  for (const mark of document.querySelectorAll(".vp-doc .takoform-camel")) {
+    const [before, after] = [mark.previousSibling, mark.nextSibling];
+    if (before?.nodeType !== Node.TEXT_NODE || after?.nodeType !== Node.TEXT_NODE) continue;
+    const top = (node, offset) => {
+      const range = document.createRange();
+      range.setStart(node, offset);
+      range.setEnd(node, offset + 1);
+      return range.getBoundingClientRect().top;
+    };
+    if (top(after, 0) > top(before, before.length - 1) + 2) breaks.push(mark.parentElement.textContent);
+  }
+  return breaks;
+}
+
 // Code blocks other than plain text, and the home page example, wrap long
 // lines instead of scrolling and so take no tab stop. Each line's first character sits at its indentation
 // column (a tab advances to the next multiple of four); a wrapped continuation
@@ -405,7 +423,7 @@ async function run() {
       for (const route of routes) {
         await visit(route);
         assert.deepEqual(await page.evaluate(inspectGeometry), [], `${width}px ${route}`);
-        assert.deepEqual(await page.evaluate(midWordCode, ".vp-doc td code"), [], `${width}px ${route}: table identifiers stay whole`);
+        assert.deepEqual(await page.evaluate(midWordCode, ".vp-doc :is(td, th) code"), [], `${width}px ${route}: table identifiers stay whole`);
         assert.deepEqual(await page.evaluate(unreachableTableControls), [], `${width}px ${route}: scrolling tables are keyboard-reachable`);
         if (route === "/") {
           const start = await page.locator('.home-actions a[href="/start/"]').boundingBox();
@@ -419,17 +437,23 @@ async function run() {
       }
       await visit("/spec/host-api/v1");
     }
-    // Table code on every built page: words stay whole on phones and on desktop,
-    // where no table may scroll; tables that scroll on phones stay reachable.
-    for (const width of [320, 375, 1280]) {
+    // Table code on every built page: words stay whole on phones and on desktop.
+    // From 414px, a large phone, no table may scroll; tables that scroll on
+    // narrower phones stay reachable. A table that stops fitting is fixed with
+    // a break hint or presentation in breakTableCode, never by rewording
+    // fixed normative text.
+    for (const width of [320, 375, 414, 1280]) {
       await page.setViewportSize({ width, height: 900 });
       for (const route of [...new Set([...routes, ...sidebarRoutes])]) {
         await visit(route);
-        assert.deepEqual(await page.evaluate(midWordCode, ".vp-doc td code"), [], `${width}px ${route}: table identifiers stay whole`);
+        assert.deepEqual(await page.evaluate(midWordCode, ".vp-doc :is(td, th) code"), [], `${width}px ${route}: table identifiers stay whole`);
         assert.deepEqual(await page.evaluate(unreachableTableControls), [], `${width}px ${route}: scrolling tables are keyboard-reachable`);
         assert.deepEqual(await page.evaluate(codeWrapProblems), [], `${width}px ${route}: long code lines wrap under their own line`);
-        if (width === 1280) assert.equal(await page.locator(".vp-doc table").evaluateAll((tables) =>
-          tables.filter((table) => table.scrollWidth > table.clientWidth + 1).length), 0, `1280px ${route}: tables fit without scrolling`);
+        if (width === 1280) assert.deepEqual(await page.evaluate(camelCaseBreaks), [], `1280px ${route}: table identifiers stay whole on desktop`);
+        if (width >= 414) assert.deepEqual(await page.locator(".vp-doc table").evaluateAll((tables) => tables
+          .filter((table) => table.scrollWidth > table.clientWidth + 1)
+          .map((table) => `${[...table.rows[0].cells].map((cell) => cell.textContent.trim()).join(" | ")}: ${table.scrollWidth - table.clientWidth}px`)),
+        [], `${width}px ${route}: tables fit without scrolling`);
       }
       // The schema index lists each identity's $id and digest as code that
       // wraps only at its hints; on desktop each takes at most two lines.
