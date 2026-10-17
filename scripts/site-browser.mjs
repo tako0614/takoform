@@ -249,6 +249,22 @@ function codeWrapProblems() {
   return problems;
 }
 
+// Header controls whose boxes overlap, where a click near an edge could reach
+// the wrong one.
+function overlappingHeaderControls() {
+  const controls = [...document.querySelectorAll(".VPNavBar :is(a, button, select)")]
+    .filter((control) => control.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true }) && control.getBoundingClientRect().width > 0);
+  const overlaps = [];
+  for (const [index, first] of controls.entries()) for (const second of controls.slice(index + 1)) {
+    const [a, b] = [first.getBoundingClientRect(), second.getBoundingClientRect()];
+    if (a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1) {
+      const name = (control) => (control.getAttribute("aria-label") || control.textContent.trim() || control.getAttribute("title") || "").slice(0, 30);
+      overlaps.push(`${name(first)} / ${name(second)}`);
+    }
+  }
+  return overlaps;
+}
+
 async function checkDisclosure(page, selector) {
   const trigger = page.locator(selector);
   await trigger.focus();
@@ -423,6 +439,23 @@ async function run() {
       assert.deepEqual(await page.evaluate(midWordCode, ".vp-doc li code"), [], `${width}px /schemas/: identities and digests stay whole`);
       if (width === 1280) assert.deepEqual(await values.evaluateAll((codes) =>
         codes.filter((code) => code.getClientRects().length > 2).map((code) => code.textContent)), [], "1280px /schemas/: each $id and digest fits two lines");
+    }
+    for (const width of [320, 375, 768, 1024, 1280]) {
+      await page.setViewportSize({ width, height: 900 });
+      for (const path of ["/", "/v2/"]) {
+        await visit(path);
+        assert.deepEqual(await page.evaluate(overlappingHeaderControls), [], `${width}px ${path}: header controls do not overlap`);
+      }
+      if (width >= 768 && width < 1280) {
+        // The open ••• menu stays clear of the API version selector.
+        await page.locator('.VPNavBarExtra button[aria-label="extra navigation"]').hover();
+        const menu = page.locator(".VPNavBarExtra .menu");
+        await menu.waitFor({ state: "visible" });
+        const [panel, select] = [await menu.boundingBox(), await page.locator(".version-context select").boundingBox()];
+        assert.ok(panel.x + panel.width <= select.x + 1 || panel.y >= select.y + select.height - 1,
+          `${width}px: the open ••• menu does not cover the API version selector`);
+        await page.mouse.move(0, 400);
+      }
     }
     for (const width of [375, 1024, 1280]) {
       await page.setViewportSize({ width, height: 900 });
