@@ -20,8 +20,9 @@ Host or a central Form catalog.
 | --- | --- |
 | Understand the model | [Concept guide](website/model/index.md) |
 | Follow a resource from creation to deletion | [Getting started](website/start/index.md) and [HTTP examples](spec/host-api/v2/examples.md) |
-| Build a client | [Client guide](website/client/index.md) and [HTTP reference](spec/host-api/v2/http.md) |
-| Define a Form | [Authoring guide](website/authoring/index.md) and [Form requirements](spec/host-api/v2/forms.md) |
+| Use the API | [Using v2](website/use/index.md) and [HTTP reference](spec/host-api/v2/http.md) |
+| Implement a client | [Client guide](website/client/index.md) and [HTTP reference](spec/host-api/v2/http.md) |
+| Create a Form | [Authoring guide](website/authoring/index.md) and [Form requirements](spec/host-api/v2/forms.md) |
 | Implement a Host | [Host guide](website/host-api/index.md) and [v2 conformance requirements](spec/host-api/v2/http.md#conformance) |
 | Maintain a v1 implementation | [v1 reference](spec/host-api/v1.md) and [migration guide](spec/host-api/v2/migration.md) |
 

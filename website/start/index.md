@@ -182,7 +182,7 @@ Read `op_delete_1` and confirm success. A later Resource GET may return `410 Gon
 
 The walkthrough followed the successful path. Each role has its own guide for what keeps that path reliable when responses are lost, generations conflict, or processes restart.
 
-### Building a client {#client-implementers}
+### Implementing a client {#client-implementers}
 
 Persist an intent record before sending, so after a lost response the identical request can be resent with its original key within the Host's replay window instead of starting a second change. The [client guide](/client/) covers replay deadlines, generation conflicts, and authorization changes.
 
