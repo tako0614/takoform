@@ -1,7 +1,7 @@
 import { test, expect } from "bun:test";
 import MiniSearch from "minisearch";
 import {
-  decodeEntities, defaultSearchScope, resultCountLabel, resultVersion, searchExcerpt, searchResultPage, searchResults,
+  decodeEntities, defaultSearchScope, resultCountLabel, resultVersion, SEARCH_OPTIONS, searchExcerpt, searchFuzziness, searchResultPage, searchResults,
 } from "../website/.vitepress/search-scope.mjs";
 
 test("the current document version supplies the default; neutral pages use all", () => {
@@ -40,7 +40,7 @@ test("a page reports truncation only when more matches exist than it shows", () 
   const more = searchResultPage(indexWith(17), "request", "v2");
   expect(more.results).toHaveLength(16);
   expect(more.truncated).toBe(true);
-  expect(searchResultPage(indexWith(3), "request", "v1")).toEqual({ results: [], truncated: false });
+  expect(searchResultPage(indexWith(3), "request", "v1")).toEqual({ results: [], truncated: false, approximate: false });
   expect(resultCountLabel(16, true)).toBe("Top 16 results");
   expect(resultCountLabel(16, false)).toBe("16 results");
   expect(resultCountLabel(1, false)).toBe("1 result");
@@ -82,4 +82,51 @@ test("result excerpts show the first match with every matched term highlighted",
   expect(shown(searchExcerpt(text, ["absent"]))).toBe(`${text.slice(0, text.lastIndexOf(" ", 160))} …`);
   expect(searchExcerpt("", ["replay"])).toEqual([]);
   expect(searchExcerpt("text", undefined)).toEqual([{ text: "text", match: false }]);
+});
+
+test("short and numeric terms match exactly, longer words tolerate a typo", () => {
+  expect([searchFuzziness("host"), searchFuzziness("hosts"), searchFuzziness("sha256")]).toEqual([false, 0.2, false]);
+  const index = new MiniSearch({ fields: ["text"], storeFields: ["text"], searchOptions: SEARCH_OPTIONS });
+  index.addAll([
+    { id: "curl", text: "Try the API with curl" },
+    { id: "url", text: "The exact Form URL" },
+    { id: "conflict", text: "409 generation conflict" },
+    { id: "missing", text: "404 not found" },
+    { id: "alpha1", text: "schemas v1alpha1" },
+    { id: "alpha2", text: "schemas v1alpha2" },
+    { id: "idempotency", text: "Idempotency-Key header" },
+    { id: "token", text: "Bearer token" },
+    { id: "specification", text: "A Form specification" },
+    { id: "verification", text: "Offline verification" },
+    { id: "host", text: "Host discovery" },
+  ]);
+  const ids = (query) => index.search(query).map((result) => result.id).sort();
+  expect(ids("curl")).toEqual(["curl"]);
+  expect(ids("409")).toEqual(["conflict"]);
+  expect(ids("v1alpha1")).toEqual(["alpha1"]);
+  expect(ids("ur")).toEqual(["url"]);
+  // A five-letter word and longer words still tolerate a typo, but at most two
+  // edits, so a long word does not match a distant one.
+  expect(ids("tokem")).toEqual(["token"]);
+  expect(ids("idempotncy")).toEqual(["idempotency"]);
+  expect(ids("specification")).toEqual(["specification"]);
+  // A query that matches nothing exactly is retried allowing typos, and the
+  // results say so.
+  const strict = searchResultPage(index, "hoat", "all");
+  expect(strict.results.map((result) => result.id)).toEqual(["host"]);
+  expect(strict.approximate).toBe(true);
+  expect(searchResultPage(index, "host", "all").approximate).toBe(false);
+  expect(searchResultPage(index, "zzzz", "all")).toEqual({ results: [], truncated: false, approximate: false });
+  // A term that matches exactly only in another version is not replaced by
+  // near spellings in the narrowed scope: the empty result offers all versions.
+  const versioned = new MiniSearch({ fields: ["text"], storeFields: ["text"], searchOptions: SEARCH_OPTIONS });
+  versioned.addAll([
+    { id: "/spec/host-api/v2/http#curl", text: "Try the API with curl" },
+    { id: "/spec/host-api/v1#url", text: "The exact Form URL" },
+  ]);
+  expect(searchResultPage(versioned, "curl", "v1")).toEqual({ results: [], truncated: false, approximate: false });
+  expect(searchResultPage(versioned, "hoat", "v1")).toEqual({ results: [], truncated: false, approximate: false });
+  expect(searchResultPage(versioned, "urk", "v1").approximate).toBe(true);
+  expect(resultCountLabel(1, false, true)).toBe("1 result for similar spellings");
+  expect(resultCountLabel(16, true, true)).toBe("Top 16 results for similar spellings");
 });

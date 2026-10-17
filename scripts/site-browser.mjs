@@ -550,6 +550,11 @@ async function run() {
     await page.locator(".VersionSearch input").fill("Host");
     await page.locator(".VersionSearch-count").filter({ hasText: /^Top 16 results$/u }).waitFor();
     assert.equal(await status.textContent(), "Top 16 results", "the same status region announces the result count");
+    // A misspelled short word finds nothing exactly, so search retries with
+    // typos allowed and says the results are for similar spellings.
+    await page.locator(".VersionSearch input").fill("hoat");
+    await page.locator(".VersionSearch-count").filter({ hasText: /for similar spellings$/u }).waitFor();
+    assert.match(await status.textContent(), /results? for similar spellings$/u, "a misspelled short word still finds close matches, labelled as such");
     assert.ok(await page.locator(".VersionSearch-results").evaluate((list) => list.scrollWidth <= list.clientWidth), "375px search results do not scroll sideways");
     await page.locator(".VersionSearch input").fill("zzzqqq");
     await page.locator("#version-search-scope").selectOption("v1");

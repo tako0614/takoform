@@ -8,11 +8,12 @@ export function resultVersion(id) {
   return documentVersion(id.split("#", 1)[0]);
 }
 
-export function searchResults(index, query, scope, limit = 16) {
+export function searchResults(index, query, scope, limit = 16, options = {}) {
   if (!query.trim()) return [];
   // MiniSearch applies filter while collecting matches. Filtering an already
   // truncated list would hide valid results whenever another version ranks first.
   return index.search(query, {
+    ...options,
     filter: (result) => {
       const version = resultVersion(result.id);
       return scope === "all" || version === null || version === scope;
@@ -20,18 +21,45 @@ export function searchResults(index, query, scope, limit = 16) {
   }).slice(0, limit);
 }
 
-export const SEARCH_RESULT_LIMIT = 16;
-
-/** Return at most `limit` filtered results and whether more matched. */
-export function searchResultPage(index, query, scope, limit = SEARCH_RESULT_LIMIT) {
-  // One extra match tells the reader whether the list was cut at the limit.
-  const matches = searchResults(index, query, scope, limit + 1);
-  return { results: matches.slice(0, limit), truncated: matches.length > limit };
+/**
+ * How far one query term may be misspelled. Short terms and terms with digits
+ * match only exactly or as a prefix: one edit would turn `curl` into `url`,
+ * `409` into `404`, and `v1alpha1` into `v1alpha2`. (Swapped letters count as
+ * two edits.)
+ */
+export function searchFuzziness(term) {
+  return term.length > 4 && !/\d/u.test(term) ? 0.2 : false;
 }
 
-export function resultCountLabel(count, truncated) {
-  if (truncated) return `Top ${count} results`;
-  return count === 1 ? "1 result" : `${count} results`;
+/**
+ * The site's MiniSearch options. At most two edits keep long words from
+ * matching distant ones, such as `specification` and `verification`.
+ */
+export const SEARCH_OPTIONS = { fuzzy: searchFuzziness, maxFuzzy: 2, prefix: true, boost: { title: 4, text: 2, titles: 1 } };
+
+export const SEARCH_RESULT_LIMIT = 16;
+
+/**
+ * Return at most `limit` filtered results, whether more matched, and whether
+ * they are approximate: a query that matches nothing exactly or by prefix in
+ * any version, such as a misspelled short word, is retried with an edit
+ * allowed in every term. A query that matches only in another version keeps
+ * the empty result, whose message offers all versions.
+ */
+export function searchResultPage(index, query, scope, limit = SEARCH_RESULT_LIMIT) {
+  // One extra match tells the reader whether the list was cut at the limit.
+  let matches = searchResults(index, query, scope, limit + 1);
+  let approximate = false;
+  if (!matches.length && (scope === "all" || !searchResults(index, query, "all", 1).length)) {
+    matches = searchResults(index, query, scope, limit + 1, { fuzzy: 0.2 });
+    approximate = matches.length > 0;
+  }
+  return { results: matches.slice(0, limit), truncated: matches.length > limit, approximate };
+}
+
+export function resultCountLabel(count, truncated, approximate = false) {
+  const label = truncated ? `Top ${count} results` : count === 1 ? "1 result" : `${count} results`;
+  return approximate ? `${label} for similar spellings` : label;
 }
 
 // VitePress strips tags from indexed text but leaves the escapes that

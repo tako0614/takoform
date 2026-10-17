@@ -3,7 +3,7 @@ import localSearchIndex from "@localSearchIndex";
 import MiniSearch, { type SearchResult } from "minisearch";
 import { useData, useRoute, useRouter } from "vitepress";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { decodeEntities, defaultSearchScope, resultCountLabel, resultVersion, searchExcerpt, searchResultPage } from "../../search-scope.mjs";
+import { decodeEntities, defaultSearchScope, resultCountLabel, resultVersion, SEARCH_OPTIONS, searchExcerpt, searchResultPage } from "../../search-scope.mjs";
 
 type Scope = "all" | "v1" | "v2";
 type IndexedResult = SearchResult & { title?: string; titles?: string[]; text?: string };
@@ -21,8 +21,8 @@ const index = ref<Index | null>(null);
 const state = ref<"loading" | "ready" | "error">("loading");
 const selected = ref(0);
 const page = computed(() => index.value
-  ? searchResultPage(index.value, query.value, scope.value) as { results: IndexedResult[]; truncated: boolean }
-  : { results: [], truncated: false });
+  ? searchResultPage(index.value, query.value, scope.value) as { results: IndexedResult[]; truncated: boolean; approximate: boolean }
+  : { results: [], truncated: false, approximate: false });
 const results = computed(() => page.value.results);
 // Where each result matched, highlighted through text segments rather than HTML.
 const excerpts = computed(() => results.value.map((result) => searchExcerpt(result.text ?? "", result.terms ?? [])));
@@ -36,7 +36,7 @@ const emptyMessage = computed(() => scope.value === "all"
 const status = computed(() => {
   if (state.value === "loading") return text.loading;
   if (state.value === "error" || !query.value.trim()) return "";
-  return results.value.length ? resultCountLabel(results.value.length, page.value.truncated) : emptyMessage.value;
+  return results.value.length ? resultCountLabel(results.value.length, page.value.truncated, page.value.approximate) : emptyMessage.value;
 });
 
 const text = {
@@ -72,11 +72,7 @@ async function loadIndex() {
     const loaded = MiniSearch.loadJSON<{ title: string; titles: string[]; text: string }>(json, {
       fields: ["title", "titles", "text"],
       storeFields: ["title", "titles", "text"],
-      searchOptions: {
-        fuzzy: 0.2,
-        prefix: true,
-        boost: { title: 4, text: 2, titles: 1 },
-      },
+      searchOptions: SEARCH_OPTIONS,
     });
     if (generation !== loadGeneration) return;
     index.value = loaded;
@@ -198,7 +194,7 @@ onBeforeUnmount(() => {
         @click="searchAllVersions">{{ text.searchAll }}</button>
     </template>
     <template v-else>
-      <p class="VersionSearch-count" aria-hidden="true">{{ resultCountLabel(results.length, page.truncated) }}</p>
+      <p class="VersionSearch-count" aria-hidden="true">{{ resultCountLabel(results.length, page.truncated, page.approximate) }}</p>
       <ul id="version-search-results" class="VersionSearch-results" role="listbox"
         :aria-label="text.search">
         <!-- Title, version and heading path name each option; the excerpt only
