@@ -130,3 +130,29 @@ test("short and numeric terms match exactly, longer words tolerate a typo", () =
   expect(resultCountLabel(1, false, true)).toBe("1 result for similar spellings");
   expect(resultCountLabel(16, true, true)).toBe("Top 16 results for similar spellings");
 });
+
+test("an error code ranks the sections that name it first; a plain phrase keeps the search order", () => {
+  const index = new MiniSearch({ fields: ["title", "text"], storeFields: ["title", "text"], searchOptions: SEARCH_OPTIONS });
+  index.addAll([
+    { id: "support", title: "Unsupported Form URLs", text: "A Form that is unsupported cannot be used." },
+    { id: "errors", title: "9. Errors", text: "422 unsupported_form when the Host does not implement the Form." },
+    { id: "window", title: "Replay", text: "Replay the request; the window closes later." },
+    { id: "retry", title: "Retry", text: "Resend within the replay\nwindow only." },
+  ]);
+  const ids = (query) => searchResults(index, query, "all").map((result) => result.id);
+  expect(index.search("unsupported_form")[0].id).toBe("support");
+  expect(ids("unsupported_form")[0]).toBe("errors");
+  // A single word and a plain phrase keep MiniSearch's order, even where a
+  // weaker section contains the phrase exactly.
+  expect(ids("replay")).toEqual(index.search("replay").map((result) => result.id));
+  expect(ids("Replay window")).toEqual(index.search("Replay window").map((result) => result.id));
+  expect(ids("Replay window")[0]).not.toBe("retry");
+  // The excerpt opens where the code occurs, not at the first of its words.
+  const text = `An unsupported Form URL is rejected. ${"Other words. ".repeat(12)}422 unsupported_form when the Host lacks it.`;
+  const shown = (segments) => segments.map((segment) => segment.match ? `[${segment.text}]` : segment.text).join("");
+  expect(shown(searchExcerpt(text, ["unsupported", "form"], "unsupported_form"))).toMatch(/^… .*422 \[unsupported\]_\[form\] when/u);
+  expect(shown(searchExcerpt(text, ["unsupported", "form"], "unsupported"))).toMatch(/^An \[unsupported\] \[Form\]/u);
+  // A punctuated query that the text does not contain opens at the first term.
+  expect(shown(searchExcerpt(text, ["unsupported", "form"], "unsupported-form-x"))).toMatch(/^An \[unsupported\] \[Form\]/u);
+  expect(searchExcerpt("text", ["text"], null)).toEqual([{ text: "text", match: true }]);
+});

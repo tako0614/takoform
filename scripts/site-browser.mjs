@@ -555,6 +555,10 @@ async function run() {
     await page.locator(".VersionSearch input").fill("hoat");
     await page.locator(".VersionSearch-count").filter({ hasText: /for similar spellings$/u }).waitFor();
     assert.match(await status.textContent(), /results? for similar spellings$/u, "a misspelled short word still finds close matches, labelled as such");
+    // An error code copied from a response leads to a section that names it.
+    await page.locator(".VersionSearch input").fill("unsupported_form");
+    await page.locator(".VersionSearch-count").filter({ hasNotText: /similar spellings/u }).waitFor();
+    assert.match(await results.first().textContent(), /unsupported_form/u, "an error code search starts with a section that contains the code");
     assert.ok(await page.locator(".VersionSearch-results").evaluate((list) => list.scrollWidth <= list.clientWidth), "375px search results do not scroll sideways");
     await page.locator(".VersionSearch input").fill("zzzqqq");
     await page.locator("#version-search-scope").selectOption("v1");

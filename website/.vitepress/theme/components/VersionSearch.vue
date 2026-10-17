@@ -25,7 +25,7 @@ const page = computed(() => index.value
   : { results: [], truncated: false, approximate: false });
 const results = computed(() => page.value.results);
 // Where each result matched, highlighted through text segments rather than HTML.
-const excerpts = computed(() => results.value.map((result) => searchExcerpt(result.text ?? "", result.terms ?? [])));
+const excerpts = computed(() => results.value.map((result) => searchExcerpt(result.text ?? "", result.terms ?? [], query.value)));
 const optionLabel = (i: number, result: IndexedResult) => ["title", "tag", ...(result.titles?.length ? ["path"] : [])]
   .map((part) => `version-search-result-${i}-${part}`).join(" ");
 const emptyMessage = computed(() => scope.value === "all"
