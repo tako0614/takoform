@@ -88,6 +88,20 @@ describe("takoform.com site derivation", () => {
       expect(readFileSync(page, "utf8"), `${page} links the Provider's version table`).toContain("README.md#choose-a-provider-version");
     }
     expect(authoring.indexOf("{#publish}"), "publishing comes before checking a Host").toBeLessThan(authoring.indexOf("{#check}"));
+    // The shell walkthrough reads only variables it sets and uses every one,
+    // and the create body is built from the Form URL and Space a reader sets.
+    const shellBlocks = [...authoring.matchAll(/^```(?:sh|bash|shell)\n([\s\S]*?)^```$/gmu)].map((block) => block[1]);
+    expect(shellBlocks.length, "Create a Form keeps its shell walkthrough").toBe(4);
+    const shell = shellBlocks.join("\n");
+    const assigned = new Set([...shell.matchAll(/^(?:export )?([A-Z_][A-Z0-9_]*)=/gmu)].map((match) => match[1]));
+    const read = new Set([...shell.matchAll(/\$\{?([A-Z_][A-Z0-9_]*)/gu)].map((match) => match[1]));
+    expect([...read].sort(), "authoring shell variables are set before use").toEqual([...assigned].sort());
+    const create = shellBlocks.find((block) => block.includes("-X POST"));
+    expect(create, "the create body uses the reader's Form URL").toMatch(/"form": "\$\{?FORM_URL\}?"/u);
+    expect(create, "the create body uses the reader's Space").toMatch(/"space": "\$\{?SPACE\}?"/u);
+    expect(create, "the create example sends a generated Idempotency-Key").toMatch(/Idempotency-Key: \$\{?CREATE_KEY\b/u);
+    expect(shellBlocks.some((block) => block.includes("-X POST") && block.includes("CREATE_KEY=")),
+      "rerunning the create command keeps its key").toBe(false);
     expect(readFileSync("website/guides/index.md", "utf8")).toContain("(/authoring/#publish)");
     const hostGuide = readFileSync("website/host-api/index.md", "utf8");
     expect(hostGuide).toContain("## Check your Host against the baseline {#check}");

@@ -76,10 +76,10 @@ Publishing registers the Form nowhere, and takoform.com keeps no Form catalog. A
 
 ## 6. Check a Host's support and try the API {#check}
 
-Once a Host operator has implemented your Form, check it the way a client will. Ask the Host operator for the API root, Space, and authentication method. The following shell example assumes those values are set. Since the Form URL is fictional, a real Host may not support it.
+Once a Host operator has implemented your Form, check it the way a client will. Ask the Host operator for the API root (the `baseUrl` from its [Discovery](/start/#discover-support)), Space, and authentication method, and set them and your Form's URL below. The example values are fictional.
 
 ```sh
-export BASE_URL='https://host.example.test/api-root-returned-by-discovery'
+export BASE_URL='https://host.example/apis/forms.takoform.com/v2'
 export FORM_URL='https://forms.publisher.example/key-value-entry/1.0.0'
 export SPACE='development'
 export TOKEN='replace-with-a-short-lived-token'
@@ -91,17 +91,43 @@ curl --fail-with-body -G "$BASE_URL/support" \
 
 Check that `form` exactly equals the URL you sent and inspect `supported` and the required operations. `supported: true` declares implementation; it does not promise your authorization, capacity, or success for an individual Operation. If unsupported, do not create a Resource; ask the Host operator.
 
-On a Host that supports the Form, use a fresh `Idempotency-Key` for create. A `200` response contains a terminal Operation; for `202`, poll the Operation at `Location`. Wait for a terminal result before reading the Resource.
+On a Host that supports the Form, create a Resource. First generate a new `Idempotency-Key` for this create. If `uuidgen` is not installed, `openssl rand -hex 16` also gives a valid key.
 
 ```sh
-curl --fail-with-body -X POST "$BASE_URL/resources" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H 'Content-Type: application/json' \
-  -H 'Idempotency-Key: tutorial-create-001' \
-  --data '{"form":"https://forms.publisher.example/key-value-entry/1.0.0","space":"development","name":"welcome-entry","spec":{"key":"welcome","value":"Hello, Ada!"}}'
+CREATE_KEY=$(uuidgen)
 ```
 
-GET the Operation at its `Location`. After terminal success, GET the Resource by its returned UID. For update, send the complete `spec` with the current generation and the same `key`, replacing only `value`. For delete, send the current generation and a new idempotency key, then wait for that Operation to complete. The [HTTP API's create/read/update/delete sections](/spec/host-api/v2/http#create) define the exact headers and responses.
+Then send the create. The body uses the Form URL and Space set above. If the Host's Discovery has `capabilities.offerings: true`, the body also needs an [`offering`](/spec/host-api/v2/http#offerings).
+
+```sh
+curl --fail-with-body -i -X POST "$BASE_URL/resources" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -H "Idempotency-Key: $CREATE_KEY" \
+  --data @- <<JSON
+{"form": "$FORM_URL", "space": "$SPACE", "name": "welcome-entry",
+ "spec": {"key": "welcome", "value": "Hello, Ada!"}}
+JSON
+```
+
+If the response is lost, run only this `curl` command again, within the Host's replay window (Discovery's `replayWindowSeconds`). The same key and body return the original Operation. A new key would be a second create, which the Host rejects with `409 name_conflict` because the name is taken.
+
+The response body is the Operation, and its `Location` header is the Operation's URL. `202` means the Operation has not finished yet, and its `Retry-After` header says how many seconds to wait before reading it again; `200` means it has already settled. Read the Operation until its `status` is `succeeded` or `failed`, then read the Resource by the Operation's `resourceUid`:
+
+```sh
+OPERATION_URL='replace-with-the-Location-header'
+RESOURCE_UID='replace-with-the-resourceUid'
+
+curl --fail-with-body "$OPERATION_URL" \
+  -H "Authorization: Bearer $TOKEN"
+
+curl --fail-with-body "$BASE_URL/resources/$RESOURCE_UID" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+After `succeeded`, check that `spec` is what you sent and that `observed` follows your Form's shapes. If the Operation `failed`, its `error` says why and `effect` says whether anything changed. The Resource stays in `phase: error`, keeping its name, until you update or delete it. This example Form's update never recreates a missing entry, so after a failed create you usually delete the Resource. If the Operation stays `reconciling`, the Host has not yet established the result; ask the Host operator rather than creating again.
+
+For update, send the complete `spec` with the current generation in `Takoform-Expected-Generation`, keeping `spec.key` and replacing only `spec.value`. Delete takes the same header and no body. Give each update and delete its own new `Idempotency-Key`, and wait for its Operation to finish. The [HTTP API's create/read/update/delete sections](/spec/host-api/v2/http#create) define the exact headers and responses.
 
 ## Continue
 
