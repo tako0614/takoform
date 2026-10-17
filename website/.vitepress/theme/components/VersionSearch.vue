@@ -3,11 +3,11 @@ import localSearchIndex from "@localSearchIndex";
 import MiniSearch, { type SearchResult } from "minisearch";
 import { useData, useRoute, useRouter } from "vitepress";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { defaultSearchScope, resultCountLabel, resultVersion, searchResultPage } from "../../search-scope.mjs";
+import { decodeEntities, defaultSearchScope, resultCountLabel, resultVersion, searchExcerpt, searchResultPage } from "../../search-scope.mjs";
 
 type Scope = "all" | "v1" | "v2";
-type IndexedResult = SearchResult & { title?: string; titles?: string[] };
-type Index = MiniSearch<{ title: string; titles: string[] }>;
+type IndexedResult = SearchResult & { title?: string; titles?: string[]; text?: string };
+type Index = MiniSearch<{ title: string; titles: string[]; text: string }>;
 
 const emit = defineEmits<{ (event: "close"): void }>();
 const route = useRoute();
@@ -24,6 +24,10 @@ const page = computed(() => index.value
   ? searchResultPage(index.value, query.value, scope.value) as { results: IndexedResult[]; truncated: boolean }
   : { results: [], truncated: false });
 const results = computed(() => page.value.results);
+// Where each result matched, highlighted through text segments rather than HTML.
+const excerpts = computed(() => results.value.map((result) => searchExcerpt(result.text ?? "", result.terms ?? [])));
+const optionLabel = (i: number, result: IndexedResult) => ["title", "tag", ...(result.titles?.length ? ["path"] : [])]
+  .map((part) => `version-search-result-${i}-${part}`).join(" ");
 const emptyMessage = computed(() => scope.value === "all"
   ? text.emptyAll
   : text.emptyIn(text[scope.value]));
@@ -65,9 +69,9 @@ async function loadIndex() {
     const loader = localSearchIndex.root;
     if (!loader) throw new Error("No documentation search index");
     const json = (await loader()).default;
-    const loaded = MiniSearch.loadJSON<{ title: string; titles: string[] }>(json, {
+    const loaded = MiniSearch.loadJSON<{ title: string; titles: string[]; text: string }>(json, {
       fields: ["title", "titles", "text"],
-      storeFields: ["title", "titles"],
+      storeFields: ["title", "titles", "text"],
       searchOptions: {
         fuzzy: 0.2,
         prefix: true,
@@ -197,12 +201,20 @@ onBeforeUnmount(() => {
       <p class="VersionSearch-count" aria-hidden="true">{{ resultCountLabel(results.length, page.truncated) }}</p>
       <ul id="version-search-results" class="VersionSearch-results" role="listbox"
         :aria-label="text.search">
+        <!-- Title, version and heading path name each option; the excerpt only
+          describes it, so moving through the list doesn't read every excerpt. -->
         <li v-for="(result, i) in results" :id="`version-search-result-${i}`" :key="result.id"
-          role="option" :aria-selected="selected === i" :class="{ selected: selected === i }">
+          role="option" :aria-selected="selected === i" :class="{ selected: selected === i }"
+          :aria-labelledby="optionLabel(i, result)"
+          :aria-describedby="excerpts[i].length ? `version-search-result-${i}-excerpt` : undefined">
           <a :href="result.id" @mouseenter="selected = i" @click="navigate(result, $event)">
-            <span class="VersionSearch-title">{{ result.title || result.id }}</span>
-            <span class="VersionSearch-tag">{{ resultVersion(result.id) ?? text.common }}</span>
-            <small v-if="result.titles?.length">{{ result.titles.join(" › ") }}</small>
+            <span :id="`version-search-result-${i}-title`" class="VersionSearch-title">{{ decodeEntities(result.title || result.id) }}</span>
+            <span :id="`version-search-result-${i}-tag`" class="VersionSearch-tag">{{ resultVersion(result.id) ?? text.common }}</span>
+            <small v-if="result.titles?.length" :id="`version-search-result-${i}-path`">{{ result.titles.map(decodeEntities).join(" › ") }}</small>
+            <!-- One element per segment: text nodes between adjacent marks would
+              drop the space between them from the accessible text. -->
+            <small v-if="excerpts[i].length" :id="`version-search-result-${i}-excerpt`" class="VersionSearch-excerpt"><component
+              :is="part.match ? 'mark' : 'span'" v-for="(part, k) in excerpts[i]" :key="k">{{ part.text }}</component></small>
           </a>
         </li>
       </ul>
@@ -244,4 +256,9 @@ onBeforeUnmount(() => {
 .VersionSearch-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .VersionSearch-tag { color: var(--vp-c-text-2); font-size: .75rem; }
 .VersionSearch-results small { grid-column: 1 / -1; min-width: 0; color: var(--vp-c-text-2); white-space: normal; overflow-wrap: anywhere; }
+.VersionSearch-excerpt { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-height: 1.5; }
+.VersionSearch-excerpt mark { color: var(--vp-c-text-1); background: var(--vp-c-brand-soft); border-radius: 2px; }
+@media (forced-colors: active) {
+  .VersionSearch-excerpt mark { color: MarkText; background: Mark; }
+}
 </style>

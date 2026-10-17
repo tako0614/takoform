@@ -308,7 +308,21 @@ export default defineConfig({
   },
   themeConfig: {
     outline: { level: [2, 3] },
-    search: { provider: "local" },
+    search: {
+      provider: "local",
+      options: {
+        // Store each section's text so search results can show where they
+        // matched. This roughly doubles the index, which loads only when
+        // search opens.
+        miniSearch: { options: { storeFields: ["title", "titles", "text"] } },
+        // VitePress indexes text with tags removed, so a code block's language
+        // label would run into its first line ("httpPUT"); leave labels out.
+        _render(src, env, md) {
+          const html = md.render(src, env);
+          return env.frontmatter?.search === false ? "" : html.replace(/<span class="lang">[^<]*<\/span>/gu, "");
+        },
+      },
+    },
     nav: [
       { text: "Overview", link: "/" },
     ],

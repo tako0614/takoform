@@ -204,6 +204,19 @@ async function checkDisclosure(page, selector) {
   }, selector);
 }
 
+// The name and description Chrome exposes to assistive technology.
+async function accessibleText(page, selector) {
+  const session = await page.context().newCDPSession(page);
+  try {
+    const { root } = await session.send("DOM.getDocument", { depth: 0 });
+    const { nodeId } = await session.send("DOM.querySelector", { nodeId: root.nodeId, selector });
+    const { nodes: [node] } = await session.send("Accessibility.getPartialAXTree", { nodeId, fetchRelatives: false });
+    return { name: node.name?.value ?? "", description: node.description?.value ?? "" };
+  } finally {
+    await session.detach();
+  }
+}
+
 async function assertDeclaredRedirect(origin, sourcePath, destinationPath) {
   const sourceUrl = new URL(sourcePath, origin);
   const expectedUrl = new URL(destinationPath, origin);
@@ -362,9 +375,34 @@ async function run() {
     await page.locator(".VersionSearch input").fill("Takoform-Expected-Generation");
     const results = page.locator(".VersionSearch-results a");
     await results.first().waitFor();
+    const marks = await results.first().locator(".VersionSearch-excerpt mark").allInnerTexts();
+    assert.ok(marks.length && marks.every((mark) => /^(?:takoform|expected|generation)/iu.test(mark)),
+      `a search result shows where it matched, with the query's terms highlighted (got ${JSON.stringify(marks)})`);
     const links = await results.evaluateAll((nodes) => nodes.map((node) => node.getAttribute("href")));
     assert.ok(links.length && links.every((link) => !link.startsWith("/en/")), "search results use root canonical routes");
     assert.ok(links.every((link) => documentVersion(link) !== "v1"), "v2 search must exclude v1 by default");
+    await page.locator(".VersionSearch input").fill("entryExists");
+    await results.first().waitFor();
+    const entryExcerpts = await page.locator(".VersionSearch-excerpt").evaluateAll((nodes) => nodes.map((node) => node.textContent));
+    assert.ok(entryExcerpts.some((excerpt) => excerpt.includes('Confirmed presence is { "entryExists": true')) &&
+      !entryExcerpts.some((excerpt) => /&(?:[a-z]+|#x?[\da-f]+);/iu.test(excerpt)), "search excerpts show escaped page text decoded");
+    await page.locator(".VersionSearch input").fill("replay window");
+    await results.first().waitFor();
+    const phrase = await page.locator(".VersionSearch-results li").evaluateAll((options) => options.findIndex((option) =>
+      /\breplay window\b/iu.test(option.querySelector(".VersionSearch-excerpt")?.textContent ?? "")));
+    assert.ok(phrase >= 0, "a search excerpt shows the query's two adjacent words");
+    const option = await accessibleText(page, `#version-search-result-${phrase}`);
+    const shown = await page.locator(`#version-search-result-${phrase} a > :not(.VersionSearch-excerpt)`).allTextContents();
+    assert.equal(option.name, shown.join(" ").replace(/\s+/gu, " ").trim(), "a search option is named by its title, version and heading path");
+    assert.match(option.description, /\breplay window\b/iu, "the excerpt describes the option with highlighted words kept apart");
+    // Near the end of a section the first match must still fit the two lines a phone shows.
+    await page.locator(".VersionSearch input").fill("retainUntil");
+    await results.first().waitFor();
+    assert.deepEqual(await page.locator(".VersionSearch-results li").evaluateAll((options) => options.flatMap((option) => {
+      const excerpt = option.querySelector(".VersionSearch-excerpt")?.getBoundingClientRect();
+      const mark = option.querySelector(".VersionSearch-excerpt mark")?.getBoundingClientRect();
+      return excerpt && mark && mark.bottom > excerpt.bottom + 1 ? [option.querySelector("a").getAttribute("href")] : [];
+    })), [], "375px: each search result's first highlight shows within its excerpt");
     await results.first().click();
     await page.waitForFunction(() => !document.querySelector(".VersionSearch"));
     await visit("/spec/host-api/v1");
