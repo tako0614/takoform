@@ -1,4 +1,5 @@
-/* Keep VitePress's default palette, typography and layout. */
+/* Keep VitePress's default palette, typography and layout; tables get
+   tighter cell padding on narrow screens. */
 html,
 body {
   overflow-x: clip;
@@ -15,12 +16,32 @@ body {
   outline-offset: 3px;
 }
 
-.vp-doc :is(h1, h2, h3, td code) {
+.vp-doc :is(h1, h2, h3) {
+  overflow-wrap: anywhere;
+}
+
+/* Keep words in table code whole: `anywhere` let a narrow column split `value`
+   into "valu|e". breakTableCode in config.mts adds break hints after
+   separators instead, and wraps pieces over 20 characters and hex digest
+   pieces in a span that may still break anywhere as a last resort. */
+.vp-doc td code {
+  overflow-wrap: break-word;
+}
+
+.vp-doc td code .table-break-anywhere {
   overflow-wrap: anywhere;
 }
 
 .vp-doc th {
   text-align: start;
+}
+
+/* Tables that cannot fit a phone scroll sideways (WCAG 1.4.10 exempts data
+   tables); narrower padding keeps that overflow small. */
+@media (max-width: 480px) {
+  .vp-doc :is(th, td) {
+    padding: 8px 10px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
