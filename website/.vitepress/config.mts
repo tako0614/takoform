@@ -145,9 +145,9 @@ const v2Sidebar = [
     items: [
       { text: "Getting started", link: "/start/" },
       { text: "The v2 model", link: "/model/" },
+      { text: "Using v2", link: "/use/" },
       { text: "Implementing a client", link: "/client/" },
       { text: "Create a Form", link: "/authoring/" },
-      { text: "Using v2", link: "/use/" },
       { text: "Implementing a Host", link: "/host-api/" },
       { text: "Guides by role", link: "/guides/" },
       { text: "Glossary", link: "/glossary" },

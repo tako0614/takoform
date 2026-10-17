@@ -1,29 +1,45 @@
 ---
 title: Guides by role
-description: Choose a v2 learning path for users, Form authors, client implementers, or Host implementers.
+description: One v2 reading path each for users, client implementers, Form authors, and Host implementers, from the guides to the normative text.
 ---
 
 # Guides by role {#guides}
 
-Each section is a reading path for one role, from the first page to the normative text that settles the details.
+Each role has one path: start with the guide pages, then read the normative text that settles the details. The home page and the [v2 entry](/v2/#reading) list the same roles in the same order.
 
 ## Users {#users}
 
-1. Start with [Getting started](/start/) to see one Resource from Discovery to delete.
-2. Follow [Using v2](/use/) to check your Host and Form, then choose how to call the API.
-3. Use the [request/response examples](/spec/host-api/v2/examples) for lost responses, conflicts, and partial failure.
+You call a Host's API, directly or through a tool that explicitly supports v2.
 
-## Form authors {#form-authors}
-
-Design the Form with [Create a Form](/authoring/): `spec`, `observed`, `output`, operation semantics, and recovery from partial failure. Then [publish it at its exact URL](/authoring/#publish) and give that URL to the Host operators who will implement it and the clients who will request it. [Form requirements](/spec/host-api/v2/forms) are normative; the [examples](/spec/host-api/v2/examples) illustrate HTTP use with fictional data.
+1. [Getting started](/start/): one Resource from Discovery to delete.
+2. [Using v2](/use/): check the Host and the exact Form, then choose how to call the API.
+3. [Request/response examples](/spec/host-api/v2/examples): lost responses, conflicts, and partial failure.
+4. [HTTP API](/spec/host-api/v2/http): the normative requests and responses.
 
 ## Client implementers {#client-implementers}
 
-Use the [client guide](/client/) to understand Discovery, support, Idempotency-Keys, generation conditions, and Operations. Treat the [HTTP API](/spec/host-api/v2/http) as the source of request and response requirements. Reconcile a lost response or conflict against Operations and Resources rather than blindly retrying.
+You build a client, CLI, or integration that sends changes on someone's behalf.
+
+1. [Getting started](/start/): the requests your client will send.
+2. [Implementing a client](/client/): Discovery and support, intent records, replay deadlines, Operations, and generation conflicts. Reconcile a lost response or conflict against Operations and Resources rather than blindly retrying.
+3. [HTTP API](/spec/host-api/v2/http): the normative requests and responses, including the [retry contract](/spec/host-api/v2/http#retry).
+
+## Form authors {#form-authors}
+
+You define a kind of Resource for Hosts to implement.
+
+1. [The v2 model](/model/): what a Form defines and what the Host API already covers.
+2. [Create a Form](/authoring/): `spec`, `observed`, `output`, operation semantics, and recovery from partial failure.
+3. [Form requirements](/spec/host-api/v2/forms): the normative requirements and the [author checklist](/spec/host-api/v2/forms#author-checklist).
+4. [Publish the Form at its exact URL](/authoring/#publish) once it answers the checklist, and give that URL to the Host operators who will implement it and the clients who will request it.
 
 ## Host implementers {#host-implementers}
 
-Read the [overview](/spec/host-api/v2/), [HTTP API](/spec/host-api/v2/http), and [Form requirements](/spec/host-api/v2/forms). Design authentication and Space authorization, Resource UIDs and generations, Idempotency-Key handling, Operation records, observed state, and post-restart recovery as one durability boundary; the [Host implementation guide](/host-api/) walks through it. Then [check your Host](/host-api/#check) against the baseline probe and plan the restart and fault experiments it leaves to you.
+You run the server that implements Forms and serves the Host API.
+
+1. [Implementing a Host](/host-api/): the durability boundary that keeps Resources, Operations, and Idempotency-Key records coherent across restarts.
+2. [Overview](/spec/host-api/v2/), [HTTP API](/spec/host-api/v2/http), and [Form requirements](/spec/host-api/v2/forms): the normative contract. Then read each Form you implement.
+3. [Check your Host](/host-api/#check) against the baseline probe, and plan the restart and fault experiments it leaves to you.
 
 ## Moving from v1 {#migration}
 

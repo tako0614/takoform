@@ -24,9 +24,9 @@ Check the API version and exact Form support of the Host and client you use.
 
 ## Suggested reading order {#reading}
 
-Refer to the [v2 glossary](/glossary) for terminology.
+Refer to the [v2 glossary](/glossary) for terminology. [Guides by role](/guides/) gives each path in full.
 
-- **Users:** Follow the fictional HTTP walkthrough in [Getting started](/start/), choose a client that explicitly supports v2 with [Using v2](/use/), then read the fuller [request/response examples](/spec/host-api/v2/examples).
-- **Form authors:** Use [Form requirements](/spec/host-api/v2/forms) to define `spec`, `observed`, `output`, and failure behavior.
-- **Client implementers:** Read [Implementing a client](/client/) for intent records, replay deadlines, Operations, and generation conflicts; then consult the [HTTP retry contract](/spec/host-api/v2/http#retry).
-- **Host implementers:** Start with the [Host implementation guide](/host-api/) for durability, then read the overview, HTTP API, and each implemented Form. [Check your Host](/host-api/#check) against the baseline probe once its endpoints respond.
+- **Users:** Follow the fictional HTTP walkthrough in [Getting started](/start/), then check your Host and Form and choose how to call the API with [Using v2](/use/); the [request/response examples](/spec/host-api/v2/examples) show lost responses and conflicts.
+- **Client implementers:** Read [Getting started](/start/) and [Implementing a client](/client/) for intent records, replay deadlines, Operations, and generation conflicts; then consult the [HTTP retry contract](/spec/host-api/v2/http#retry).
+- **Form authors:** Read [The v2 model](/model/), then [Create a Form](/authoring/) to define `spec`, `observed`, `output`, and failure behavior; [Form requirements](/spec/host-api/v2/forms) settle the details.
+- **Host implementers:** Start with [Implementing a Host](/host-api/) for durability, then read the overview, HTTP API, and each implemented Form. [Check your Host](/host-api/#check) against the baseline probe once its endpoints respond.

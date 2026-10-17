@@ -12,7 +12,7 @@ Choose the API version in the header. All documentation is in English. Each spec
 
 - Host API and common model: resource identity, requests, responses and operations.
 - Form authoring: describing resource-specific inputs, outputs and behavior.
-- Implementation guides and examples for users, Form authors, Hosts and clients.
+- Implementation guides and examples for users, client implementers, Form authors and Host implementers.
 - Retained v1 JSON Schemas served at their identifier paths, with each profile's applicability listed in the index.
 
 Check individual Form details with its publisher and Host or client support with the product or environment you intend to use.

@@ -160,8 +160,8 @@ describe("takoform.com site derivation", () => {
       .map(([, path, label]) => [label, path]));
     expect(readings).toEqual({
       "Use the API": "/use/",
-      "Build a client": "/client/",
-      "Define a Form": "/authoring/",
+      "Implement a client": "/client/",
+      "Create a Form": "/authoring/",
       "Implement a Host": "/host-api/",
     });
     expect(component).toContain('<h1 id="home-title">Takoform</h1>');
@@ -198,6 +198,39 @@ describe("takoform.com site derivation", () => {
       "/start/#create-read",
       "/start/#update",
     ]) expect(component).toContain(target);
+  });
+  test("the home page, Guides by role, the v2 entry and the sidebar give the same role paths", async () => {
+    const roles = [
+      ["users", "Users", "/use/"],
+      ["client-implementers", "Client implementers", "/client/"],
+      ["form-authors", "Form authors", "/authoring/"],
+      ["host-implementers", "Host implementers", "/host-api/"],
+    ];
+    const component = readFileSync("website/.vitepress/theme/components/HomePage.vue", "utf8");
+    expect([...component.matchAll(/\{ path: "([^"]+)", label: "[^"]+", text:/gu)].map(([, path]) => path))
+      .toEqual(roles.map(([, , path]) => path));
+    const sections = readFileSync("website/guides/index.md", "utf8").split(/^## /mu).slice(1);
+    expect(sections.map((section) => section.match(/\{#([^}]+)\}/u)?.[1])).toEqual([...roles.map(([id]) => id), "migration"]);
+    for (const [index, [id, , path]] of roles.entries()) {
+      // Each role is one numbered path through its guide to the normative text.
+      expect(sections[index], id).toMatch(/^1\. \[/mu);
+      expect(sections[index], id).toContain(`(${path})`);
+      // Normative: the overview, HTTP API or Form requirements, not the examples or migration guide.
+      expect(sections[index], id).toMatch(/\]\(\/spec\/host-api\/v2\/(?:http|forms)?(?:#[^)]*)?\)/u);
+    }
+    const v2 = readFileSync("website/v2/index.md", "utf8");
+    const bullets = [...v2.slice(v2.indexOf("{#reading}")).matchAll(/^- \*\*([^:]+):\*\* (.+)$/gmu)];
+    expect(bullets.map(([, role]) => role)).toEqual(roles.map(([, role]) => role));
+    for (const [index, [id, , path]] of roles.entries()) {
+      expect(bullets[index][2], path).toContain(`(${path})`);
+      // Both lists start each role on the same page.
+      const firstLink = (text) => text.match(/\]\((\/[^)#]*)/u)?.[1];
+      expect(firstLink(bullets[index][2]), id).toBe(firstLink(sections[index]));
+    }
+    const config = (await import("../website/.vitepress/config.mts")).default;
+    const guides = Object.values(config.themeConfig.sidebar).flat().find((group) => group.text === "Guides");
+    const order = guides.items.map((item) => item.link).filter((link) => roles.some(([, , path]) => path === link));
+    expect(order).toEqual(roles.map(([, , path]) => path));
   });
   test("separates version sidebars and keeps shared pages out of their sequences", async () => {
     const config = (await import("../website/.vitepress/config.mts")).default;
