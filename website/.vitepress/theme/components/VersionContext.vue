@@ -89,6 +89,14 @@ async function changeVersion(event: Event) {
   transform: translateY(-50%) rotate(90deg);
 }
 
+/* VitePress pulls the header's last items (the ••• menu, the social links)
+   into the bar's edge with a negative right margin. The API version selector
+   comes after them, so their buttons would overlap it; give that space back. */
+:global(.VPNavBar .content-body > .VPNavBarExtra),
+:global(.VPNavBar .content-body > .social-links) {
+  margin-right: 0;
+}
+
 .version-context select:hover {
   border-color: var(--vp-c-brand-1);
 }
