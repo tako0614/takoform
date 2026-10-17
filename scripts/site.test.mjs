@@ -107,6 +107,47 @@ describe("takoform.com site derivation", () => {
       "(/spec/host-api/v2/forms#author-checklist)", "{#host-implementers}",
     ]) expect(next).toContain(target);
   });
+  test("keeps words in table code whole and breaks only after separators or in long pieces", async () => {
+    // createMarkdownRenderer caches one renderer per process; use a fresh one
+    // with the site's markdown config, then leave none behind for other tests.
+    const { createMarkdownRenderer, disposeMdItInstance } = await import("vitepress");
+    const config = (await import("../website/.vitepress/config.mts")).default;
+    disposeMdItInstance();
+    const markdown = await createMarkdownRenderer(join(process.cwd(), "website"), config.markdown);
+    const url = "https://forms.publisher.example/key-value-entry/1.0.0";
+    const digest = "sha256:9ebd0fcad6f25f513a8146de9ddda412e2d38ca2ac515f0d33b0e962ba1d2906";
+    const long = "averyveryverylongidentifiername";
+    const html = markdown.render([
+      "| Field | Value |", "| --- | --- |",
+      `| \`value\` | \`${url}\` |`,
+      `| \`privateInputs\` | \`${digest}\` |`,
+      "| `409 private_inputs_unverifiable` | `waiting_input` |",
+      `| \`/schemas/v1\` | \`${long}\` |`,
+      "| `capabilities.privateInputs:true` | `a<b&c_d` |",
+      "| `initial send time + replayWindowSeconds` | x |",
+      "", `Outside a table: \`${url}\``,
+    ].join("\n"));
+    disposeMdItInstance();
+    // Words stay whole; code may wrap only after an inner run of separators.
+    expect(html).toContain("<code>value</code>");
+    expect(html).toContain("<code>privateInputs</code>");
+    expect(html).toContain("<code>waiting_<wbr>input</code>");
+    expect(html).toContain("<code>409 private_<wbr>inputs_<wbr>unverifiable</code>");
+    expect(html).toContain("<code>/schemas/<wbr>v1</code>");
+    expect(html).toContain("<code>capabilities.<wbr>privateInputs:<wbr>true</code>");
+    expect(html).toContain("<code>https://<wbr>forms.<wbr>publisher.<wbr>example/<wbr>key-<wbr>value-<wbr>entry/<wbr>1.<wbr>0.<wbr>0</code>");
+    expect(html).toContain("<code>a&lt;b&amp;c_<wbr>d</code>");
+    // A long span of short words is not a long piece.
+    expect(html).toContain("<code>initial send time + replayWindowSeconds</code>");
+    // Only a piece over 20 characters or a hex digest piece may break anywhere.
+    const anywhere = (piece) => `<span class="table-break-anywhere">${piece}</span>`;
+    expect(html).toContain(`<code>${anywhere(long)}</code>`);
+    expect(html).toContain(`<code>sha256:<wbr>${["9ebd0fcad6f25f51", "3a8146de9ddda412", "e2d38ca2ac515f0d", "33b0e962ba1d2906"].map(anywhere).join("<wbr>")}</code>`);
+    // The hints add no text, and inline code outside tables is unchanged.
+    const text = html.replace(/<wbr>|<\/?span[^>]*>/gu, "");
+    for (const token of [url, digest]) expect(text).toContain(`<code>${token}</code>`);
+    expect(html).toContain(`Outside a table: <code>${url}</code>`);
+  });
   test("renders canonical v2 contract links in authoring and client guides", async () => {
     const { createMarkdownRenderer } = await import("vitepress");
     const markdown = await createMarkdownRenderer(join(process.cwd(), "website"));

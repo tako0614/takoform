@@ -132,11 +132,64 @@ function inspectGeometry() {
     if (sidebar && !sidebar.classList.contains("open") && innerWidth < 960) continue;
     const rectangle = element.getBoundingClientRect();
     if (rectangle.width === 0 || rectangle.height === 0) continue;
+    // WCAG 1.4.10 exempts data tables from reflow. A control scrolled out of
+    // view inside a table that scrolls sideways is reachable as long as the
+    // table itself fits; unreachableTableControls checks that separately.
+    const table = element.closest(".vp-doc table");
+    if (table && table.scrollWidth > table.clientWidth + 1) {
+      const box = table.getBoundingClientRect();
+      if (box.left >= -1 && box.right <= documentWidth + 1) continue;
+    }
     if (rectangle.left < -1 || rectangle.right > documentWidth + 1) {
       issues.push(`clipped control: ${element.textContent.trim().slice(0, 70) || element.getAttribute("aria-label") || element.tagName}`);
     }
   }
   return issues;
+}
+
+// A table that scrolls sideways must take keyboard focus (VitePress renders
+// tabindex="0") and contain no control wider than its visible width, so
+// scrolling the table alone brings every control into view.
+function unreachableTableControls() {
+  const problems = [];
+  document.querySelectorAll(".vp-doc table").forEach((table, index) => {
+    if (table.scrollWidth <= table.clientWidth + 1) return;
+    const name = `table ${index + 1}`;
+    if (!["auto", "scroll"].includes(getComputedStyle(table).overflowX)) problems.push(`${name} does not scroll`);
+    if (table.tabIndex !== 0) problems.push(`${name} cannot take keyboard focus`);
+    for (const control of table.querySelectorAll("a[href], button, input, select, summary"))
+      if (control.getBoundingClientRect().width > table.clientWidth + 1) problems.push(`${name}: ${control.textContent.trim().slice(0, 70)}`);
+  });
+  return problems;
+}
+
+// Table code that wraps inside a word, such as "valu|e". A break is allowed at
+// a <wbr> hint (a text-node boundary), at a space, and inside a
+// table-break-anywhere piece (over 20 characters or a hex digest piece).
+function midWordTableCode() {
+  const alnum = /[A-Za-z0-9]/u;
+  const broken = [];
+  for (const code of document.querySelectorAll(".vp-doc td code")) {
+    if (code.getClientRects().length < 2) continue;
+    const chars = [];
+    const walker = document.createTreeWalker(code, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode())
+      for (let offset = 0; offset < node.length; offset++) chars.push([node, offset]);
+    let previous = null;
+    for (const [index, [node, offset]] of chars.entries()) {
+      const range = document.createRange();
+      range.setStart(node, offset);
+      range.setEnd(node, offset + 1);
+      const top = Math.round(range.getBoundingClientRect().top);
+      const [before, beforeOffset] = chars[index - 1] ?? [];
+      if (previous !== null && top > previous + 2 && before === node &&
+        alnum.test(node.data[beforeOffset]) && alnum.test(node.data[offset])) {
+        if (!node.parentElement.classList.contains("table-break-anywhere")) broken.push(code.textContent);
+      }
+      previous = top;
+    }
+  }
+  return [...new Set(broken)];
 }
 
 async function checkDisclosure(page, selector) {
@@ -261,6 +314,8 @@ async function run() {
       for (const route of routes) {
         await visit(route);
         assert.deepEqual(await page.evaluate(inspectGeometry), [], `${width}px ${route}`);
+        assert.deepEqual(await page.evaluate(midWordTableCode), [], `${width}px ${route}: table identifiers stay whole`);
+        assert.deepEqual(await page.evaluate(unreachableTableControls), [], `${width}px ${route}: scrolling tables are keyboard-reachable`);
         if (route === "/") {
           const start = await page.locator('.home-actions a[href="/start/"]').boundingBox();
           assert.ok(start && start.y + start.height <= 900, `${width}px: the walkthrough link is in the first viewport`);
@@ -274,6 +329,18 @@ async function run() {
         }
       }
       await visit("/spec/host-api/v1");
+    }
+    // Table code on every built page: words stay whole on phones and on desktop,
+    // where no table may scroll; tables that scroll on phones stay reachable.
+    for (const width of [320, 375, 1280]) {
+      await page.setViewportSize({ width, height: 900 });
+      for (const route of [...new Set([...routes, ...sidebarRoutes])]) {
+        await visit(route);
+        assert.deepEqual(await page.evaluate(midWordTableCode), [], `${width}px ${route}: table identifiers stay whole`);
+        assert.deepEqual(await page.evaluate(unreachableTableControls), [], `${width}px ${route}: scrolling tables are keyboard-reachable`);
+        if (width === 1280) assert.equal(await page.locator(".vp-doc table").evaluateAll((tables) =>
+          tables.filter((table) => table.scrollWidth > table.clientWidth + 1).length), 0, `1280px ${route}: tables fit without scrolling`);
+      }
     }
     for (const width of [375, 1024, 1280]) {
       await page.setViewportSize({ width, height: 900 });

@@ -55,6 +55,49 @@ function firstParagraph(srcDir, relativePath) {
 // declare authority and version status separately; navigation and indexes
 // are non-normative.
 
+// Table code keeps whole words (custom.css): a narrow column must not split
+// `value` into "valu|e". This rule gives code in table cells break
+// opportunities after inner runs of the separators / . : _ - (so
+// `private_inputs_conflict` may wrap after an underscore) and every 16 digits
+// of a long hex run. A piece with a word over 20 characters, and each 16-digit
+// piece of a hex run, is wrapped in a table-break-anywhere span that may break
+// anywhere as a last resort; short words such as `sha256:` stay whole. <wbr>
+// and the span add no text, so copying and search see the original token.
+const SEPARATOR_RUN = /(?<=[^\s/.:_-])[/.:_-]+(?=[^\s/.:_-])/gu;
+const HEX_RUN = /([0-9a-f]{16})(?=[0-9a-f])/gu;
+
+export function breakTableCode(md) {
+  md.core.ruler.push("takoform_table_code_breaks", (state) => {
+    let cells = 0;
+    for (const token of state.tokens) {
+      if (token.type === "td_open") cells++;
+      else if (token.type === "td_close") cells--;
+      else if (cells > 0 && token.type === "inline")
+        for (const child of token.children ?? []) {
+          if (child.type !== "code_inline" || child.meta?.takoformPieces) continue;
+          const pieces = child.content.replace(SEPARATOR_RUN, "$&\u0000").replace(HEX_RUN, "$1\u0000").split("\u0000");
+          child.meta = {
+            ...child.meta,
+            takoformPieces: pieces.map((text) => ({
+              text,
+              long: text.split(/\s+/u).some((word) => word.length > 20) || /^[0-9a-f]{16}$/u.test(text),
+            })),
+          };
+        }
+    }
+  });
+  const render = md.renderer.rules.code_inline;
+  md.renderer.rules.code_inline = (tokens, index, options, env, self) => {
+    const pieces = tokens[index].meta?.takoformPieces;
+    if (!pieces) return render(tokens, index, options, env, self);
+    const html = pieces.map(({ text, long }) => {
+      const escaped = md.utils.escapeHtml(text);
+      return long ? `<span class="table-break-anywhere">${escaped}</span>` : escaped;
+    });
+    return `<code${self.renderAttrs(tokens[index])}>${html.join("<wbr>")}</code>`;
+  };
+}
+
 // VitePress names each heading permalink from the heading's raw inline source,
 // so a custom `{#id}` (including retained Japanese fragment IDs) leaks into the
 // accessible name. Rename them from the rendered heading text instead, after
@@ -194,7 +237,10 @@ export default defineConfig({
       light: "github-light-high-contrast",
       dark: "github-dark-high-contrast",
     },
-    config: nameHeadingPermalinks,
+    config(md) {
+      nameHeadingPermalinks(md);
+      breakTableCode(md);
+    },
   },
   // VitePress 1.6 builds the local-search MiniSearch index through a concurrent
   // mapper. MiniSearch assigns numeric document IDs in completion order, so a
