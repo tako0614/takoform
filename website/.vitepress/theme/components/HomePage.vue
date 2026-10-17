@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { codeLineSegments } from "../../code-wrap.mjs";
+
 const copy = {
   introduction: "Takoform describes how clients create, inspect, update and delete resources on a server. A Form defines a kind of resource. A Host is the server that implements it and provides the API.",
   actions: [
@@ -68,6 +70,15 @@ HTTP/1.1 200 OK
     "entryExists": true, "key": "greeting", "value": "hello"
   }
 }`;
+
+// The example wraps like highlighted code (code-wrap.mjs): each line hangs
+// under its own indentation, keeps its indentation with its first character,
+// and may wrap at <wbr> hints. The text is unchanged.
+const examples = [
+  { label: copy.requestLabel, lines: codeLineSegments(request) },
+  { label: copy.responseLabel, lines: codeLineSegments(response) },
+  { label: copy.resultLabel, lines: codeLineSegments(result) },
+];
 </script>
 
 <template>
@@ -105,13 +116,10 @@ HTTP/1.1 200 OK
         <p>{{ copy.exampleIntro }}</p>
         <div class="home-example">
           <figure>
-            <p class="home-example__label">{{ copy.requestLabel }}</p>
-            <!-- The request and the Resource scroll on narrow screens, so they take focus. -->
-            <pre tabindex="0"><code>{{ request }}</code></pre>
-            <p class="home-example__label">{{ copy.responseLabel }}</p>
-            <pre><code>{{ response }}</code></pre>
-            <p class="home-example__label">{{ copy.resultLabel }}</p>
-            <pre tabindex="0"><code>{{ result }}</code></pre>
+            <template v-for="example in examples" :key="example.label">
+              <p class="home-example__label">{{ example.label }}</p>
+              <pre class="takoform-wrap"><code><template v-for="(line, i) in example.lines" :key="i"><span class="line" :style="line.style"><template v-for="(segment, k) in line.segments" :key="k"><wbr v-if="segment.hint"><span v-if="segment.keep" class="takoform-keep">{{ segment.text }}</span><template v-else>{{ segment.text }}</template></template></span><template v-if="i < example.lines.length - 1">{{ "\n" }}</template></template></code></pre>
+            </template>
             <figcaption>
               <code>spec</code> is the accepted desired value and <code>observed</code> is what the Host last checked;
               <code>observedGeneration</code> equals <code>generation</code>, so <code>observed</code> reflects the current generation.

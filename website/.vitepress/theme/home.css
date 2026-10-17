@@ -106,7 +106,7 @@
   font-family: var(--vp-font-family-mono);
   font-size: 0.875rem;
   line-height: 1.75;
-  tab-size: 2;
+  tab-size: 4;
 }
 .home-example code { font-family: inherit; }
 .home-page .home-example__label {
@@ -160,7 +160,7 @@
   white-space: nowrap;
 }
 .home-reading-link:hover { text-decoration-thickness: 2px; }
-.home-reading-link:focus-visible, .home-example pre:focus-visible {
+.home-reading-link:focus-visible {
   outline: 2px solid var(--vp-c-brand-1);
   outline-offset: 3px;
 }
@@ -177,7 +177,7 @@
   .home-page__inner { padding-inline: var(--home-space-lg); }
   .home-roles > div { grid-template-columns: minmax(6rem, 1fr) minmax(0, 5fr); }
 }
-/* Two columns only once the request's longest line fits without scrolling. */
+/* Two columns only once the request's longest line fits without wrapping. */
 @media (min-width: 66rem) {
   .home-example { grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); }
 }

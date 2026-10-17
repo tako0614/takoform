@@ -192,8 +192,8 @@ function midWordCode(selector) {
   return [...new Set(broken)];
 }
 
-// Code blocks other than plain text wrap long lines instead of scrolling and
-// so take no tab stop. Each line's first character sits at its indentation
+// Code blocks other than plain text, and the home page example, wrap long
+// lines instead of scrolling and so take no tab stop. Each line's first character sits at its indentation
 // column (a tab advances to the next multiple of four); a wrapped continuation
 // starts right of it, so it reads as part of that line; and a row may end
 // inside a word only when that run of letters and digits is 16 or longer.
@@ -207,8 +207,7 @@ function codeWrapProblems() {
     range.setEnd(node, offset + 1);
     return range.getBoundingClientRect();
   };
-  for (const block of document.querySelectorAll('.vp-doc div[class*="language-"]')) {
-    const pre = block.querySelector("pre");
+  for (const pre of document.querySelectorAll('.vp-doc div[class*="language-"] > pre, .home-example pre')) {
     const name = pre.textContent.trim().split("\n")[0].slice(0, 60);
     if (!pre.classList.contains("takoform-wrap")) {
       if (getComputedStyle(pre).whiteSpace !== "pre") problems.push(`plain text wraps: ${name}`);
@@ -223,7 +222,7 @@ function codeWrapProblems() {
     probe.remove();
     const origin = code.getBoundingClientRect().left + parseFloat(getComputedStyle(code).paddingLeft);
     const lineHeight = parseFloat(getComputedStyle(code).lineHeight);
-    for (const line of block.querySelectorAll(".line")) {
+    for (const line of pre.querySelectorAll(".line")) {
       const chars = [];
       const walker = document.createTreeWalker(line, NodeFilter.SHOW_TEXT);
       for (let node = walker.nextNode(); node; node = walker.nextNode())
@@ -341,6 +340,11 @@ async function run() {
     const page = await context.newPage();
     page.setDefaultTimeout(10000);
     page.on("pageerror", (error) => networkFailures.push(error.message));
+    // Vue reports a hydration mismatch only on the console. Failed loads are
+    // console errors too, but the response listener below judges those.
+    page.on("console", (message) => {
+      if (message.type() === "error" && !message.text().startsWith("Failed to load resource")) networkFailures.push(`console: ${message.text()}`);
+    });
     page.on("response", (response) => {
       if (response.status() >= 400 && !(response.status() === 404 && expectedNotFound.has(new URL(response.url()).pathname))) {
         networkFailures.push(`${response.status()}: ${response.url()}`);
@@ -390,9 +394,7 @@ async function run() {
         if (route === "/") {
           const start = await page.locator('.home-actions a[href="/start/"]').boundingBox();
           assert.ok(start && start.y + start.height <= 900, `${width}px: the walkthrough link is in the first viewport`);
-          assert.deepEqual(await page.locator(".home-example pre").evaluateAll((blocks) => blocks
-            .filter((pre) => pre.scrollWidth > pre.clientWidth && pre.tabIndex !== 0).map((pre) => pre.textContent.split("\n")[0])), [],
-          `${width}px: an example that scrolls sideways can be scrolled from the keyboard`);
+          assert.equal(await page.locator(".home-example pre.takoform-wrap").count(), 3, `${width}px: the home example wraps like other code`);
         }
         if (width === 375 && ["/", "/spec/host-api/v2/http"].includes(route)) {
           const name = route === "/" ? "home-en" : "http-v2";
@@ -568,8 +570,9 @@ async function run() {
       assert.deepEqual(await page.locator(".home-steps h3 a").evaluateAll((links) => links.map((link) => link.getAttribute("href"))), [
         "/start/#discover-support", "/start/#create-read", "/start/#create-read", "/start/#update",
       ], "each lifecycle step opens its walkthrough section");
-      assert.deepEqual(await page.locator(".home-example pre").evaluateAll((blocks) => blocks.map((pre) => pre.scrollWidth <= pre.clientWidth)),
-        [true, true, true], "the create request, its response and the Resource fit without horizontal scrolling");
+      assert.deepEqual(await page.locator(".home-example .line").evaluateAll((lines) => lines
+        .filter((line) => line.getBoundingClientRect().height > parseFloat(getComputedStyle(line).lineHeight) * 1.5)
+        .map((line) => line.textContent)), [], "on desktop no line of the create request, its response or the Resource wraps");
       const exampleRequest = readFileSync(join(root, "website/start/index.md"), "utf8")
         .match(/^POST .+ HTTP\/1\.1$/mu)?.[0];
       assert.ok(exampleRequest, "the getting-started guide includes a create request");
