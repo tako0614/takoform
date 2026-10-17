@@ -1,5 +1,11 @@
 ---
 title: Create a Form
+prev:
+  text: The v2 model
+  link: /model/
+next:
+  text: Form requirements
+  link: /spec/host-api/v2/forms
 ---
 
 # Create a Form {#authoring}

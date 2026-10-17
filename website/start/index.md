@@ -1,6 +1,12 @@
 ---
 title: Getting started with v2
 description: Follow one fictional KeyValueEntry through Discovery, support, create, update, and delete.
+prev:
+  text: Host API v2
+  link: /v2/
+next:
+  text: Guides by role
+  link: /guides/
 ---
 
 # Getting started with v2 {#start}

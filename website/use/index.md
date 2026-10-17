@@ -1,6 +1,12 @@
 ---
 title: Using v2
 description: What you need to manage Resources through Host API v2, how to check a Host, and which client to use in your situation.
+prev:
+  text: Getting started
+  link: /start/
+next:
+  text: Request/response examples
+  link: /spec/host-api/v2/examples
 ---
 
 # Using v2 {#use}

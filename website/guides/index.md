@@ -1,6 +1,9 @@
 ---
 title: Guides by role
 description: One v2 reading path each for users, client implementers, Form authors, and Host implementers, from the guides to the normative text.
+prev:
+  text: Getting started
+  link: /start/
 ---
 
 # Guides by role {#guides}
@@ -38,7 +41,7 @@ You define a kind of Resource for Hosts to implement.
 You run the server that implements Forms and serves the Host API.
 
 1. [Implementing a Host](/host-api/): the durability boundary that keeps Resources, Operations, and Idempotency-Key records coherent across restarts.
-2. [Overview](/spec/host-api/v2/), [HTTP API](/spec/host-api/v2/http), and [Form requirements](/spec/host-api/v2/forms): the normative contract. Then read each Form you implement.
+2. [Specification overview](/spec/host-api/v2/), [HTTP API](/spec/host-api/v2/http), and [Form requirements](/spec/host-api/v2/forms): the normative contract. Then read each Form you implement.
 3. [Check your Host](/host-api/#check) against the baseline probe, and plan the restart and fault experiments it leaves to you.
 
 ## Moving from v1 {#migration}

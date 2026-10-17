@@ -1,6 +1,12 @@
 ---
 title: Implementing Host API v2
 description: Design the durability boundary that keeps Resources, Operations, and retry records coherent across restarts.
+prev:
+  text: Guides by role
+  link: /guides/
+next:
+  text: Specification overview
+  link: /spec/host-api/v2/
 ---
 
 # Implementing Host API v2 {#host-api}
