@@ -99,6 +99,123 @@ export function breakTableCode(md) {
   };
 }
 
+// Long code lines wrap instead of hiding their ends off to the side (see
+// custom.css). Plain-text blocks keep their layout, because some hold
+// diagrams; other blocks get the takoform-wrap class and, as they no longer
+// scroll, no tab stop. This runs in the code hook, after VitePress's notation
+// transformers have read their comments. Each change keeps the text, so
+// copying and search are unchanged:
+//
+// - A wrapped line hangs: its first row is pulled back by --takoform-hang and
+//   its continuation rows start that far in. The hang covers the leading
+//   indentation plus at least two columns, rounded up to the four-column tab
+//   size, because tab stops are measured from the block's edge: a first row
+//   that starts on a tab stop keeps its tabs at their usual width.
+// - Preserved white space is a wrap opportunity, so the indentation and the
+//   first character share a takoform-keep span that does not wrap; otherwise
+//   a long first token leaves the indentation alone on a blank row. A trailing
+//   shell continuation (" \") likewise stays with the word before it.
+// - <wbr> hints let a line wrap after the punctuation that joins parts of a
+//   path, URL, query or expression, and after every 16 digits of a hex run,
+//   before the browser breaks inside a word.
+const TAB_SIZE = 4;
+const CODE_BREAK_RUN = /(?<=[^\s/.:_\-?&=,([{])[/.:_\-?&=,([{]+(?=[^\s/.:_\-?&=,([{)\]}])/gu;
+const PLAIN_LANGUAGES = new Set(["", "text", "txt", "plain", "plaintext"]);
+const classes = (node) => [node.properties?.class ?? node.properties?.className ?? []].flat().join(" ").split(/\s+/u);
+const hastText = (node) => node.type === "text" ? node.value : (node.children ?? []).map(hastText).join("");
+const withText = (token, value) => token.type === "text"
+  ? { type: "text", value }
+  : { ...token, properties: { ...token.properties }, children: [{ type: "text", value }] };
+
+// Make `at` fall between two of the line's tokens, splitting a token that holds
+// only text. Returns false when `at` falls inside a token it cannot split.
+function splitLineAt(line, at) {
+  let offset = 0;
+  for (const [index, token] of line.children.entries()) {
+    const length = hastText(token).length;
+    if (at > offset && at < offset + length) {
+      const text = token.type === "text" ? token : token.children?.length === 1 ? token.children[0] : null;
+      if (text?.type !== "text") return false;
+      line.children.splice(index, 1, withText(token, text.value.slice(0, at - offset)), withText(token, text.value.slice(at - offset)));
+      return true;
+    }
+    offset += length;
+  }
+  return true;
+}
+
+function keepTogether(line, start, end) {
+  if (!splitLineAt(line, start) || !splitLineAt(line, end)) return;
+  let offset = 0;
+  const [before, kept, after] = [[], [], []];
+  for (const token of line.children) {
+    (offset >= end ? after : offset >= start ? kept : before).push(token);
+    offset += hastText(token).length;
+  }
+  line.children = [...before, { type: "element", tagName: "span", properties: { class: "takoform-keep" }, children: kept }, ...after];
+}
+
+function hintBreaks(line, text) {
+  const positions = new Set([
+    // A time such as 12:00:00 stays whole.
+    ...[...text.matchAll(CODE_BREAK_RUN)].filter((match) => !/^\d:$/u.test(text.slice(match.index - 1, match.index + 1)) ||
+      !/^\d/u.test(text.slice(match.index + match[0].length))).map((match) => match.index + match[0].length),
+    ...[...text.matchAll(HEX_RUN)].map((match) => match.index + 16),
+  ]);
+  let offset = 0;
+  const visit = (parent, kept) => {
+    for (let index = 0; index < parent.children.length; index++) {
+      const child = parent.children[index];
+      if (child.type !== "text") {
+        if (child.children) visit(child, kept || classes(child).includes("takoform-keep"));
+        continue;
+      }
+      const start = offset;
+      offset += child.value.length;
+      const cuts = kept ? [] : [...positions].filter((at) => at > start && at <= offset).sort((left, right) => left - right);
+      if (!cuts.length) continue;
+      const pieces = [];
+      let from = 0;
+      for (const cut of cuts) {
+        pieces.push({ type: "text", value: child.value.slice(from, cut - start) }, { type: "element", tagName: "wbr", properties: {}, children: [] });
+        from = cut - start;
+      }
+      if (from < child.value.length) pieces.push({ type: "text", value: child.value.slice(from) });
+      parent.children.splice(index, 1, ...pieces);
+      index += pieces.length - 1;
+    }
+  };
+  visit(line, false);
+}
+
+function wrapLine(line) {
+  const text = hastText(line);
+  const leading = text.match(/^[ \t]*/u)[0];
+  if (leading && leading.length < text.length) {
+    const indent = [...leading]
+      .reduce((column, character) => character === "\t" ? column + TAB_SIZE - column % TAB_SIZE : column + 1, 0);
+    const hang = `--takoform-hang:${Math.ceil((indent + 2) / TAB_SIZE) * TAB_SIZE}ch`;
+    line.properties.style = [line.properties.style?.replace(/;\s*$/u, ""), hang].filter(Boolean).join(";");
+    keepTogether(line, 0, leading.length + String.fromCodePoint(text.codePointAt(leading.length)).length);
+  }
+  const continuation = text.match(/[^ \t][ \t]+\\$/u);
+  if (continuation) keepTogether(line, continuation.index, text.length);
+  hintBreaks(line, text);
+}
+
+export const wrappedCodeLines = {
+  name: "takoform:wrapped-code-lines",
+  pre(node) {
+    if (PLAIN_LANGUAGES.has(this.options.lang ?? "")) return;
+    this.addClassToHast(node, "takoform-wrap");
+    delete node.properties.tabindex;
+  },
+  code(code) {
+    if (PLAIN_LANGUAGES.has(this.options.lang ?? "")) return;
+    for (const line of code.children) if (line.type === "element" && classes(line).includes("line")) wrapLine(line);
+  },
+};
+
 // VitePress names each heading permalink from the heading's raw inline source,
 // so a custom `{#id}` (including retained Japanese fragment IDs) leaks into the
 // accessible name. Rename them from the rendered heading text instead, after
@@ -238,6 +355,7 @@ export default defineConfig({
       light: "github-light-high-contrast",
       dark: "github-dark-high-contrast",
     },
+    codeTransformers: [wrappedCodeLines],
     config(md) {
       nameHeadingPermalinks(md);
       breakTableCode(md);
