@@ -848,6 +848,18 @@ export function inspectRenderedSitePages(pages, servedPaths = new Set()) {
     if (headings.some((heading) => japaneseTitle.test(readableText(heading[1])))) {
       problems.push(`${page.path} must render an English page heading`);
     }
+    // A screen reader moves through the page's own headings by level; the
+    // outline may deepen only one level at a time.
+    const main = page.html.match(/<main\b[^>]*>([\s\S]*?)<\/main>/u)?.[1] ?? "";
+    let previousLevel = 0;
+    for (const match of main.matchAll(/<h([1-6])\b[^>]*>([\s\S]*?)<\/h\1>/gu)) {
+      const level = Number(match[1]);
+      if (previousLevel > 0 && level > previousLevel + 1) {
+        const text = readableText(match[2].replace(/<a\b[^>]*class="header-anchor"[^>]*>[\s\S]*?<\/a>/gu, ""));
+        problems.push(`${page.path} skips from h${previousLevel} to h${level} at ${text}`);
+      }
+      previousLevel = level;
+    }
     // Preserve historical Japanese fragment IDs in attributes, but not visible
     // prose. Scripts and styles are not reader-facing body text.
     const body = page.html.match(/<body\b[^>]*>([\s\S]*?)<\/body>/u)?.[1] ?? "";
