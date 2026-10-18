@@ -88,7 +88,7 @@ Retry-After: 1
 }
 ```
 
-`202 Accepted` means “accepted, not finished.” After `Retry-After`, read the Operation from `Location` or `op_create_1`. Once it succeeds, fetch the Resource.
+`202 Accepted` means “accepted, not finished.” After `Retry-After`, read the Operation by its ID, `op_create_1`, under the API root; its `Location` gives the same URL. Once it succeeds, fetch the Resource.
 
 ```http
 GET /apis/forms.takoform.com/v2/operations/op_create_1 HTTP/1.1

@@ -500,6 +500,36 @@ test("the client guide's loop follows changes against an asynchronous Host", asy
   expect(expired.result).toBe("unknown");
   expect(sent.length).toBe(before);
 
+  // Without any answer it stops at its own bound, well inside a long window, and returns pending.
+  const unanswered = async () => { throw new Error("lost"); };
+  const paused = await applyChange(unanswered, save, update("guide-update-000023", "x", 4), Date.now() + 500);
+  expect(paused).toEqual({ result: "pending", intent: expect.objectContaining({ key: "guide-update-000023" }) });
+  // Resumed later, it may already have reached the Host: a refusal of access proves nothing.
+  // Resume from the saved record, as a restarted client would.
+  const savedIntent = saved.findLast((record) => record.key === "guide-update-000023");
+  const resumedLater = await applyChange(async () => problem(403, "forbidden"), save, savedIntent);
+  expect(resumedLater.result).toBe("unknown");
+  expect(saved.some((record) => record.key === "guide-update-000023" && record.refused)).toBe(false);
+  // The replay window's end comes before the call's own bound.
+  const closing = update("guide-update-000024", "x", 4, { firstSentAt: Date.now() - 3_600_000 + 800 });
+  expect((await applyChange(unanswered, save, closing, Date.now() + 100)).result).toBe("unknown");
+  // The bound also covers following an accepted change: a long Retry-After never outlasts it.
+  waits.length = 0;
+  const slowAccept = async (method, path, ...rest) => (method === "PUT"
+    ? json({ id: "op-slow", resourceUid: uid, status: "running" }, 202,
+      { Location: `${root}/operations/op-slow`, "Retry-After": "86400" })
+    : http(method, path, ...rest));
+  await applyChange(slowAccept, save, update("guide-update-000025", "x", 4), Date.now() + 500);
+  expect(waits[0]).toBeLessThanOrEqual(500);
+  // So does following the Operation a private_inputs_unverifiable Problem names.
+  waits.length = 0;
+  const namedSlow = async (method, path, ...rest) => (method === "PUT"
+    ? json({ type: "about:blank", title: "conflict", status: 409, code: "private_inputs_unverifiable",
+      operationId: "op-named-slow" }, 409)
+    : http(method, path, ...rest));
+  await applyChange(namedSlow, save, update("guide-update-000026", "x", 4), Date.now() + 500);
+  expect(waits[0]).toBeLessThanOrEqual(500);
+
   // Access revoked after an uncertain send keeps the intent unresolved.
   let lost = false;
   const revoked = async () => {
@@ -781,6 +811,7 @@ test("the client guide's update and delete intents follow the Resource's generat
   expect(mutations[1].headers["Content-Type"], "delete sends no Content-Type").toBeUndefined();
   expect(mutations[1].body, "delete sends no body").toBeUndefined();
   expect(sent.every(({ redirect }) => redirect === "manual"), "no request follows a redirect").toBe(true);
+  expect(saved.every((record) => record.baseUrl === root), "each intent names its Host's API root").toBe(true);
   // Each change's result is recorded, so a restart does not follow it again.
   expect(saved.filter((record) => record.status).map((record) => record.status)).toEqual(["succeeded", "succeeded", "succeeded"]);
   // A change is built only from a Resource with no unfinished change.
