@@ -476,6 +476,21 @@ async function run() {
         await visit(path);
         assert.deepEqual(await page.evaluate(overlappingHeaderControls), [], `${width}px ${path}: header controls do not overlap`);
       }
+      // A select clips its label without wrapping, so every option's text,
+      // including "API version" on pages that belong to no version, must fit
+      // with room to spare. The select uses the page font, not the platform's
+      // control font, so this measures what every reader sees.
+      assert.deepEqual(await page.locator(".version-context select").evaluate((select) => {
+        const style = getComputedStyle(select);
+        const problems = [];
+        if (style.fontFamily !== getComputedStyle(document.body).fontFamily) problems.push(`font ${style.fontFamily}`);
+        const context = document.createElement("canvas").getContext("2d");
+        context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+        if (!context.font.includes(style.fontSize)) problems.push(`canvas font ${context.font}`);
+        const room = select.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+        for (const option of select.options) if (context.measureText(option.text).width > room - 4) problems.push(option.text);
+        return problems;
+      }), [], `${width}px: every API version label fits its selector`);
       if (width >= 768 && width < 1280) {
         // The open ••• menu stays clear of the API version selector.
         await page.locator('.VPNavBarExtra button[aria-label="extra navigation"]').hover();
@@ -487,6 +502,18 @@ async function run() {
         await page.mouse.move(0, 400);
       }
     }
+    // Before the page script runs, or without it, the selector shows the
+    // server-rendered choice.
+    const staticContext = await browser.newContext({ javaScriptEnabled: false });
+    await staticContext.route("**/*", (route) => new URL(route.request().url()).origin === origin
+      ? route.continue() : route.abort());
+    const staticPage = await staticContext.newPage();
+    for (const [path, label] of [["/", "API version"], ["/v1/", "API v1"], ["/v2/", "API v2"]]) {
+      assert.equal((await staticPage.goto(origin + path)).status(), 200, `${path} without scripts: the page loads`);
+      assert.equal(await staticPage.locator(".version-context select").evaluate((select) => select.selectedOptions[0]?.text), label,
+        `${path} without scripts: the API version selector shows ${label}`);
+    }
+    await staticContext.close();
     for (const width of [375, 1024, 1280]) {
       await page.setViewportSize({ width, height: 900 });
       for (const path of ["/", "/v1/", "/v2/", "/spec/host-api/v2/http", "/start/", "/spec/host-api/v1#artifacts-and-operations"]) {

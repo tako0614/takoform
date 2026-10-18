@@ -42,8 +42,10 @@ async function changeVersion(event: Event) {
       aria-label="API version"
       @change="changeVersion"
     >
-      <option value="shared" disabled>API</option>
-      <option v-for="item in options" :key="item.version" :value="item.version">{{ item.label }}</option>
+      <!-- :selected marks the choice in the server-rendered HTML too, which a
+           browser shows before the page script runs or without it. -->
+      <option value="shared" disabled :selected="currentVersion === null">API version</option>
+      <option v-for="item in options" :key="item.version" :value="item.version" :selected="currentVersion === item.version">{{ item.label }}</option>
     </select>
     <span class="vpi-chevron-down version-chevron" aria-hidden="true"></span>
   </label>
@@ -62,11 +64,13 @@ async function changeVersion(event: Event) {
   width: 7rem;
   max-width: calc(100vw - 11.875rem);
   min-height: 44px;
-  padding: 0.35rem 1.8rem 0.35rem 0.5rem;
+  padding: 0.35rem 1.5rem 0.35rem 0.5rem;
   border: 1px solid var(--vp-c-divider);
   border-radius: 6px;
   color: var(--vp-c-text-1);
   background-color: var(--vp-c-bg);
+  /* A select keeps the platform's control font unless told otherwise. */
+  font-family: inherit;
   font-size: 0.75rem;
   line-height: 1.3;
   appearance: none;
