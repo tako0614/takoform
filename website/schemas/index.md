@@ -4,7 +4,7 @@ title: Public schemas
 pageClass: schema-index
 ---
 
-# Public schemas {#公開-schema}
+# <span id="公開-schema"></span>Public schemas {#public-schemas}
 
 This non-normative index is derived from the append-only identity ledger. It
 can track future identities without adding them to the frozen Host API v1
