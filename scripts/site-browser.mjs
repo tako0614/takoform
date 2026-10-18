@@ -652,6 +652,12 @@ async function run() {
         ["Resource UID", "/glossary#uid"], ["generation", "/glossary#generation-observedgeneration"],
         ["Idempotency-Key", "/glossary#idempotency-key"], ["replay window", "/glossary#replay-window"],
       ], "the update step links its terms to the glossary");
+      assert.deepEqual(await page.locator("#home-example-title + p .home-term-link").evaluateAll((links) => links.map((link) => [link.textContent, link.getAttribute("href")])), [
+        ["Space", "/glossary#space"], ["Operation", "/glossary#operation"], ["status and effect", "/glossary#status-effect"],
+      ], "the example's introduction links the request and response terms to the glossary");
+      assert.equal((await page.locator("#home-example-title + p").textContent()).replace(/\s+/gu, " ").trim(),
+        "In this v2 example, a client asks a Host to store a key/value entry. The Form identifies the resource's behavior and spec supplies its configuration. The name must be unique within its Space, a Resource scope on the Host. The Host accepts the request and answers with an Operation whose status and effect report its progress and what is known to have changed so far.",
+        "the example's introduction reads as continuous sentences");
       assert.equal((await page.locator(".home-steps li").nth(3).locator("p").textContent()).replace(/\s+/gu, " ").trim(),
         "Use the Resource UID and the generation you last read, with a new Idempotency-Key for each change. If a response is lost, resend that exact request with its original key within the Host's replay window.",
         "the linked terms read as one sentence");
