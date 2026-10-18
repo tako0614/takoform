@@ -138,7 +138,7 @@ const examples = [
             </template>
             <figcaption>
               <code>spec</code> is the accepted desired value and <code>observed</code> is what the Host last checked;
-              <code>observedGeneration</code> equals <code>generation</code>, so <code>observed</code> reflects the current generation.
+              <code>observedGeneration</code> equals <code>generation</code>, so the Host has confirmed the current generation as realized.
               Illustrative Host API v2 exchanges with other headers, fields and timestamps omitted; the Host and Form use example domains, not live services.
             </figcaption>
           </figure>

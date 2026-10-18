@@ -27,8 +27,8 @@ A Resource has a Host-unique UID, Form URL, Space, name, generation, and state. 
 - `observed`: the latest state the Host has checked; it may lag behind desired state.
 - `output`: values defined by the Form for using the Resource, such as a connection address; it may be empty. It is not a second channel for desired state.
 - `generation`: the accepted desired-state generation. It begins at creation and advances as updates or deletion are accepted.
-- `observedGeneration`: the generation represented by the current observation.
-- `observedAt`: when the Host recorded that observation, not necessarily when a GET request arrived.
+- `observedGeneration`: the latest generation the Host has confirmed as realized, or 0 before any. It can stay behind `generation`, for example while a newer change is unfinished or after it fails; the Host advances it to a newer generation only after confirming that generation.
+- `observedAt`: when the Host last verified `observed` and `output`, or `null` before any verification; not necessarily when a GET request arrived.
 
 An Operation succeeding, a Host observing a generation, and an application being available are not equivalent. Availability requires other evidence explicitly defined by the Form and Host.
 
