@@ -481,6 +481,7 @@ export function renderMirroredDocument(specPath, source, context) {
     "---",
     `# Generated from ${specPath} by scripts/site.mjs. Edit the specification, not this page.`,
     `normative: ${FROZEN_HOST_API_SPEC_DOCUMENTS.includes(specPath)}`,
+    ...FROZEN_HOST_API_SPEC_DOCUMENTS.includes(specPath) ? ["hostApiVersion: v1"] : [],
     `canonicalSource: ${specPath}`,
     `canonicalUrl: ${SOURCE_BROWSE}/${specPath}`,
     "---",
@@ -928,6 +929,19 @@ export function inspectRenderedSitePages(pages, servedPaths = new Set()) {
         problems.push(`${page.path} source notice disagrees with releaseState=${page.releaseState}`);
       }
     }
+    // A frozen Host API v1 document still calls its own lane "current"; its
+    // notice says which API it belongs to. No other page carries that line.
+    const noticeBody = page.html.match(/<aside\b[^>]*class="[^"]*\bmirror-notice\b[^"]*"[^>]*>([\s\S]*?)<\/aside>/u)?.[1] ?? "";
+    const noticeText = readableText(noticeBody);
+    const carriesV1Line = /\bmirror-notice-version\b/u.test(noticeBody) || /\bPart of the Host API v1 documents\b/u.test(noticeText);
+    if (page.hostApiVersion === "v1") {
+      if (!carriesV1Line || !/href="\/v1\/"/u.test(noticeBody) || !/href="\/v2\/"/u.test(noticeBody) ||
+          !/\bPart of the Host API v1 documents: a lane, profile, or identity they call .current. is the one in Host API v1\. Host API v2 is a separate specification and does not change v1 requirements\./u.test(noticeText)) {
+        problems.push(`${page.path} source notice does not place the page in Host API v1`);
+      }
+    } else if (carriesV1Line) {
+      problems.push(`${page.path} source notice places a page outside the Host API v1 documents in them`);
+    }
     if (page.releaseState === "published" && page.authority === "normative") {
       const notice = page.html.match(/<aside\b[^>]*class="[^"]*\bmirror-notice\b[^"]*"[^>]*>([\s\S]*?)<\/aside>/u);
       if (notice === null || !/Normative source \(English original\)/u.test(readableText(notice[1])) ||
@@ -1118,6 +1132,7 @@ export function inspectDist(root, distRoot = SITE_DIST) {
         ? "normative"
         : "non-normative",
       mirror: true,
+      hostApiVersion: FROZEN_HOST_API_SPEC_DOCUMENTS.includes(specPath) ? "v1" : undefined,
     });
   }
   for (const document of V2_SPEC_DOCUMENTS) {

@@ -913,6 +913,48 @@ describe("takoform.com site derivation", () => {
     }
   });
 
+  test("places each frozen v1 document in Host API v1 and no other page there", async () => {
+    const { documentVersion } = await import("../website/.vitepress/versions.mjs");
+    for (const path of MIRRORED_SPEC_DOCUMENTS) {
+      expect(documentVersion(siteRouteForSpecDocument(path)), path).toBe("v1");
+      expect(renderMirroredDocument(path, "# Title\n", context).includes("\nhostApiVersion: v1\n"), path)
+        .toBe(FROZEN_HOST_API_SPEC_DOCUMENTS.includes(path));
+    }
+    expect(FROZEN_HOST_API_SPEC_DOCUMENTS).toContain("spec/versioning.md");
+    expect(FROZEN_HOST_API_SPEC_DOCUMENTS).not.toContain("spec/schemas/README.md");
+    for (const document of V2_SPEC_DOCUMENTS) expect(documentVersion(siteRouteForV2SpecDocument(document.path)), document.path).toBe("v2");
+
+    const html = `<!doctype html><html lang="en" data-document-authority="normative"><head>
+<title>V1 contract</title><meta property="og:title" content="V1 contract">
+<meta property="og:url" content="https://takoform.com/">
+<meta property="og:description" content="V1 contract">
+<meta name="twitter:title" content="V1 contract">
+<meta name="twitter:description" content="V1 contract">
+</head><body><main><h1>V1 contract</h1>
+<aside class="mirror-notice" aria-label="About this page" data-document-authority="normative" data-release-state="published"><p>Normative source (English original)</p>
+<p class="mirror-notice-version">Part of the <a href="/v1/">Host API v1</a> documents: a lane, profile,
+or identity they call “current” is the one in Host API v1.
+<a href="/v2/">Host API v2</a> is a separate specification and does not change v1 requirements.</p></aside>
+</main></body></html>`;
+    const page = { path: "dist/index.html", route: "/", html, lang: "en", authority: "normative", mirror: true, hostApiVersion: "v1" };
+    const unplaced = "dist/index.html source notice does not place the page in Host API v1";
+    expect(inspectRenderedSitePages([page])).not.toContain(unplaced);
+    for (const wrong of [
+      html.replace(/<p class="mirror-notice-version">[\s\S]*?<\/p>/u, ""),
+      html.replace('href="/v1/"', 'href="/v1"'),
+      html.replace('href="/v2/"', 'href="/v2/http"'),
+      html.replace("is the one in Host API v1", "refers to the v1 contract"),
+      html.replace("does not change v1 requirements", "replaces v1"),
+    ]) {
+      expect(inspectRenderedSitePages([{ ...page, html: wrong }])).toContain(unplaced);
+    }
+    const misplaced = "dist/index.html source notice places a page outside the Host API v1 documents in them";
+    expect(inspectRenderedSitePages([{ ...page, hostApiVersion: undefined }])).toContain(misplaced);
+    expect(inspectRenderedSitePages([{ ...page, hostApiVersion: undefined, mirror: false }])).toContain(misplaced);
+    expect(inspectRenderedSitePages([{ ...page, hostApiVersion: undefined, html: html.replace(' class="mirror-notice-version"', "") }]))
+      .toContain(misplaced);
+  });
+
   test("rewrites v2 document links to canonical root routes without changing frozen v1", () => {
     const v2Context = {
       ...context,

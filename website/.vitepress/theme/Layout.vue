@@ -46,6 +46,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", closeMobileNavigatio
         :normative="frontmatter.normative === true"
         :source-language="frontmatter.sourceLanguage"
         :release-state="frontmatter.releaseState"
+        :host-api-version="frontmatter.hostApiVersion"
       />
     </template>
   </Layout>
