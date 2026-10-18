@@ -126,7 +126,7 @@ function inspectOperation(op, action, uid, generation, step) {
 
 /**
  * Probe one caller-owned disposable Form fixture using HTTP-shaped Response objects.
- * `transport` receives {method,url,headers,body}; it owns authentication and network access.
+ * `transport` receives {method,url,headers,body,authenticated,signal}; it owns authentication and network access.
  * A passing baseline never means full Host or Form conformance.
  */
 export async function runHostApiV2({ origin, transport, fixture, maxPolls = 10, timeoutMs = 10000, pollDelayMs = 0, wait } = {}) {
@@ -140,6 +140,14 @@ export async function runHostApiV2({ origin, transport, fixture, maxPolls = 10, 
     "setup", "invalid finite polling bounds");
   const sleep = wait ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
   requireThat(typeof sleep === "function", "setup", "wait must be a function");
+  // Retry-After is seconds before polling, or on a 429 possibly an HTTP date; a 429 without one waits
+  // a second, as the client guide does. The probe waits at most 60 seconds.
+  const retryAfterMs = (response) => {
+    const value = response.headers.get("retry-after") ?? "";
+    const limited = response.status === 429;
+    const ms = Number(value) > 0 ? Number(value) * 1000 : limited ? Date.parse(value) - Date.now() : 0;
+    return ms > 0 ? Math.min(ms, 60000) : limited ? 1000 : 0;
+  };
 
   async function request(step, method, url, { headers = {}, body, statuses = [200] } = {}) {
     const controller = new AbortController();
@@ -167,10 +175,11 @@ export async function runHostApiV2({ origin, transport, fixture, maxPolls = 10, 
     return result;
   }
 
+  const isProblem = (value, status, code) => value?.type === "about:blank" && typeof value.title === "string" &&
+    value.status === status && value.code === code;
   async function error(step, method, url, options, status, code) {
     const { value } = await request(step, method, url, { ...options, statuses: [status] });
-    requireThat(value?.type === "about:blank" && typeof value.title === "string" &&
-      value.status === status && value.code === code, step, `expected Problem ${code}`);
+    requireThat(isProblem(value, status, code), step, `expected Problem ${code}`);
   }
 
   const discovery = (await request("discovery", "GET", `${origin}/.well-known/takoform/v2`)).value;
@@ -231,17 +240,27 @@ export async function runHostApiV2({ origin, transport, fixture, maxPolls = 10, 
     requireThat(response.headers.get("location") === `${base}/operations/${value.id}`, step, "invalid Location");
     if (response.status === 202) requireThat(Number(response.headers.get("retry-after")) > 0,
       step, "202 requires positive Retry-After");
-    return value;
+    return { response, value };
   }
-  async function settle(step, initial, action, uid, generation) {
-    let op = initial;
+  // Read the accepted Operation until it settles. A 429 counts as one read and is followed like a 202.
+  async function settle(step, { response, value: initial }, action, uid, generation) {
+    let op;
     for (let index = 0; index < maxPolls; index++) {
-      if (index > 0 && pollDelayMs) await sleep(pollDelayMs);
-      op = (await request(`${step}-poll`, "GET", `${base}/operations/${initial.id}`)).value;
+      const delay = Math.max(retryAfterMs(response), index > 0 ? pollDelayMs : 0);
+      if (delay) await sleep(delay);
+      let value;
+      ({ response, value } = await request(`${step}-poll`, "GET", `${base}/operations/${initial.id}`,
+        { statuses: [200, 429] }));
+      if (response.status === 429) {
+        requireThat(isProblem(value, 429, "rate_limited"), `${step}-poll`, "expected Problem rate_limited");
+        continue;
+      }
+      op = value;
       inspectOperation(op, action, uid, generation, `${step}-poll`);
       requireThat(op.id === initial.id, `${step}-poll`, "Operation ID changed");
       if (["succeeded", "failed"].includes(op.status)) break;
     }
+    requireThat(response.status !== 429, step, "Operation reads were rate limited until the polling bound");
     requireThat(op.status === "succeeded", step, "Operation did not succeed within polling bound");
     requireThat(Date.parse(op.retainUntil) - Date.parse(op.updatedAt) >=
       discovery.limits.replayWindowSeconds * 1000, step, "terminal retention shorter than replay window");
@@ -249,11 +268,12 @@ export async function runHostApiV2({ origin, transport, fixture, maxPolls = 10, 
   }
 
   const createHeaders = { "Content-Type": "application/json", "Idempotency-Key": key() };
-  const created = await mutation("create", "POST", `${base}/resources`, createHeaders, createBody, "create", undefined, 1);
+  const create = await mutation("create", "POST", `${base}/resources`, createHeaders, createBody, "create", undefined, 1);
+  const created = create.value;
   requireThat(isToken(created.resourceUid), "create", "invalid Resource UID");
-  await settle("create", created, "create", created.resourceUid, 1);
-  const replay = await mutation("create-replay", "POST", `${base}/resources`, createHeaders, createBody,
-    "create", created.resourceUid, 1);
+  await settle("create", create, "create", created.resourceUid, 1);
+  const replay = (await mutation("create-replay", "POST", `${base}/resources`, createHeaders, createBody,
+    "create", created.resourceUid, 1)).value;
   requireThat(replay.id === created.id, "create-replay", "same key created another Operation");
   await error("changed-input", "POST", `${base}/resources`, { headers: createHeaders,
     body: { ...createBody, name: `${fixture.name}-changed` } }, 409, "idempotency_conflict");
@@ -278,17 +298,19 @@ export async function runHostApiV2({ origin, transport, fixture, maxPolls = 10, 
   inspectResource((await request("read-after-stale", "GET", resourceUrl)).value,
     fixture, created.resourceUid, 1, created.id, "read-after-stale");
   const updateHeaders = { ...staleHeaders, "Idempotency-Key": key(), "Takoform-Expected-Generation": "1" };
-  const updated = await mutation("update", "PUT", resourceUrl, updateHeaders, updateBody,
+  const update = await mutation("update", "PUT", resourceUrl, updateHeaders, updateBody,
     "update", created.resourceUid, 2);
-  await settle("update", updated, "update", created.resourceUid, 2);
+  const updated = update.value;
+  await settle("update", update, "update", created.resourceUid, 2);
   requireThat(updated.id !== created.id, "update", "new key reused prior Operation");
   inspectResource((await request("read-after-update", "GET", resourceUrl)).value,
     fixture, created.resourceUid, 2, updated.id, "read-after-update");
 
   const deleteHeaders = { "Idempotency-Key": key(), "Takoform-Expected-Generation": "2" };
-  const deleted = await mutation("delete", "DELETE", resourceUrl, deleteHeaders, undefined,
+  const deletion = await mutation("delete", "DELETE", resourceUrl, deleteHeaders, undefined,
     "delete", created.resourceUid, 3);
-  await settle("delete", deleted, "delete", created.resourceUid, 3);
+  const deleted = deletion.value;
+  await settle("delete", deletion, "delete", created.resourceUid, 3);
   requireThat(deleted.id !== updated.id, "delete", "new key reused prior Operation");
   const gone = await request("read-after-delete", "GET", resourceUrl, { statuses: [404, 410] });
   requireThat(gone.value?.type === "about:blank" && gone.value.status === gone.response.status &&
@@ -296,8 +318,8 @@ export async function runHostApiV2({ origin, transport, fixture, maxPolls = 10, 
   const afterList = (await request("list-after-delete", "GET", `${base}/resources?${listQuery}`)).value;
   requireThat(Array.isArray(afterList?.items) && !afterList.items.some((item) => item.uid === created.resourceUid),
     "list-after-delete", "deleted Resource remains listed");
-  const deleteReplay = await mutation("delete-replay", "DELETE", resourceUrl, deleteHeaders, undefined,
-    "delete", created.resourceUid, 3);
+  const deleteReplay = (await mutation("delete-replay", "DELETE", resourceUrl, deleteHeaders, undefined,
+    "delete", created.resourceUid, 3)).value;
   requireThat(deleteReplay.id === deleted.id, "delete-replay", "same key did not recover deleted Operation");
 
   return {
