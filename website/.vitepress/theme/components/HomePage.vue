@@ -14,7 +14,7 @@ const copy = {
     { name: "Client", text: "Chooses a Host and Form, sends the requested configuration and follows the result. It can be an application, CLI or infrastructure provider." },
   ],
   portability: "A shared API gives clients a consistent management protocol. Before using a resource, check that the Host supports the particular Form and review its available capacity, access requirements and terms.",
-  // A [term, href] pair renders as a link to the term's glossary entry, for a reader who meets it here first.
+  // A [term, href] pair, here and in `steps`, renders as a link to the term's glossary entry, for a reader who meets it here first.
   exampleIntro: [
     "In this v2 example, a client asks a Host to store a key/value entry. The Form identifies the resource's behavior and spec supplies its configuration. The name must be unique within its ",
     ["Space", "/glossary#space"], ", a Resource scope on the Host. The Host accepts the request and answers with an ",
@@ -22,7 +22,7 @@ const copy = {
     " report its progress and what is known to have changed so far.",
   ],
   requestLabel: "Request",
-  responseLabel: "Response (abridged): the accepted Operation, polled at its Location until it finishes",
+  responseLabel: "Response (abridged): the accepted Operation, which the client polls until it finishes",
   resultLabel: "Result (abridged): the Resource, read after the Operation succeeds",
   steps: [
     { name: "Check support", path: "/start/#discover-support", text: "Read the Host's connection and authentication details, then check support for the exact Form URL." },
