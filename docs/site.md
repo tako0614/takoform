@@ -84,7 +84,7 @@ explanation. A reader can reach a Host API v1 document without passing the
 `/v1/` entry, so the source notice on each document in the v1 freeze also
 says that it belongs to Host API v1, that a lane, profile, or identity it
 calls "current" is the one in v1, and that v2 does not change v1
-requirements. Public JSON paths and bytes remain fixed.
+requirements. Each such page's title also names Host API v1. Public JSON paths and bytes remain fixed.
 
 Presentation changes also use the explicit browser lane:
 

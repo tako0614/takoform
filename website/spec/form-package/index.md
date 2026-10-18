@@ -2,6 +2,7 @@
 # Generated from spec/form-package/README.md by scripts/site.mjs. Edit the specification, not this page.
 normative: true
 hostApiVersion: v1
+titleTemplate: "Host API v1 — :title | Takoform"
 canonicalSource: spec/form-package/README.md
 canonicalUrl: https://github.com/tako0614/takoform/blob/main/spec/form-package/README.md
 ---
