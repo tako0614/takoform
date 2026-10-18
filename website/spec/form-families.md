@@ -1,6 +1,7 @@
 ---
 # Generated from spec/form-families.md by scripts/site.mjs. Edit the specification, not this page.
 normative: true
+hostApiVersion: v1
 canonicalSource: spec/form-families.md
 canonicalUrl: https://github.com/tako0614/takoform/blob/main/spec/form-families.md
 ---

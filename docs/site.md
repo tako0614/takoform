@@ -76,7 +76,11 @@ URLs. Headings that kept a Japanese fragment ID until the site became
 English-only now use an English ID and keep the old one as an alias, so
 those links remain valid; IDs dropped in earlier rewrites were not restored.
 Both API versions display their English normative source separately from
-explanation. Public JSON paths and bytes remain fixed.
+explanation. A reader can reach a Host API v1 document without passing the
+`/v1/` entry, so the source notice on each document in the v1 freeze also
+says that it belongs to Host API v1, that a lane, profile, or identity it
+calls "current" is the one in v1, and that v2 does not change v1
+requirements. Public JSON paths and bytes remain fixed.
 
 Presentation changes also use the explicit browser lane:
 

@@ -1,6 +1,7 @@
 ---
 # Generated from spec/binding-contract/README.md by scripts/site.mjs. Edit the specification, not this page.
 normative: true
+hostApiVersion: v1
 canonicalSource: spec/binding-contract/README.md
 canonicalUrl: https://github.com/tako0614/takoform/blob/main/spec/binding-contract/README.md
 ---

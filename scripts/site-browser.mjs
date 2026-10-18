@@ -680,12 +680,14 @@ async function run() {
       const clientBlocks = await page.locator("#loop ~ div[class*='language-js'] pre").evaluateAll((blocks) => blocks.map((pre) => pre.scrollWidth <= pre.clientWidth));
       assert.ok(clientBlocks.length === 3 && clientBlocks.every(Boolean),
         `${colorScheme}: the client loop, its usage, and its update/delete intents fit without horizontal scrolling on desktop`);
-      for (const path of ["/spec/host-api/v1", "/spec/host-api/v2/http"]) {
+      for (const [path, links] of [["/spec/host-api/v1", 3], ["/spec/host-api/v2/http", 1]]) {
         await visit(path);
-        assert.ok(await page.locator(".mirror-notice a").evaluate((link) => {
+        const linkLooks = await page.locator(".mirror-notice a").evaluateAll((links) => links.map((link) => {
           const style = getComputedStyle(link);
           return style.textDecorationLine.includes("underline") && style.color !== getComputedStyle(link.closest("p")).color;
-        }), `${colorScheme} ${path}: the normative source link looks like a link`);
+        }));
+        assert.ok(linkLooks.length === links && linkLooks.every(Boolean),
+          `${colorScheme} ${path}: the source notice's links look like links`);
       }
       await visit("/spec/host-api/v1");
       await page.locator(".VPNavBarSearch button").click();
