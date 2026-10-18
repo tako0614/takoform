@@ -216,9 +216,9 @@ export const wrappedCodeLines = {
 };
 
 // VitePress names each heading permalink from the heading's raw inline source,
-// so a custom `{#id}` (including retained Japanese fragment IDs) leaks into the
-// accessible name. Rename them from the rendered heading text instead, after
-// markdown-it-anchor has inserted the links.
+// so a custom `{#id}` leaks into the accessible name. Rename them from the
+// rendered heading text instead, after markdown-it-anchor has inserted the
+// links.
 function nameHeadingPermalinks(md) {
   md.core.ruler.after("anchor", "takoform_permalink_names", (state) => {
     state.tokens.forEach((token, index) => {

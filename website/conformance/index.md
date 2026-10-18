@@ -2,7 +2,7 @@
 title: V1 conformance checks
 ---
 
-# V1 conformance checks {#conformance-と参照実装}
+# <span id="conformance-と参照実装"></span>V1 conformance checks {#conformance-checks}
 
 This non-normative guide explains the retained v1 verification tools and reports. For v2 requirements,
 read the [v2 HTTP API](/spec/host-api/v2/http#conformance).
@@ -14,7 +14,7 @@ its Form is usable on a particular Host.
 
 The [v1 conformance specification](/spec/conformance) defines the retained requirements. The repository also provides a [caller-driven v2 HTTP probe](/host-api/#check) for a supplied disposable Form.
 
-## What each result covers {#claim-を分けて読む}
+## <span id="claim-を分けて読む"></span>What each result covers {#result-coverage}
 
 | Evidence source | What it checks | What it does not establish |
 | --- | --- | --- |
@@ -25,7 +25,7 @@ The [v1 conformance specification](/spec/conformance) defines the retained requi
 
 Conformance claims belong to their stated subjects. One result does not transfer to another subject or establish production readiness.
 
-## Run local verification {#repository-から実行できる-harness}
+## <span id="repository-から実行できる-harness"></span>Run local verification {#run-local-verification}
 
 First fetch dependencies at the repository root. This step may access the network.
 
@@ -53,7 +53,7 @@ Host operations or verify Host or client implementations.
 
 Neither command performs Host resource operations, activates a Form or starts executable code.
 
-## Reading a report {#report-を読むときの確認点}
+## <span id="report-を読むときの確認点"></span>Reading a report {#reading-a-report}
 
 1. Check the subject of the report, not just `status`.
 2. Identify the verified definition using all four FormRef fields.
@@ -66,7 +66,7 @@ Verification tools and fixtures are on [GitHub](https://github.com/tako0614/tako
 For checks of the OpenTofu implementation, see
 [terraform-provider-takoform](https://github.com/tako0614/terraform-provider-takoform).
 
-## Read next {#次に読む}
+## <span id="次に読む"></span>Read next {#read-next}
 
 - [Retained Host API v1](/spec/host-api/v1) — v1 discovery and operations.
 - [Migration to v2](/spec/host-api/v2/migration) — differences when moving to the separate API.

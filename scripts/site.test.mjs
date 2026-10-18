@@ -319,7 +319,8 @@ describe("takoform.com site derivation", () => {
     for (const path of [...HAND_AUTHORED_PAGE_SOURCES, ...GENERATED_INDEX_PAGES]) {
       const source = derived.get(path)?.toString("utf8") ?? readFileSync(path, "utf8");
       const title = source.match(/^title: (.+)$/mu)?.[1];
-      const heading = source.match(/^# (.+)$/mu)?.[1]?.replace(/\s*\{#[^}]+\}/u, "");
+      // Visible heading text: tags such as a historical-ID alias carry no text.
+      const heading = source.match(/^# (.+)$/mu)?.[1]?.replace(/\s*\{#[^}]+\}/u, "").replace(/<[^>]*>/gu, "");
       expect(title, `${path}: browser title`).toBeDefined();
       expect(japanese.test(title), `${path}: browser title must be English`).toBe(false);
       if (heading) expect(japanese.test(heading), `${path}: page heading must be English`).toBe(false);
@@ -615,10 +616,34 @@ describe("takoform.com site derivation", () => {
     }
   });
 
+  test("headings use English fragment IDs and keep historical ones as aliases", () => {
+    // Before the site became English-only some headings had Japanese IDs.
+    // Links to them still land on the heading through an empty alias at its
+    // start, while search results and copied links use the English ID.
+    const historical = {
+      "website/site.md": { "この-site-について": "about", "この-repository-が扱う範囲": "scope", "参考": "references" },
+      "website/conformance/index.md": {
+        "conformance-と参照実装": "conformance-checks", "claim-を分けて読む": "result-coverage",
+        "repository-から実行できる-harness": "run-local-verification", "report-を読むときの確認点": "reading-a-report", "次に読む": "read-next",
+      },
+      "website/schemas/index.md": { "公開-schema": "public-schemas" },
+    };
+    const files = buildSiteFiles(".");
+    const source = (path) => files.get(path)?.toString("utf8") ?? readFileSync(path, "utf8");
+    for (const path of [...new Set([...HAND_AUTHORED_PAGE_SOURCES, ...GENERATED_INDEX_PAGES])]) {
+      for (const [, id] of source(path).matchAll(/^#{1,6} .*\{#([^}]+)\}$/gmu)) expect(id, `${path} heading ID`).toMatch(/^[a-z0-9]+(?:-[a-z0-9]+)*$/u);
+    }
+    for (const [path, aliases] of Object.entries(historical)) {
+      for (const [old, id] of Object.entries(aliases)) {
+        expect(source(path), `${path} keeps #${old} in #${id}`).toMatch(new RegExp(`^#{1,6} <span id="${old}"></span>[^\\n]*\\{#${id}\\}$`, "mu"));
+      }
+    }
+  });
+
   test("describes non-retired identities as mixed authoring/readable inventory", () => {
     const index = buildSiteFiles(".").get("website/schemas/index.md")?.toString("utf8");
     expect(index).toContain("current-authoring");
-    expect(index).toContain("# Public schemas {#公開-schema}");
+    expect(index).toContain('# <span id="公開-schema"></span>Public schemas {#public-schemas}');
     expect(index).toContain("retained-readable");
     expect(index).toContain("does not say that a profile is valid");
     expect(index).toContain("current-authoring guidance");

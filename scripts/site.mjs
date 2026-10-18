@@ -560,7 +560,7 @@ title: ${title}
 pageClass: schema-index
 ---
 
-# ${title} {#公開-schema}
+# <span id="公開-schema"></span>${title} {#public-schemas}
 
 This non-normative index is derived from the append-only identity ledger. It
 can track future identities without adding them to the frozen Host API v1

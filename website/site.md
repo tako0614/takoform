@@ -2,13 +2,13 @@
 title: About this site
 ---
 
-# About this site {#この-site-について}
+# <span id="この-site-について"></span>About this site {#about}
 
 Takoform is a common API and model for Hosts to provide resources defined by Forms. This site covers the API, Forms and implementation guidance.
 
 Choose the API version in the header. All documentation is in English. Each specification page distinguishes normative text from explanation.
 
-## Scope {#この-repository-が扱う範囲}
+## <span id="この-repository-が扱う範囲"></span>Scope {#scope}
 
 - Host API and common model: resource identity, requests, responses and operations.
 - Form authoring: describing resource-specific inputs, outputs and behavior.
@@ -30,7 +30,7 @@ identify their source and whether the text is normative; the raw English v2
 sources are linked from their specification pages. Previously published
 `/en/` URLs redirect to the corresponding English root pages.
 
-## References {#参考}
+## <span id="参考"></span>References {#references}
 
 - [Schema index](/schemas/)
 - [Source code](https://github.com/tako0614/takoform)

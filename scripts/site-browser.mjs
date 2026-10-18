@@ -495,6 +495,18 @@ async function run() {
       await page.waitForURL((url) => url.pathname === "/v1/" && url.hash === "");
     }
     await page.setViewportSize({ width: 375, height: 900 });
+    // A link to a historical Japanese fragment ID lands on its heading, which
+    // carries the old ID as an alias, as the English ID would.
+    await visit(`/conformance/#${encodeURIComponent("claim-を分けて読む")}`);
+    assert.equal(await page.locator("#result-coverage #claim-を分けて読む").count(), 1, "the historical ID sits in its heading");
+    const landed = await page.locator("#result-coverage").boundingBox();
+    // Load another page first, so the English ID also opens as a fresh load.
+    await visit("/site");
+    await visit("/conformance/#result-coverage");
+    const english = await page.locator("#result-coverage").boundingBox();
+    // The alias sits on the heading's text line, a pixel or two below its top.
+    assert.ok(landed && english && Math.abs(landed.y - english.y) <= 4 && english.y >= 0 && english.y < 300,
+      `a historical fragment ID opens its section like the English ID (${landed?.y}, ${english?.y})`);
     await visit("/start/");
     await page.locator(".VPNavBarSearch button").click();
     assert.equal(await page.locator("#version-search-scope").inputValue(), "v2");

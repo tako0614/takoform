@@ -68,7 +68,9 @@ entry when there is no corresponding page and does not carry unrelated fragments
 All visible site text, controls and accessible names are English. Heading
 permalinks are named from the rendered heading text, so a custom `{#id}` never
 reaches a screen reader. Former `/en/` pages redirect to their canonical root
-URLs. Previously published fragment IDs, including Japanese IDs, remain valid.
+URLs. Headings that kept a Japanese fragment ID until the site became
+English-only now use an English ID and keep the old one as an alias, so
+those links remain valid; IDs dropped in earlier rewrites were not restored.
 Both API versions display their English normative source separately from
 explanation. Public JSON paths and bytes remain fixed.
 
