@@ -83,4 +83,4 @@ A Resource scope within a Host. Naming a Space does not grant permission to use 
 
 ## v1-only terms {#v1-terms}
 
-FormRef, Form Package, Snapshot, revision, and `schemaDigest` belong to the frozen v1 contract. They are not synonyms for a v2 Form URL or Resource generation. See the [frozen v1 specification](/spec/host-api/v1).
+FormRef, Form Package, Snapshot, a Resource's `revision` (the counter behind its v1 ETag), and `schemaDigest` belong to the frozen v1 contract. They are not synonyms for a v2 Form URL or Resource generation; an Offering's `revision` is a separate v2 field. See the [frozen v1 specification](/spec/host-api/v1).

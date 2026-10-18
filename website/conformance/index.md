@@ -12,7 +12,7 @@ A report describes whether the named data or implementation satisfies the
 requirements under test. A valid package, for example, does not establish that
 its Form is usable on a particular Host.
 
-The [v1 conformance specification](/spec/conformance) defines the retained requirements. The [Takoform repository](https://github.com/tako0614/takoform) also provides a [caller-driven v2 HTTP probe](/host-api/#check) for a supplied disposable Form.
+The [v1 conformance specification](/spec/conformance) defines the retained requirements. The [Takoform repository](https://github.com/tako0614/takoform) also provides a [v2 HTTP probe](/host-api/#check) that you run against your own Host with a disposable Resource of a Form it supports for create, read, update and delete.
 
 ## <span id="claim-を分けて読む"></span>What each result covers {#result-coverage}
 
@@ -20,7 +20,7 @@ The [v1 conformance specification](/spec/conformance) defines the retained requi
 | --- | --- | --- |
 | `form-package verify` | One v1 Form Package's index, declared files, FormRef and digests | Host support, publication, or lifecycle behavior |
 | `generic-conformance verify` | Caller-supplied package, Interface, Binding and Snapshot artifacts; reference closure, order-independent compilation, and failure behavior | Host lifecycle requests, fencing, support, activation, runtime code, or publisher family semantics |
-| v2 HTTP baseline probe | A caller-selected disposable Form through an injected transport, for the probe's implemented checks | Complete Host or Form conformance, production operation, or a reusable SDK |
+| v2 HTTP baseline probe | A disposable Resource of a caller-selected Form, through an injected transport, for the probe's implemented checks | Complete Host or Form conformance, production operation, or a reusable SDK |
 | Host, client, or publisher report | Only the exact implementation or workflow named in its evidence | Claims about a different Host, client, Form, publisher, or release |
 
 Conformance claims belong to their stated subjects. One result does not transfer to another subject or establish production readiness.
