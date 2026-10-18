@@ -138,13 +138,13 @@ JSON
 
 If the response is lost, run only this `curl` command again, within the Host's replay window (Discovery's `replayWindowSeconds`). The same key and body return the original Operation. A new key would be a new create, not a replay: if the first create was accepted, the Host rejects it with `409 name_conflict` because the name is taken; otherwise it may be accepted as a separate change. Neither answer is the original request's Operation.
 
-The response body is the Operation, and its `Location` header is the Operation's URL. `202` means the Operation has not finished yet, and its `Retry-After` header says how many seconds to wait before reading it again; `200` means it has already settled. Read the Operation until its `status` is `succeeded` or `failed`, then read the Resource by the Operation's `resourceUid`:
+The response body is the Operation; read it at `$BASE_URL/operations/` followed by its `id`, the URL its `Location` header also gives. `202` means the Operation has not finished yet, and its `Retry-After` header says how many seconds to wait before reading it again; `200` means it has already settled. Read the Operation until its `status` is `succeeded` or `failed`, then read the Resource by the Operation's `resourceUid`:
 
 ```sh
-OPERATION_URL='replace-with-the-Location-header'
+OPERATION_ID='replace-with-the-Operation-id'
 RESOURCE_UID='replace-with-the-resourceUid'
 
-curl --fail-with-body "$OPERATION_URL" \
+curl --fail-with-body "$BASE_URL/operations/$OPERATION_ID" \
   -H "Authorization: Bearer $TOKEN"
 
 curl --fail-with-body "$BASE_URL/resources/$RESOURCE_UID" \

@@ -31,7 +31,7 @@ An Idempotency-Key is not reusable merely because a request body happens to matc
 
 | Outcome | Client action |
 | --- | --- |
-| `202 Accepted` | Wait `Retry-After`, then GET the `Location` or Operation ID. Follow that Operation to a terminal state and reread the Resource. Do not create another mutation. |
+| `202 Accepted` | Wait `Retry-After`, then GET `{baseUrl}/operations/{id}` with the body's `id`. `Location` names the same URL; if it ever differs, send no credentials to it. Follow that Operation to a terminal state and reread the Resource. Do not create another mutation. |
 | Lost response, still within replay window | If the same stable [principal](/glossary#principal) remains authorized, resend the stored method, path/query, body, and key unchanged. Do not alter the body or create a new key. The Host returns the original Operation's current state; it may be `202` while work is unfinished or `200` once settled. |
 | Operation is `reconciling` / `effect: unknown` | Retain the UID and Operation ID as unresolved and continue checking the Operation. Do not send another mutation to that UID until the Host resolves the original backend identity. GET is not a substitute for recovery work. |
 | `409 generation_conflict` | The request was not accepted and has no Operation. GET the current Resource and decide what change is still intended. If continuing, create a new intent with the current generation and a new key. |
@@ -68,15 +68,20 @@ const delay = (response, seconds) => {
 // Send one recorded intent and follow it to its result.
 // `http(method, path, headers, body)` sends one request to the API
 // root with your Host's authentication; `save` stores the intent
-// durably. The intent holds method, path, headers, body, key,
-// firstSentAt, and replayWindowMs.
-async function applyChange(http, save, intent) {
+// durably. The intent holds baseUrl (the Host's v2 API root),
+// method, path, headers, body, key, firstSentAt, replayWindowMs,
+// and, once saved here, attempted. Rather than wait past `until`
+// for an answer it can act on, it returns pending; resume it later.
+async function applyChange(http, save, intent,
+  until = Date.now() + 10 * 60_000) {
+  // A saved intent may already have reached the Host.
+  let uncertain = intent.attempted === true;
+  intent = { ...intent, attempted: true };
   await save(intent);
   const deadline = intent.firstSentAt + intent.replayWindowMs;
   if (Date.now() >= deadline) return { result: "unknown", intent };
   let response;
   let value;
-  let uncertain = false;
   for (let attempt = 0; ; attempt++) {
     response = undefined;
     value = undefined;
@@ -98,6 +103,9 @@ async function applyChange(http, save, intent) {
     if (Date.now() + wait >= deadline) {
       return { result: "unknown", intent };
     }
+    if (Date.now() + wait >= until) {
+      return { result: "pending", intent }; // Resume it later.
+    }
     await sleep(wait);
   }
   if (!response.ok) {
@@ -108,7 +116,7 @@ async function applyChange(http, save, intent) {
       const named = { ...intent, operationId: value.operationId };
       await save(named);
       const outcome = await followOperation(http,
-        named.operationId);
+        named.operationId, undefined, undefined, until);
       await save({ ...named, status: outcome.result });
       return outcome;
     }
@@ -132,7 +140,7 @@ async function applyChange(http, save, intent) {
     location: response.headers.get("location") };
   await save(accepted);
   const outcome = await followOperation(http, value.id, value,
-    response);
+    response, until);
   await save({ ...accepted, status: outcome.result });
   return outcome;
 }
@@ -170,10 +178,10 @@ async function followOperation(http, id, operation, response,
 ```
 
 - `save` runs before the first send, again with the Operation ID, Resource UID, accepted generation, `retainUntil`, and `Location`, and once more with the refusal's code or the Operation's result: the records listed in [Record intent before sending](#intent).
-- A request that throws, a `5xx`, a redirect, or an answer that is not the API's JSON leaves acceptance uncertain, so the same request is resent with the same key; a `429` is resent after its `Retry-After`, given in seconds or as a date. Every resend stops before `firstSentAt + replayWindowMs`; after that the result is `unknown`, so you [gather evidence](#unknown) instead of starting a new intent.
+- A request that throws, a `5xx`, a redirect, or an answer that is not the API's JSON leaves acceptance uncertain, so the same request is resent with the same key; a `429` is resent after its `Retry-After`, given in seconds or as a date. Every resend stops before `firstSentAt + replayWindowMs`; after that the result is `unknown`, so you [gather evidence](#unknown) instead of starting a new intent. A replay window can last a day, so rather than wait past ten minutes for an answer it can act on, `applyChange` returns `pending`, and you [resume](#resume) the intent later.
 - `private_inputs_unverifiable`, which a Host answers when it has lost the material to compare a replay's [private inputs](/spec/host-api/v2/http#private-inputs) (a Host retention failure), means an earlier send of this change was accepted: the loop saves and follows the Operation the Problem names, or returns `unknown` when it names none. `401`, `403`, `404`, or `410` after an uncertain send proves nothing either way and also returns `unknown`, as [When authentication changes](#auth-change) explains.
 - Any other `409` was not accepted, even when its Problem names another Operation, as a `resource_busy` Problem may. For `generation_conflict`, read the Resource and, if you still want the change, record a new intent with the current generation and a new key. For `resource_busy`, another change was unfinished when the Host answered, so yours was not accepted. Wait for that change to end: poll the Operation the Problem names, or reread the Resource until its `phase` is `idle` or `error`. That Operation is not this intent; if it is one of your saved intents, resume that one. Otherwise you cannot replenish its private inputs, and a `403`, `404`, `410`, or redirect while reading it does not make this change unknown: reread the Resource instead. Then decide as for `generation_conflict`.
-- `followOperation` honors `Retry-After` without sleeping past its bound, repeats lost or unreadable reads, returns `waiting_input` so you can replenish private inputs on the same Operation, returns `unknown` when the Operation can no longer be read (see [When the outcome stays unknown](#unknown) and [When authentication changes](#auth-change)), and returns `pending` with the ID after ten minutes so you can resume later. A `failed` result still returns the Resource, so you can see `phase: error`.
+- `followOperation` honors `Retry-After` without sleeping past its bound, repeats lost or unreadable reads, returns `waiting_input` so you can replenish private inputs on the same Operation, returns `unknown` when the Operation can no longer be read (see [When the outcome stays unknown](#unknown) and [When authentication changes](#auth-change)), and returns `pending` with the ID after ten minutes, or once `applyChange`'s own bound is reached, so you can resume later. A `failed` result still returns the Resource, so you can see `phase: error`.
 
 Read the Host's [Discovery](/spec/host-api/v2/http#discovery) first, without credentials, and stop if it is invalid instead of repairing it: requests built from a repaired `baseUrl` would carry your credentials to an address the Host never advertised. Then build `http` from its `baseUrl` and your authentication, and record each intent before calling `applyChange`. This example assumes a Host that declares Bearer authentication and no Offerings; add `offering` to the body when the Host advertises them.
 
@@ -251,6 +259,7 @@ const result = await applyChange(http, save, {
     spec: { key: "greeting", value: "hello" },
   },
   key: crypto.randomUUID(),
+  baseUrl: discovery.baseUrl,
   firstSentAt: Date.now(),
   replayWindowMs: discovery.limits.replayWindowSeconds * 1000,
 });
@@ -260,7 +269,7 @@ Update and delete name the Resource by UID and carry the generation you read. Bu
 
 <a id="resume"></a>
 
-After a restart, resume only intents without a final answer instead of building them again, which would create a new key. Follow a saved Operation that has no recorded `succeeded` or `failed` result with `followOperation`, and record the result it returns; resend an intent that has neither an Operation nor a recorded refusal with `applyChange`, which still stops at the replay window and then returns `unknown`. Never resend an intent the Host refused. An intent is finished once the Host has refused it or you have recorded its Operation as `succeeded` or `failed`. An unfinished Operation stays readable until it ends; a finished one stays readable at least until its current `retainUntil`, which the Host extends when it ends.
+After a restart or a `pending` result, resume only intents without a final answer instead of building them again, which would create a new key. Send each through the Host it was recorded for: read Discovery again from the origin of its `baseUrl` and build `http` from the `baseUrl` advertised now. A `pending` result with an `intent` resumes with `applyChange`, and one with an `id` with `followOperation`. A resumed intent may already have reached the Host, so a `401`, `403`, `404`, or `410` leaves it unresolved rather than refused. Follow a saved Operation that has no recorded `succeeded` or `failed` result with `followOperation`, and record the result it returns; resend an intent that has neither an Operation nor a recorded refusal with `applyChange`, which still stops at the replay window and then returns `unknown`. Never resend an intent the Host refused. An intent is finished once the Host has refused it or you have recorded its Operation as `succeeded` or `failed`. An unfinished Operation stays readable until it ends; a finished one stays readable at least until its current `retainUntil`, which the Host extends when it ends.
 
 ```js
 const change = (resource, method, body) => {
@@ -277,6 +286,7 @@ const change = (resource, method, body) => {
     },
     body,
     key: crypto.randomUUID(),
+    baseUrl: discovery.baseUrl,
     firstSentAt: Date.now(),
     replayWindowMs: discovery.limits.replayWindowSeconds * 1000,
   };
