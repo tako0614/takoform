@@ -14,7 +14,13 @@ const copy = {
     { name: "Client", text: "Chooses a Host and Form, sends the requested configuration and follows the result. It can be an application, CLI or infrastructure provider." },
   ],
   portability: "A shared API gives clients a consistent management protocol. Before using a resource, check that the Host supports the particular Form and review its available capacity, access requirements and terms.",
-  exampleIntro: "In this v2 example, a client asks a Host to store a key/value entry. The Form identifies the resource's behavior; spec supplies its configuration.",
+  // A [term, href] pair renders as a link to the term's glossary entry, for a reader who meets it here first.
+  exampleIntro: [
+    "In this v2 example, a client asks a Host to store a key/value entry. The Form identifies the resource's behavior and spec supplies its configuration. The name must be unique within its ",
+    ["Space", "/glossary#space"], ", a Resource scope on the Host. The Host accepts the request and answers with an ",
+    ["Operation", "/glossary#operation"], " whose ", ["status and effect", "/glossary#status-effect"],
+    " report its progress and what is known to have changed so far.",
+  ],
   requestLabel: "Request",
   responseLabel: "Response (abridged): the accepted Operation, polled at its Location until it finishes",
   resultLabel: "Result (abridged): the Resource, read after the Operation succeeds",
@@ -22,7 +28,6 @@ const copy = {
     { name: "Check support", path: "/start/#discover-support", text: "Read the Host's connection and authentication details, then check support for the exact Form URL." },
     { name: "Submit the change", path: "/start/#create-read", text: "POST the resource request. The Host returns an Operation so the client can follow the accepted change." },
     { name: "Read the result", path: "/start/#create-read", text: "Follow the Operation to completion, then read the Resource. Neither acceptance nor a succeeded Operation alone means the resource is ready to use." },
-    // A [term, href] pair renders as a link to the term's glossary entry, for a reader who meets it here first.
     { name: "Update or delete", path: "/start/#update", text: [
       "Use the ", ["Resource UID", "/glossary#uid"], " and the ", ["generation", "/glossary#generation-observedgeneration"],
       " you last read, with a new ", ["Idempotency-Key", "/glossary#idempotency-key"],
@@ -119,7 +124,12 @@ const examples = [
 
       <section class="home-section" aria-labelledby="home-example-title">
         <h2 id="home-example-title" lang="en">A resource, from request to result</h2>
-        <p>{{ copy.exampleIntro }}</p>
+        <p>
+          <template v-for="(part, index) in copy.exampleIntro" :key="index">
+            <a v-if="Array.isArray(part)" class="home-term-link" :href="part[1]">{{ part[0] }}</a>
+            <template v-else>{{ part }}</template>
+          </template>
+        </p>
         <div class="home-example">
           <figure>
             <template v-for="example in examples" :key="example.label">
