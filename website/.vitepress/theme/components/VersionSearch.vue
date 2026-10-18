@@ -169,7 +169,7 @@ onBeforeUnmount(() => {
   <dialog ref="dialog" class="VersionSearch" :aria-label="text.search"
     @close="finish" @click="onBackdropClick" @keydown="onKeydown">
     <div class="VersionSearch-head">
-      <input ref="input" v-model="query" type="search" role="combobox" :aria-label="text.search"
+      <input ref="input" v-model="query" name="q" type="search" role="combobox" :aria-label="text.search"
         :placeholder="text.placeholder" autocomplete="off" spellcheck="false"
         aria-autocomplete="list" :aria-expanded="results.length > 0"
         :aria-controls="results.length ? 'version-search-results' : undefined"

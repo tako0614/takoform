@@ -579,7 +579,8 @@ The served bytes are identical to the source in
 the append-only [identity ledger](${SOURCE_BROWSE}/release/public-schema-identities.json).
 
 An \`$id\` is a logical specification identity. The publishing operator decides
-which hostnames route to this site; this repository does not choose them.
+which hostnames route to this site; the Takoform repository does not choose
+them.
 
 Schemas validate structural requirements, not the whole contract. Semantic
 constraints are defined by [conformance](/spec/conformance) and each contract.

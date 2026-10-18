@@ -17,9 +17,9 @@ Host API v2 is a shared HTTP contract for creating, reading, updating, and delet
 
 The overview, HTTP API, and Form requirements are normative. Examples and migration guidance explain the specification.
 
-The Go SDK in this repository implements v1. For v2, this repository provides
-the contract, design guides and a limited caller-driven
-[HTTP baseline probe](/host-api/#check).
+The Go libraries in the [Takoform repository](https://github.com/tako0614/takoform)
+implement v1. For v2, the repository provides the contract, design guides and a
+limited caller-driven [HTTP baseline probe](/host-api/#check).
 Check the API version and exact Form support of the Host and client you use.
 
 ## Suggested reading order {#reading}

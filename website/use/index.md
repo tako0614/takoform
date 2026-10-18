@@ -11,7 +11,7 @@ next:
 
 # Using v2 {#use}
 
-To manage a Resource through Host API v2 you need three things: a Host operator who gives you the Host's origin, credentials, and a Space you may use; the exact Form URL for the kind of Resource you want; and a client that speaks v2 with that Host's authentication. Takoform itself runs no Host. Check them in that order.
+To manage a Resource through Host API v2 you need three things: a Host operator who gives you the Host's origin, credentials, and a Space you may use; the exact Form URL for the kind of Resource you want; and a client that speaks v2 with that Host's authentication. Check them in that order. Takoform itself runs no Host, and no API call lists the Forms a Host supports: [Discovery](/glossary#discovery) carries only connection metadata, `support` answers only about a URL you already have, and takoform.com keeps no Form catalog. Get the Form URL from the Form's author, who publishes its specification there, or ask the Host operator which exact Form URLs the Host implements.
 
 ## 1. Check what the Host offers {#host}
 
@@ -24,7 +24,7 @@ Read the Host's Discovery document at `/.well-known/takoform/v2` for its API roo
 | Trying the API or scripting a few calls | Any HTTP client. Every request in [Getting started](/start/) is a complete HTTP exchange you can adapt. |
 | Building a client, CLI, or integration | [Implementing a client](/client/), for intent records, replay deadlines, and conflicts. |
 | Terraform or OpenTofu | A Provider that explicitly supports Host API v2 and your Form. The [Takoform Provider's version table](https://github.com/tako0614/terraform-provider-takoform/blob/main/README.md#choose-a-provider-version) states which Host API each of its versions speaks. |
-| A Host that speaks v1 | The [v1 documentation](/v1/); the Go Host client in this repository speaks v1. |
+| A Host that speaks v1 | The [v1 documentation](/v1/); the Takoform Go client, [`hostclient`](https://pkg.go.dev/github.com/tako0614/takoform/hostclient), speaks v1. |
 
 ## 3. Track every change to its result {#client-responsibilities}
 

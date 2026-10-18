@@ -11,7 +11,7 @@ next:
 
 # Implementing Host API v2 {#host-api}
 
-This is design guidance, not a reference Host implementation. A v2 Host manages more than HTTP responses: it owns accepted work, Resource generations, and the state verified at its execution target. This guide focuses on the durability boundary, then shows how to check a running Host against the repository's baseline probe. The [HTTP API](/spec/host-api/v2/http) is the source for exact paths, statuses, and retention requirements.
+This is design guidance, not a reference Host implementation. A v2 Host manages more than HTTP responses: it owns accepted work, Resource generations, and the state verified at its execution target. This guide focuses on the durability boundary, then shows how to check a running Host against the Takoform repository's baseline probe. The [HTTP API](/spec/host-api/v2/http) is the source for exact paths, statuses, and retention requirements.
 
 ## Make acceptance one durable fact {#acceptance}
 
@@ -51,7 +51,7 @@ Once these obligations are met, the choice of worker, database, and queue arrang
 
 ## Check your Host against the baseline {#check}
 
-[Section 10 of the HTTP API](/spec/host-api/v2/http#conformance) lists what a Host must demonstrate through its public API. This repository includes a [baseline probe](https://github.com/tako0614/takoform/tree/main/conformance/v2) that drives one mandatory lifecycle against your Host and stops at the first response that breaks the contract. It is a development check, not a certification: a pass covers the steps it ran, for one Form, through the transport you supply. For each Section 10 obligation:
+[Section 10 of the HTTP API](/spec/host-api/v2/http#conformance) lists what a Host must demonstrate through its public API. The Takoform repository includes a [baseline probe](https://github.com/tako0614/takoform/tree/main/conformance/v2) that drives one mandatory lifecycle against your Host and stops at the first response that breaks the contract. It is a development check, not a certification: a pass covers the steps it ran, for one Form, through the transport you supply. For each Section 10 obligation:
 
 1. **Exact Form support**
    - Probe checks: `support` for your Form and for a Form URL you do not implement, and that Create with that URL returns `422 unsupported_form`.
