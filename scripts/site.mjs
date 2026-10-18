@@ -479,14 +479,18 @@ export function renderMirroredDocument(specPath, source, context) {
   const body = rewriteMarkdownLinks(specPath, source, context);
   const frozenV1 = FROZEN_HOST_API_SPEC_DOCUMENTS.includes(specPath);
   // A tab, bookmark or search result shows only the title, so a v1 document
-  // whose heading does not already say so names its API there too.
-  const namesV1 = /\bHost API v1\b/u.test(source.match(/^# (.+)$/mu)?.[1] ?? "");
+  // names its API there too. The HTTP API page's heading already does; like
+  // v2's "Host API v2 — HTTP API", it names its subject instead, which also
+  // keeps it apart from the /v1/ entry page.
+  const titleTemplate = !frozenV1 ? undefined
+    : specPath === "spec/host-api/v1.md" ? ":title — HTTP API | Takoform"
+    : "Host API v1 — :title | Takoform";
   return [
     "---",
     `# Generated from ${specPath} by scripts/site.mjs. Edit the specification, not this page.`,
     `normative: ${frozenV1}`,
     ...frozenV1 ? ["hostApiVersion: v1"] : [],
-    ...frozenV1 && !namesV1 ? ['titleTemplate: "Host API v1 — :title | Takoform"'] : [],
+    ...titleTemplate === undefined ? [] : [`titleTemplate: "${titleTemplate}"`],
     `canonicalSource: ${specPath}`,
     `canonicalUrl: ${SOURCE_BROWSE}/${specPath}`,
     "---",
@@ -1035,6 +1039,17 @@ export function inspectRenderedSitePages(pages, servedPaths = new Set()) {
   }
   for (const route of byRoute.keys()) {
     if (route !== "/404" && !reachable.has(route)) problems.push(`${route} is not reachable from the home page`);
+  }
+
+  // A tab, bookmark or search result shows only the title, so no two pages
+  // share one.
+  const pagesByTitle = new Map();
+  for (const page of pages) {
+    const title = attributeText(page.html.match(/<title(?:\s[^>]*)?>([\s\S]*?)<\/title>/u)?.[1] ?? "");
+    if (title) pagesByTitle.set(title, [...(pagesByTitle.get(title) ?? []), page.path]);
+  }
+  for (const [title, paths] of pagesByTitle) {
+    if (paths.length > 1) problems.push(`${paths.join(", ")} share the title: ${title}`);
   }
 
   // Each page describes itself. A page that shares its description, such as

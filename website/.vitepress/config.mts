@@ -237,7 +237,7 @@ const contractSidebar = [
   {
     text: "API specification",
     items: [
-      { text: "Wire contract", link: "/spec/host-api/v1" },
+      { text: "HTTP API", link: "/spec/host-api/v1" },
     ],
   },
   {

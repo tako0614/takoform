@@ -852,6 +852,8 @@ describe("takoform.com site derivation", () => {
     }
     expect(inspectRenderedSitePages([pages[0], { ...pages[1], html: guide.replaceAll('content="Guide."', 'content="Contract."') }]))
       .toContain("dist/index.html, dist/guide.html share the description: Contract.");
+    expect(inspectRenderedSitePages([pages[0], { ...pages[1], html: guide.replace("<title>Guide</title>", "<title>Takoform</title>") }]))
+      .toContain("dist/index.html, dist/guide.html share the title: Takoform");
     // VitePress escapes og and twitter content; the same text escaped differently is still one description.
     pages[1] = { ...pages[1], html: guide.replaceAll('content="Guide."', 'content="R&amp;D guide."').replace('name="description" content="R&amp;D guide."', 'name="description" content="R&#38;D guide."') };
     expect(inspectRenderedSitePages(pages).filter((problem) => problem.includes("description"))).toEqual([]);
@@ -977,7 +979,8 @@ describe("takoform.com site derivation", () => {
     }
     expect(renderMirroredDocument("spec/versioning.md", "# Versioning\n", context))
       .toContain('\ntitleTemplate: "Host API v1 — :title | Takoform"\n');
-    expect(renderMirroredDocument("spec/host-api/v1.md", "# Host API v1\n", context)).not.toContain("titleTemplate");
+    expect(renderMirroredDocument("spec/host-api/v1.md", "# Host API v1\n", context))
+      .toContain('\ntitleTemplate: ":title — HTTP API | Takoform"\n');
     expect(renderMirroredDocument("spec/schemas/README.md", "# Schemas\n", context)).not.toContain("titleTemplate");
     expect(FROZEN_HOST_API_SPEC_DOCUMENTS).toContain("spec/versioning.md");
     expect(FROZEN_HOST_API_SPEC_DOCUMENTS).not.toContain("spec/schemas/README.md");
