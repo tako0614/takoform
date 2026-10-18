@@ -563,15 +563,26 @@ pageClass: schema-index
 
 # <span id="公開-schema"></span>${title} {#public-schemas}
 
-This non-normative index is derived from the append-only identity ledger. It
-can track future identities without adding them to the frozen Host API v1
-closure or redefining their contracts.
+This non-normative index lists every JSON Schema identity in the append-only
+identity ledger. Each one listed today is either part of [Host API v1](/v1/), as
+named by its [freeze record](${SOURCE_BROWSE}/spec/host-api/v1.freeze.json), or
+a profile from before it; a label such as \`v1alpha5\` in an \`$id\` does not
+say which. Host API v2 publishes no JSON Schemas: its
+[HTTP API specification](/spec/host-api/v2/http) defines each request and
+response, and each Form's specification defines its \`spec\`, \`observed\`, and
+\`output\`. A Form's specification may also include JSON Schemas; they are
+[supplemental unless that Form makes one normative](/spec/host-api/v2/forms#what-a-form-specification-must-define),
+and none is a [prerequisite for publishing it](/spec/host-api/v2/#compatibility).
+The index can track future identities without adding them to the frozen Host
+API v1 closure or redefining their contracts.
 
-The non-retired/active identities below are a mixed inventory of
-current-authoring and retained-readable profiles. Non-retired status only says
-that the identity has not been retired; it does not say that a profile is valid
-or preferred for new authoring. Read the owning source contract and its
-current-authoring guidance before selecting an identity.
+The non-retired/active identities below are a mixed inventory. Some are
+current-authoring profiles, for writing new Host API v1 documents; others are
+retained-readable profiles, kept so that existing documents can still be read.
+Non-retired status only says that the identity has not been retired; it
+does not say that a profile is valid or preferred for new authoring. Read the
+owning source contract and its current-authoring guidance before selecting an
+identity.
 
 Normative schemas are served at the paths named by their \`$id\` values.
 The served bytes are identical to the source in

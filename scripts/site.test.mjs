@@ -686,6 +686,16 @@ describe("takoform.com site derivation", () => {
     expect(buildSiteFiles(".").has("website/en/schemas/index.md")).toBe(false);
   });
 
+  test("places every listed identity in Host API v1 or before it, and none in v2", () => {
+    const index = buildSiteFiles(".").get("website/schemas/index.md")?.toString("utf8") ?? "";
+    expect(index).toContain("Host API v2 publishes no JSON Schemas");
+    // The intro says every identity is part of Host API v1 or from before it, and
+    // that v2 has none: revise schemaIndexPage before adding any other identity.
+    const v1 = new Set(JSON.parse(readFileSync("spec/host-api/v1.freeze.json", "utf8")).schemas.closureIds);
+    expect(schemas.identities.filter((entry) => !v1.has(entry.id) && entry.status !== "verify-only" &&
+      !/\/v1(?:alpha|beta)\d+\//u.test(entry.id)).map((entry) => entry.id)).toEqual([]);
+  });
+
   test("lists each schema identity once with its served path, digest and source", () => {
     const index = buildSiteFiles(".").get("website/schemas/index.md")?.toString("utf8") ?? "";
     // Break hints add no text: removing them restores each value exactly.
