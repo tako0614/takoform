@@ -273,14 +273,15 @@ test("the client guide's loop follows changes against an asynchronous Host", asy
   };
   const sent = [];
   const fetch = async (url, init) => {
-    sent.push({ method: init.method, url, headers: init.headers, signal: init.signal });
-    return asynchronous({ method: init.method, url, headers: init.headers,
+    // Like fetch, a request without a method is a GET.
+    const method = init.method ?? "GET";
+    sent.push({ method, url, headers: init.headers, signal: init.signal });
+    return asynchronous({ method, url, headers: init.headers,
       body: init.body === undefined ? undefined : JSON.parse(init.body) });
   };
   const saved = [];
   const save = async (record) => { saved.push(record); };
   const waits = [];
-  const discovery = { baseUrl: root, limits: { replayWindowSeconds: 3600 } };
   // The stub yields like a timer would and turns runaway retrying into a failure.
   const program = loop.replace(sleepLine, `const sleep = async (ms) => {
     waits.push(ms);
@@ -288,11 +289,12 @@ test("the client guide's loop follows changes against an asynchronous Host", asy
     await new Promise((done) => setImmediate(done));
   };`)
     + usage.replace('"https://forms.publisher.example/key-value-entry/1.0.0"', JSON.stringify(form))
+      .replace('readDiscovery("https://host.example")', 'readDiscovery("https://host.example.test")')
     + "\nreturn { applyChange, followOperation, http, result };";
   const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
   const { applyChange, followOperation, http, result } = await new AsyncFunction(
-    "fetch", "save", "discovery", "token", "crypto", "waits", program)(
-    fetch, save, discovery, "guide-token", globalThis.crypto, waits);
+    "fetch", "save", "token", "crypto", "waits", program)(
+    fetch, save, "guide-token", globalThis.crypto, waits);
 
   // Accepted with 202, followed through Retry-After to success, then the Resource is read.
   expect(result.result).toBe("succeeded");
@@ -301,7 +303,10 @@ test("the client guide's loop follows changes against an asynchronous Host", asy
   expect(saved[1]).toMatchObject({ operationId: result.operation.id, resourceUid: result.resource.uid,
     generation: 1, retainUntil: result.operation.retainUntil,
     location: `${root}/operations/${result.operation.id}` });
-  expect(sent.every(({ headers, signal }) => headers.Authorization === "Bearer guide-token" && signal)).toBe(true);
+  // Discovery is read first and without credentials; every API request carries them.
+  expect(sent[0].url).toBe("https://host.example.test/.well-known/takoform/v2");
+  expect(sent[0].headers).toBeUndefined();
+  expect(sent.slice(1).every(({ headers, signal }) => headers.Authorization === "Bearer guide-token" && signal)).toBe(true);
   const uid = result.resource.uid;
 
   const update = (key, value, generation, extra = {}) => ({ method: "PUT", path: `/resources/${uid}`,
@@ -536,6 +541,44 @@ test("the client guide's loop follows changes against an asynchronous Host", asy
   expect(resumed.operation.id).toBe(replayed.operation.id);
 });
 
+test("the client guide stops on invalid Discovery instead of repairing it", async () => {
+  const guide = readFileSync(new URL("../../website/client/index.md", import.meta.url), "utf8");
+  const usage = [...guide.slice(guide.indexOf("{#loop}")).matchAll(/```js\n([\s\S]*?)```/gu)][1][1];
+  const reader = `${usage.slice(0, usage.indexOf("const discovery = "))}\nreturn readDiscovery;`;
+  const valid = await (await makeHost()({ method: "GET", url: "https://host.example.test/.well-known/takoform/v2" })).json();
+  const readWith = (document, status = 200) => new Function("fetch", reader)(async (url, init) => {
+    // One credential-free GET of the well-known path that follows no redirect.
+    expect(url).toBe("https://host.example.test/.well-known/takoform/v2");
+    expect(init).toEqual({ credentials: "omit", redirect: "manual", signal: expect.any(AbortSignal) });
+    return json(document, status);
+  });
+  expect((await readWith(valid)("https://host.example.test")).baseUrl).toBe(root);
+  // The specification allows the origin root as baseUrl.
+  expect((await readWith({ ...valid, baseUrl: "https://host.example.test" })("https://host.example.test")).baseUrl)
+    .toBe("https://host.example.test");
+  for (const broken of [
+    { ...valid, api: "forms.takoform.com/v1" },
+    { ...valid, baseUrl: `${root}/` },
+    { ...valid, baseUrl: `${root}?` },
+    { ...valid, baseUrl: `${root}#v2` },
+    // An array that would serialize to a valid origin root.
+    { ...valid, baseUrl: ["https://host.example.test"] },
+    { ...valid, baseUrl: "https://user@host.example.test/custom/api" },
+    { ...valid, baseUrl: "https://other.example.test/custom/api" },
+    { ...valid, baseUrl: "http://host.example.test/custom/api" },
+    { ...valid, baseUrl: "HTTPS://host.example.test/custom/api" },
+    { ...valid, documentation: "http://host.example.test/docs" },
+    { ...valid, authentication: { ...valid.authentication, schemes: [] } },
+    { ...valid, capabilities: { offerings: false, previews: false } },
+    { ...valid, limits: { ...valid.limits, replayWindowSeconds: 0 } },
+  ]) {
+    await expect(readWith(broken)("https://host.example.test"), JSON.stringify(broken))
+      .rejects.toThrow("Invalid Discovery at https://host.example.test; stop.");
+  }
+  // Discovery answers 200; a redirect, which fetch returns unfollowed, is invalid.
+  await expect(readWith(valid, 302)("https://host.example.test")).rejects.toThrow("Invalid Discovery");
+});
+
 test("the client guide's update and delete intents follow the Resource's generation", async () => {
   const guide = readFileSync(new URL("../../website/client/index.md", import.meta.url), "utf8");
   const [loop, usage, changes] = [...guide.slice(guide.indexOf("{#loop}")).matchAll(/```js\n([\s\S]*?)```/gu)]
@@ -543,20 +586,21 @@ test("the client guide's update and delete intents follow the Resource's generat
   const host = makeHost();
   const sent = [];
   const fetch = async (url, init) => {
-    sent.push({ method: init.method, headers: init.headers, body: init.body });
-    return host({ method: init.method, url, headers: init.headers,
+    const method = init.method ?? "GET";
+    sent.push({ method, headers: init.headers, body: init.body });
+    return host({ method, url, headers: init.headers,
       body: init.body === undefined ? undefined : JSON.parse(init.body) });
   };
   const program = loop.replace("const sleep = (ms) => new Promise((done) => setTimeout(done, ms));",
     "const sleep = async () => { await new Promise((done) => setImmediate(done)); };")
     + usage.replace('"https://forms.publisher.example/key-value-entry/1.0.0"', JSON.stringify(form))
+      .replace('readDiscovery("https://host.example")', 'readDiscovery("https://host.example.test")')
     + changes + "\nreturn { result, updated, deleted, change };";
   const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
   const saved = [];
   const { result, updated, deleted, change } = await new AsyncFunction(
-    "fetch", "save", "discovery", "token", "crypto", program)(
-    fetch, async (record) => { saved.push(record); }, { baseUrl: root, limits: { replayWindowSeconds: 3600 } },
-    "guide-token", globalThis.crypto);
+    "fetch", "save", "token", "crypto", program)(
+    fetch, async (record) => { saved.push(record); }, "guide-token", globalThis.crypto);
 
   expect(result.resource.generation).toBe(1);
   expect(updated.result).toBe("succeeded");
