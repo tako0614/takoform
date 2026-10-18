@@ -685,6 +685,9 @@ async function run() {
         ["Resource UID", "/glossary#uid"], ["generation", "/glossary#generation-observedgeneration"],
         ["Idempotency-Key", "/glossary#idempotency-key"], ["replay window", "/glossary#replay-window"],
       ], "the update step links its terms to the glossary");
+      assert.deepEqual(await page.locator(".home-reading-list .home-term-link").evaluateAll((links) => links.map((link) => [link.textContent, link.getAttribute("href")])), [
+        ["baseline probe", "/host-api/#check"],
+      ], "the Host guide's entry links the probe it mentions");
       assert.deepEqual(await page.locator("#home-example-title + p .home-term-link").evaluateAll((links) => links.map((link) => [link.textContent, link.getAttribute("href")])), [
         ["Space", "/glossary#space"], ["Operation", "/glossary#operation"], ["status and effect", "/glossary#status-effect"],
       ], "the example's introduction links the request and response terms to the glossary");
