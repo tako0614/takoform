@@ -148,6 +148,12 @@
 }
 .home-step-link:hover { text-decoration-thickness: 2px; }
 .home-steps p { color: var(--home-muted); }
+.home-term-link {
+  color: var(--vp-c-brand-1);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+.home-term-link:hover { text-decoration-thickness: 2px; }
 .home-reading-link {
   display: inline-flex;
   align-items: center;

@@ -51,7 +51,7 @@ Operation results or connection information whose meaning is defined by the Form
 
 ## generation / observedGeneration {#generation-observedgeneration}
 
-`generation` identifies an accepted desired-state version. `observedGeneration` identifies the version reflected by `observed`.
+`generation` identifies an accepted desired-state version. `observedGeneration` identifies the version reflected by `observed`. An update or delete sends the `generation` it last read in `Takoform-Expected-Generation`. If the Resource has since moved on, a new request gets `409 generation_conflict` and is not accepted; resending an accepted request unchanged with its original Idempotency-Key still returns its original Operation. See [Update](/spec/host-api/v2/http#update).
 
 ## phase {#phase}
 
