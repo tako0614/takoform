@@ -49,8 +49,9 @@ it includes the site checks and build alongside the Go and record checks.
 `check:site` compares derived pages and schema bytes. `build:site` checks the
 rendered pages for metadata, language, document authority, duplicate IDs,
 ARIA references, English accessible names without `{#id}` or backtick syntax,
-internal routes and fragments, and reachability from the overview. A
-successful build does not establish publication or Host support.
+headings in the main content that deepen one level at a time, internal routes
+and fragments, and reachability from the overview. A successful build does
+not establish publication or Host support.
 
 The v2 walkthrough uses fictional HTTP exchanges. Its examples are not run
 against a real Host. The Go documentation tests validate the retained v1
@@ -67,7 +68,10 @@ entry when there is no corresponding page and does not carry unrelated fragments
 
 All visible site text, controls and accessible names are English. Heading
 permalinks are named from the rendered heading text, so a custom `{#id}` never
-reaches a screen reader. Former `/en/` pages redirect to their canonical root
+reaches a screen reader. A heading that skips a level, such as an h3 straight
+after the page title, renders one level below the heading it falls under, so
+the outline deepens one level at a time; the Markdown and the heading's ID do
+not change. Former `/en/` pages redirect to their canonical root
 URLs. Headings that kept a Japanese fragment ID until the site became
 English-only now use an English ID and keep the old one as an alias, so
 those links remain valid; IDs dropped in earlier rewrites were not restored.

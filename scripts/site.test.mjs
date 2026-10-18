@@ -200,6 +200,41 @@ describe("takoform.com site derivation", () => {
     expect(codeLineLayout("  a \\").keep).toEqual([[0, 3]]);
   });
 
+  test("headings nest one level at a time and siblings stay siblings", async () => {
+    const { nestedHeadingLevels } = await import("../website/.vitepress/heading-levels.mjs");
+    expect(nestedHeadingLevels([1, 3, 4, 2, 4])).toEqual([1, 2, 3, 2, 3]);
+    expect(nestedHeadingLevels([1, 3, 4, 3])).toEqual([1, 2, 3, 2]);
+    expect(nestedHeadingLevels([1, 2, 3, 3, 2, 3])).toEqual([1, 2, 3, 3, 2, 3]);
+    expect(nestedHeadingLevels([2, 4, 1, 3])).toEqual([2, 3, 1, 2]);
+    expect(nestedHeadingLevels([])).toEqual([]);
+  });
+
+  test("renders heading tokens at their nested level and leaves code alone", async () => {
+    const { nestHeadings } = await import("../website/.vitepress/heading-levels.mjs");
+    let rule;
+    nestHeadings({ core: { ruler: { after: (_after, _name, fn) => { rule = fn; } } } });
+    const heading = (tag, text) => [
+      { type: "heading_open", tag, nesting: 1 },
+      { type: "inline", tag: "", nesting: 0, content: text },
+      { type: "heading_close", tag, nesting: -1 },
+    ];
+    const state = {
+      tokens: [
+        ...heading("h1", "A"),
+        { type: "fence", tag: "code", nesting: 0, content: "### not a heading\n" },
+        ...heading("h3", "B"),
+        { type: "blockquote_open", tag: "blockquote", nesting: 1 },
+        ...heading("h4", "C"),
+        { type: "blockquote_close", tag: "blockquote", nesting: -1 },
+        ...heading("h3", "D"),
+      ],
+    };
+    rule(state);
+    expect(state.tokens.map((token) => token.tag)).toEqual([
+      "h1", "", "h1", "code", "h2", "", "h2", "blockquote", "h3", "", "h3", "blockquote", "h2", "", "h2",
+    ]);
+  });
+
   test("splits a hand-written code block into segments that keep its text", async () => {
     const { codeLineSegments } = await import("../website/.vitepress/code-wrap.mjs");
     const source = 'POST /apis/forms.takoform.com/v2/resources HTTP/1.1\n\n{\n  "form": "https://forms.publisher.example/key-value-entry/1.0.0"\n}';
@@ -747,6 +782,8 @@ describe("takoform.com site derivation", () => {
       .toContain("dist/guide.html must render English visible body text");
     expect(inspectRenderedSitePages([pages[0], { ...pages[1], html: guide.replace('id="guide"', 'id="過去の見出し"') }]))
       .toEqual([]);
+    expect(inspectRenderedSitePages([{ ...pages[0], html: home.replace("</main>", "<h2>Model</h2><h3>Detail</h3><h2>Next</h2><h4>Deep</h4></main>") }, pages[1]]))
+      .toEqual(["dist/index.html skips from h2 to h4 at Deep"]);
     expect(inspectRenderedSitePages([pages[0], { ...pages[1], html: guide.replace("</body>", '<aside aria-label="広告"></aside></body>') }]))
       .toContain("dist/guide.html must render English accessible names without Markdown syntax: 広告");
     expect(inspectRenderedSitePages([pages[0], { ...pages[1], html: guide.replace("</body>", "<aside aria-label='&#x5E83;&#21578;'></aside></body>") }]))

@@ -3,6 +3,7 @@ import path from "node:path";
 import { defineConfig, type DefaultTheme } from "vitepress";
 import { fileURLToPath } from "node:url";
 import { codeLineLayout, HEX_RUN } from "./code-wrap.mjs";
+import { nestHeadings } from "./heading-levels.mjs";
 
 const configDirectory = path.dirname(fileURLToPath(import.meta.url));
 
@@ -356,6 +357,7 @@ export default defineConfig({
     },
     codeTransformers: [wrappedCodeLines],
     config(md) {
+      nestHeadings(md);
       nameHeadingPermalinks(md);
       breakTableCode(md);
     },
