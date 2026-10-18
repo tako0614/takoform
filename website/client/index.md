@@ -152,9 +152,50 @@ async function followOperation(http, id, operation, response,
 - Any other `409` was not accepted, even when its Problem names another Operation, as `resource_busy` does. For `generation_conflict`, read the Resource and, if you still want the change, record a new intent with the current generation and a new key.
 - `followOperation` honors `Retry-After` without sleeping past its bound, repeats lost or unreadable reads, returns `waiting_input` so you can replenish private inputs on the same Operation, returns `unknown` when the Operation can no longer be read, and returns `pending` with the ID after ten minutes so you can resume later. A `failed` result still returns the Resource, so you can see `phase: error`.
 
-Supply `http` from the Host's Discovery response and authentication, and record each intent before calling `applyChange`. This example assumes a Host that declares Bearer authentication and no Offerings; add `offering` to the body when the Host advertises them.
+Read the Host's [Discovery](/spec/host-api/v2/http#discovery) first, without credentials, and stop if it is invalid instead of repairing it: requests built from a repaired `baseUrl` would carry your credentials to an address the Host never advertised. Then build `http` from its `baseUrl` and your authentication, and record each intent before calling `applyChange`. This example assumes a Host that declares Bearer authentication and no Offerings; add `offering` to the body when the Host advertises them.
 
 ```js
+async function readDiscovery(origin) {
+  // Discovery needs no credentials and answers 200, not a redirect.
+  const url = `${origin}/.well-known/takoform/v2`;
+  const response = await fetch(url, {
+    credentials: "omit",
+    redirect: "manual",
+    signal: AbortSignal.timeout(30_000),
+  });
+  const found = response.status === 200
+    ? await response.json().catch(() => undefined) : undefined;
+  const isHttps = (value) => typeof value === "string"
+    && URL.canParse(value) && new URL(value).protocol === "https:";
+  const base = isHttps(found?.baseUrl)
+    ? new URL(found.baseUrl) : undefined;
+  const schemes = found?.authentication?.schemes;
+  const valid = [
+    found?.api === "forms.takoform.com/v2",
+    // HTTPS on this origin, exactly as the URL serializes it (an
+    // origin root gains a "/"), without userinfo, query, fragment,
+    // or trailing slash.
+    base?.origin === origin && !base.username && !base.password
+      && [found.baseUrl, `${found.baseUrl}/`].includes(base.href)
+      && !/[?#]|\/$/u.test(found.baseUrl),
+    isHttps(found?.documentation)
+      && isHttps(found?.authentication?.documentation),
+    Array.isArray(schemes) && schemes.length > 0
+      && schemes.every((name) => typeof name === "string" && name),
+    ["offerings", "previews", "privateInputs"].every((name) =>
+      typeof found?.capabilities?.[name] === "boolean"),
+    ["maxRequestBytes", "maxPageSize", "replayWindowSeconds"]
+      .every((name) => Number.isSafeInteger(found?.limits?.[name])
+        && found.limits[name] > 0),
+  ].every(Boolean);
+  if (!valid) {
+    throw new Error(`Invalid Discovery at ${origin}; stop.`);
+  }
+  return found;
+}
+
+const discovery = await readDiscovery("https://host.example");
+
 const http = (method, path, headers = {}, body) =>
   fetch(`${discovery.baseUrl}${path}`, {
     method,
