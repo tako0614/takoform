@@ -23,7 +23,10 @@ function httpsUrl(value, step) {
   requireThat(typeof value === "string" && /^[\x21-\x7e]+$/u.test(value) &&
     !/[\\?#]/u.test(value), step, "expected a serialized ASCII HTTPS URL without query or fragment");
   const authority = /^https:\/\/([^/]+)(?:\/.*)?$/iu.exec(value)?.[1];
-  requireThat(authority && !authority.includes("@"), step, "userinfo is forbidden");
+  // Reject a non-https or authority-less URL before the userinfo check, so an
+  // http:// origin is not reported as a userinfo problem.
+  requireThat(authority !== undefined, step, "expected an absolute HTTPS URL");
+  requireThat(!authority.includes("@"), step, "userinfo is forbidden");
   let url;
   try { url = new URL(value); } catch { requireThat(false, step, "expected an absolute HTTPS URL"); }
   requireThat(url.protocol === "https:" && !url.username && !url.password && !url.search && !url.hash,

@@ -174,6 +174,19 @@ test("refuses absent or non-disposable fixture without sending a request", async
 });
 
 test.each([
+  ["http://localhost:8443", "expected an absolute HTTPS URL"],
+  ["localhost:8443", "expected an absolute HTTPS URL"],
+  ["https:///", "expected an absolute HTTPS URL"],
+  ["https://user@host.example.test", "userinfo is forbidden"],
+  ["https://host.example.test/", "expected a bare HTTPS origin"],
+])("names what is wrong with origin %s before sending a request", async (origin, reason) => {
+  let sent = 0;
+  const transport = async () => { sent++; return problem(500, "internal_error"); };
+  await expect(runHostApiV2({ origin, transport, fixture })).rejects.toThrow(`v2 HTTP baseline setup.origin: ${reason}`);
+  expect(sent).toBe(0);
+});
+
+test.each([
   `${root}?`, `${root}#`, "https://@host.example.test/custom/api",
   "https://:@host.example.test/custom/api", "https://host.example.test/custom\\api",
   "https://host.example.test/custom/api\n",
