@@ -127,7 +127,8 @@ describe("version-separated documentation navigation", () => {
     expect(versionContext).not.toContain("固定済み");
     expect(versionContext).toContain('label: "API v1"');
     expect(versionContext).toContain('label: "API v2"');
-    expect(versionContext).toContain('<option value="shared" disabled>API</option>');
+    expect(versionContext).toContain('<option value="shared" disabled :selected="currentVersion === null">API version</option>');
+    expect(versionContext).toContain(':selected="currentVersion === item.version"');
     expect(versionContext).toContain("min-height: 44px");
     expect(versionContext).toContain(":focus-visible");
     expect(versionContext).toContain(":disabled=\"changingVersion\"");
