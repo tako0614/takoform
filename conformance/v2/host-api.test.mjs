@@ -26,7 +26,7 @@ function problem(status, code) {
   return json({ type: "about:blank", title: code, status, code }, status);
 }
 
-function makeHost(defect) {
+function makeHost(defect, base = root) {
   const resources = new Map();
   const operations = new Map();
   const keys = new Map();
@@ -45,14 +45,14 @@ function makeHost(defect) {
   return async ({ method, url, headers = {}, body }) => {
     const u = new URL(url);
     if (u.pathname === "/.well-known/takoform/v2") return json({
-      api: "forms.takoform.com/v2", baseUrl: root,
+      api: "forms.takoform.com/v2", baseUrl: base,
       documentation: "https://host.example.test/docs?section=v2#overview",
       authentication: { schemes: ["None"], documentation: "https://host.example.test/auth#none" },
       capabilities: { offerings: defect === "paged-offering", previews: false, privateInputs: false },
       limits: { maxRequestBytes: 10000, maxPageSize: 100, replayWindowSeconds: 3600 },
     });
-    if (!url.startsWith(`${root}/`)) return problem(404, "not_found");
-    const path = url.slice(root.length).split("?")[0];
+    if (!url.startsWith(`${base}/`)) return problem(404, "not_found");
+    const path = url.slice(base.length).split("?")[0];
     if (method === "GET" && path === "/support") {
       const supported = u.searchParams.get("form") === form;
       return json({ form: u.searchParams.get("form"), supported,
@@ -83,7 +83,7 @@ function makeHost(defect) {
         if (old.signature !== signature) return problem(409, "idempotency_conflict");
         const op = operations.get(old.id);
         return json(defect === "replay-new-operation" ? { ...op, id: "op-rogue" } : op, 200,
-          { Location: `${root}/operations/${defect === "replay-new-operation" ? "op-rogue" : op.id}` });
+          { Location: `${base}/operations/${defect === "replay-new-operation" ? "op-rogue" : op.id}` });
       }
       if (method === "POST" && path === "/resources") {
         if (body.form !== form) return problem(422, "unsupported_form");
@@ -97,20 +97,20 @@ function makeHost(defect) {
         keys.set(key, { signature, id: op.id });
         return json(defect === "missing-resource-uid" ? { ...op, resourceUid: undefined } : op,
           defect === "terminal-as-202" ? 202 : 200,
-          { Location: `${root}/operations/${op.id}`, ...(defect === "terminal-as-202" && { "Retry-After": "1" }) });
+          { Location: `${base}/operations/${op.id}`, ...(defect === "terminal-as-202" && { "Retry-After": "1" }) });
       }
       const resource = resources.get(path.slice(11));
       if (!resource) return problem(404, "not_found");
       if (Number(headers["Takoform-Expected-Generation"]) !== resource.generation) {
         return defect === "accept-stale-generation" ? json(operation("update", resource), 200,
-          { Location: `${root}/operations/${resource.lastOperation}` }) : problem(409, "generation_conflict");
+          { Location: `${base}/operations/${resource.lastOperation}` }) : problem(409, "generation_conflict");
       }
       resource.generation++;
       if (method === "PUT") resource.spec = body.spec;
       const op = operation(method === "PUT" ? "update" : "delete", resource);
       keys.set(key, { signature, id: op.id });
       if (method === "DELETE") resources.delete(resource.uid);
-      return json(op, 200, { Location: `${root}/operations/${op.id}` });
+      return json(op, 200, { Location: `${base}/operations/${op.id}` });
     }
     return problem(404, "not_found");
   };
@@ -216,6 +216,13 @@ test.each([
   expect(sent).toBe(0);
 });
 
+
+test("passes a Host whose baseUrl is the origin root", async () => {
+  // The specification allows https://host.example as a baseUrl.
+  const result = await runHostApiV2({ origin: "https://host.example.test",
+    transport: makeHost(undefined, "https://host.example.test"), fixture });
+  expect(result.baseline).toBe("passed");
+});
 
 test("accepts an origin-root Form URL with or without its final slash", async () => {
   for (const rootForm of ["https://forms.example.test", "https://forms.example.test/"]) {
