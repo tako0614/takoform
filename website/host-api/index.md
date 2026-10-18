@@ -15,16 +15,18 @@ This is design guidance, not a reference Host implementation. A v2 Host manages 
 
 ## Make acceptance one durable fact {#acceptance}
 
-Before dispatching a mutation, validate authentication and authorization, Form support, input, references, and generation conditions. On acceptance, persist the Resource and Operation together with the Idempotency-Key mapping as one durable acceptance. Concurrent requests must converge on one winner; do not allow partial records such as an Operation without its Resource, or a backend change without its replay record.
+After authentication and authorization, look up the Idempotency-Key before any acceptance check. The same key with the same request, private inputs included, returns the original Operation's current state; a different request under that key gets `409 idempotency_conflict` without effects; and if the Host has lost the comparison material for its private inputs, which is a Host retention failure, it answers `409 private_inputs_unverifiable` naming the original `operationId`.
+
+Only for a new key, check Form support, the Offering selection, input, references, that the name is free (create) or the generation is current (update, delete), and that no other mutation of the UID is unfinished, then accept. Run first, those checks would refuse a lost-response replay of an accepted change with `409 generation_conflict`, `409 name_conflict`, or `409 resource_busy`. On acceptance, persist the Resource and Operation together with the Idempotency-Key mapping as one durable acceptance. Concurrent requests must converge on one winner; do not allow partial records such as an Operation without its Resource, or a backend change without its replay record.
 
 At minimum, retain enough information to identify and resume the original request after restart:
 
-- Stable principal, API version, Idempotency-Key, and the method, path/query, generation condition, and JSON value needed to match a retry.
+- Stable principal, API version, Idempotency-Key, and the method, path/query, generation condition, and JSON value needed to match a retry, plus private-input comparison material kept apart from the values themselves.
 - Host-issued Resource UID, Form URL, Space, name, accepted desired `spec`, and current generation.
 - Operation ID, action, generation, status/effect, acceptance time, and retention deadline.
 - Execution state bound to that Operation and the backend identity needed to verify its outcome.
 
-The key scope is `(Host, API version, stable principal, key)`. The same key and request return the original Operation; reusing the key for a different request is rejected as a conflict. Do not discard unfinished Operations or unknown effects at an ordinary retention deadline. The common contract does not choose a database, queue, ORM, or encryption scheme. It requires durability and concurrency control that preserve these associations.
+The key scope is `(Host, API version, stable principal, key)`. Do not discard unfinished Operations or unknown effects at an ordinary retention deadline. The common contract does not choose a database, queue, ORM, or encryption scheme. It requires durability and concurrency control that preserve these associations.
 
 ## Bind execution to the original Operation {#dispatch}
 
@@ -168,7 +170,7 @@ Section 10 names three restart points, the last three rows of [Recover at each r
 2. Start a new Host process.
 3. Resend the identical request with the same key, within the replay window.
 4. Check that the replay returns the same Operation ID and Resource UID, and that restart and replay produced no second backend object, no object under another name, and no repeated effect.
-5. While the result is still unknown, the Operation stays `reconciling`, and a different mutation on that UID, sent with a new key and the current generation, gets `409 resource_busy`. Have the test build hold its readback so you can observe this state.
+5. Until the Operation is terminal, a different mutation on that UID, sent with a new key and the current generation, gets `409 resource_busy`. After the restart at the after-acceptance point, the Operation is `queued` with `effect: none` until the Host dispatches it; at the two later points it is `reconciling` with `effect: unknown` until the Host has verified the backend result. Have the test build hold dispatch and readback after the restart so you can observe these states.
 6. Follow the Operation to its end and compare the Resource's `observed` with the backend. After a delete, the Resource returns `404` or `410`, it is gone from the list, and the backend object is gone.
 7. Restart once more after the terminal status is recorded and confirm the Operation is unchanged.
 
