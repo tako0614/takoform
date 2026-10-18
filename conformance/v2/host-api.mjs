@@ -31,6 +31,11 @@ function httpsUrl(value, step) {
   try { url = new URL(value); } catch { requireThat(false, step, "expected an absolute HTTPS URL"); }
   requireThat(url.protocol === "https:" && !url.username && !url.password && !url.search && !url.hash,
     step, "expected an ASCII HTTPS URL without userinfo, query, or fragment");
+  // ASCII-serialized: the URL is written exactly as it serializes (lowercase
+  // scheme and host, no default port, no dot segments). An origin root may
+  // omit the final "/", as a baseUrl such as https://host.example does.
+  requireThat(url.href === value || url.href === `${value}/`, step,
+    "expected the URL exactly as it serializes (lowercase scheme and host, no default port or dot segments)");
   return url;
 }
 
