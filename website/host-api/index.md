@@ -53,7 +53,7 @@ Once these obligations are met, the choice of worker, database, and queue arrang
 
 ## Check your Host against the baseline {#check}
 
-[Section 10 of the HTTP API](/spec/host-api/v2/http#conformance) lists what a Host must demonstrate through its public API. The Takoform repository includes a [baseline probe](https://github.com/tako0614/takoform/tree/main/conformance/v2) that drives one mandatory lifecycle against your Host and stops at the first response that breaks the contract. It is a development check, not a certification: a pass covers the steps it ran, for one Form, through the transport you supply. For each Section 10 obligation:
+[Section 10 of the HTTP API](/spec/host-api/v2/http#conformance) lists what a Host must demonstrate through its public API. The Takoform repository includes a [baseline probe](https://github.com/tako0614/takoform/tree/main/conformance/v2) that drives one mandatory lifecycle against your Host and stops at the first response it does not accept. It is a development check, not a certification: a pass covers the steps it ran, for one Form, through the transport you supply. For each Section 10 obligation:
 
 1. **Exact Form support**
    - Probe checks: `support` for your Form and for a Form URL you do not implement, and that Create with that URL returns `422 unsupported_form`.
@@ -135,7 +135,9 @@ If your Host's certificate is self-signed or issued by a local certificate autho
 NODE_EXTRA_CA_CERTS=<path to the PEM certificate> HOST_TOKEN=<credential> node check-host.mjs
 ```
 
-If your Form needs private inputs, add `privateInputs` (a map of strings) to the fixture; the probe sends them only when Discovery and `support` both declare the capability. `pollDelayMs`, `maxPolls` (10 by default, up to 100), and `timeoutMs` (per request, 10000 by default) bound the run. Raise them for a Host whose Operations take longer than a few seconds.
+If your Form needs private inputs, add `privateInputs` (a map of strings) to the fixture; the probe sends them only when Discovery and `support` both declare the capability.
+
+After its create, update, and delete, the probe reads each Operation until it finishes, for at most `maxPolls` reads (10 by default, up to 100). Before each read it waits for the `Retry-After` on the response before that read, such as the `202` or a `429` `rate_limited` Problem that refused a read, and 1 second after a `429` without one. It never waits more than 60 seconds, so a Host that asks for longer is read sooner, and between reads it waits at least `pollDelayMs` (in milliseconds, 0 by default). A refused read counts toward `maxPolls`, and the run fails if reads are still refused at that bound. A `429` on any other request ends the run, so give the test credential a rate limit that allows the probe's back-to-back requests. With the defaults the probe sleeps at most ten minutes for each change, and `timeoutMs` (10000 by default) limits each request. Raise `pollDelayMs` or `maxPolls` for a Host whose Operations take longer than a few seconds.
 
 ### Read the result {#check-result}
 

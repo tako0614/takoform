@@ -224,6 +224,128 @@ test("passes a Host whose baseUrl is the origin root", async () => {
   expect(result.baseline).toBe("passed");
 });
 
+// Answers each new mutation with 202 and paces reads of its Operation on a simulated clock: it asks
+// for the `retryAfter` waits in turn and answers a read that comes sooner with 429 rate_limited and the
+// seconds still left. `readHint` sets the Retry-After of a read that is still running, given the
+// seconds the Host wants; the HTTP API requires the header only on 202, so it may return undefined.
+function pacedHost(retryAfter, { readHint = (seconds) => seconds } = {}) {
+  const host = makeHost();
+  const pending = new Map();
+  const waits = [];
+  let clock = 0;
+  const wait = async (ms) => { waits.push(ms); clock += ms; };
+  const transport = async (request) => {
+    const response = await host(request);
+    const location = response.headers.get("location");
+    if (request.method !== "GET" && response.status === 200) {
+      const operation = await response.json();
+      if (pending.has(operation.id)) return json(operation, 200, { Location: location });
+      pending.set(operation.id, { paces: retryAfter.slice(1), readyAt: clock + retryAfter[0] * 1000 });
+      return json({ ...operation, status: "running", effect: "unknown" }, 202,
+        { Location: location, "Retry-After": retryAfter[0] });
+    }
+    const state = pending.get(request.url.split("/operations/")[1]);
+    if (request.method !== "GET" || state?.readyAt === undefined) return response;
+    if (clock < state.readyAt) {
+      return json({ type: "about:blank", title: "Too Many Requests", status: 429, code: "rate_limited" }, 429,
+        { "Retry-After": String(Math.ceil((state.readyAt - clock) / 1000)) });
+    }
+    if (!state.paces.length) {
+      state.readyAt = undefined;
+      return response;
+    }
+    const next = state.paces.shift();
+    state.readyAt = clock + next * 1000;
+    const hint = readHint(next);
+    return json({ ...(await response.json()), status: "running", effect: "unknown" }, 200,
+      hint === undefined ? {} : { "Retry-After": hint });
+  };
+  return { transport, wait, waits };
+}
+
+test.each([
+  ["each Retry-After before reading", ["2", "3"], {}, {}, [2000, 3000]],
+  ["pollDelayMs as the shortest wait between reads", ["2", "3"], {}, { pollDelayMs: 4000 }, [2000, 4000]],
+  ["a Retry-After longer than pollDelayMs", ["2", "3"], {}, { pollDelayMs: 1000 }, [2000, 3000]],
+  ["a 429 when a running read carries no Retry-After", ["2", "3"], { readHint: () => undefined }, {}, [2000, 3000]],
+  ["pollDelayMs after a 429 with a shorter Retry-After", ["1", "4"], { readHint: () => undefined },
+    { pollDelayMs: 2500 }, [1000, 2500, 2500]],
+  // Only a 429 may give a date; on a read the probe ignores it, reads at once, and follows the 429.
+  ["an HTTP date only on a 429", ["2", "3"], { readHint: () => new Date(Date.now() + 30000).toUTCString() }, {},
+    [2000, 3000]],
+  ["at most 60 seconds, then the 429 that follows", ["120"], {}, {}, [60000, 60000]],
+])("follows a paced Host: %s", async (_, retryAfter, hostOptions, options, perChange) => {
+  const { transport, wait, waits } = pacedHost(retryAfter, hostOptions);
+  const result = await runHostApiV2({ origin: "https://host.example.test", transport, fixture, wait, ...options });
+  expect(result.baseline).toBe("passed");
+  // Create, update, and delete each wait the same way.
+  expect(waits).toEqual([...perChange, ...perChange, ...perChange]);
+});
+
+test("reads an Operation answered with 200 without waiting", async () => {
+  const waits = [];
+  const result = await runHostApiV2({ origin: "https://host.example.test", transport: makeHost(), fixture,
+    pollDelayMs: 4000, wait: async (ms) => { waits.push(ms); } });
+  expect(result.baseline).toBe("passed");
+  expect(waits).toEqual([]);
+});
+
+test("counts a 429 as one of maxPolls reads", async () => {
+  const { transport, wait } = pacedHost(["120"]);
+  await expect(runHostApiV2({ origin: "https://host.example.test", transport, fixture, wait, maxPolls: 1 }))
+    .rejects.toThrow("v2 HTTP baseline create: Operation reads were rate limited until the polling bound");
+});
+
+test("names rate limiting when refusals follow a served read to the bound", async () => {
+  // The first read is served while the Operation still runs; the next is refused.
+  const { transport, wait } = pacedHost(["1", "120"], { readHint: () => undefined });
+  await expect(runHostApiV2({ origin: "https://host.example.test", transport, fixture, wait, maxPolls: 2 }))
+    .rejects.toThrow("v2 HTTP baseline create: Operation reads were rate limited until the polling bound");
+});
+
+// Answers Operation reads with 429 and this Problem `code` and Retry-After: the first read, or every read.
+function limited(code, retryAfter, { always = false } = {}) {
+  const host = makeHost();
+  let refused = false;
+  return async (request) => {
+    if ((refused && !always) || !request.url.includes("/operations/")) return host(request);
+    refused = true;
+    return json({ type: "about:blank", title: "Too Many Requests", status: 429, code }, 429,
+      retryAfter === undefined ? {} : { "Retry-After": retryAfter });
+  };
+}
+
+test("fails a Host that never serves an Operation read", async () => {
+  // Its mutations answer 200 with a succeeded Operation, which the reads must still confirm.
+  await expect(runHostApiV2({ origin: "https://host.example.test", transport: limited("rate_limited", "1",
+    { always: true }), fixture, wait: async () => {} }))
+    .rejects.toThrow("v2 HTTP baseline create: Operation reads were rate limited until the polling bound");
+});
+
+test("waits a second after a 429 without Retry-After", async () => {
+  const waits = [];
+  const result = await runHostApiV2({ origin: "https://host.example.test", transport: limited("rate_limited"),
+    fixture, wait: async (ms) => { waits.push(ms); } });
+  expect(result.baseline).toBe("passed");
+  expect(waits).toEqual([1000]);
+});
+
+test("follows a 429 whose Retry-After is an HTTP date", async () => {
+  const transport = limited("rate_limited", new Date(Date.now() + 5000).toUTCString());
+  const waits = [];
+  const result = await runHostApiV2({ origin: "https://host.example.test", transport, fixture,
+    wait: async (ms) => { waits.push(ms); } });
+  expect(result.baseline).toBe("passed");
+  expect(waits).toHaveLength(1);
+  expect(waits[0]).toBeGreaterThan(3000);
+  expect(waits[0]).toBeLessThanOrEqual(5000);
+});
+
+test("rejects a 429 Operation read that is not a rate_limited Problem", async () => {
+  await expect(runHostApiV2({ origin: "https://host.example.test", transport: limited("busy", "1"), fixture,
+    wait: async () => {} })).rejects.toThrow("v2 HTTP baseline create-poll: expected Problem rate_limited");
+});
+
 test("accepts an origin-root Form URL with or without its final slash", async () => {
   for (const rootForm of ["https://forms.example.test", "https://forms.example.test/"]) {
     // The fake Host does not support it, so the run passes fixture checks and stops at support.
