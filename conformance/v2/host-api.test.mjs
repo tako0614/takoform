@@ -188,6 +188,8 @@ test.each([
 
 test.each([
   `${root}?`, `${root}#`, "https://@host.example.test/custom/api",
+  "HTTPS://host.example.test/custom/api", "https://HOST.example.test/custom/api",
+  "https://host.example.test:443/custom/api", "https://host.example.test/custom/./api",
   "https://:@host.example.test/custom/api", "https://host.example.test/custom\\api",
   "https://host.example.test/custom/api\n",
 ])("rejects lexically invalid discovery baseUrl %s", async (baseUrl) => {
@@ -203,6 +205,8 @@ test.each([
 
 test.each([
   `${form}?`, `${form}#`, "https://@forms.example.test/fixture/0.1.0",
+  "HTTPS://forms.example.test/fixture/0.1.0", "https://forms.example.test:443/fixture/0.1.0",
+  "https://forms.example.test/fixture/../fixture/0.1.0",
   "https://forms.example.test/fixture\\0.1.0", "https://forms.example.test/fixture/0.1.0\n",
 ])("rejects lexically invalid Form URL before transport %s", async (invalidForm) => {
   let sent = 0;
@@ -212,6 +216,15 @@ test.each([
   expect(sent).toBe(0);
 });
 
+
+test("accepts an origin-root Form URL with or without its final slash", async () => {
+  for (const rootForm of ["https://forms.example.test", "https://forms.example.test/"]) {
+    // The fake Host does not support it, so the run passes fixture checks and stops at support.
+    await expect(runHostApiV2({ origin: "https://host.example.test", transport: makeHost(),
+      fixture: { ...fixture, form: rootForm } }), rootForm)
+      .rejects.toThrow("v2 HTTP baseline support: fixture Form lacks mandatory operations");
+  }
+});
 
 test("the Host guide's runnable example passes against a conforming Host", async () => {
   const guide = readFileSync(new URL("../../website/host-api/index.md", import.meta.url), "utf8");
