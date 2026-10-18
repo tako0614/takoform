@@ -29,6 +29,10 @@ A Host-defined choice of terms for new Resources of a Form, such as a backend, l
 
 Form-defined secret string values, sent in `privateInputs` only when both Discovery and Form support declare the capability. They are not the credentials a client uses to authenticate to the Host. A Host never copies them into the Resource, Operation, ordinary logs, or errors, and never exposes a simple hash of them. See [Private inputs](/spec/host-api/v2/http#private-inputs).
 
+## Interface / Binding {#interface-binding}
+
+Contracts a Form can define for using and connecting Resources. An Interface describes behavior a Resource offers to a caller, such as a runtime method or network protocol. A Binding is a connection between resources through which one Resource consumes a typed capability, such as another resource's Interface; it includes how an Interface is presented and what permissions it requires. The Form, or an exact external specification it references, defines each one's exact methods, input and result shapes, errors, limits, streaming or transaction behavior, and authority boundaries. A reference to another Resource alone does not transfer ownership, supply credentials, or authorize action on it, and a Binding must not silently reveal another Resource's credentials or private inputs. See [Interfaces and Bindings](/spec/host-api/v2/forms#interfaces-and-bindings).
+
 ## Resource {#resource}
 
 The Host's durable management record of one managed resource, not proof that a backend object currently exists. It has a UID, Form URL, Space, name, generation, `spec`, `observed`, `output`, and other fields defined by the contract.
@@ -83,4 +87,4 @@ A Resource scope within a Host. Naming a Space does not grant permission to use 
 
 ## v1-only terms {#v1-terms}
 
-FormRef, Form Package, Snapshot, a Resource's `revision` (the counter behind its v1 ETag), and `schemaDigest` belong to the frozen v1 contract. They are not synonyms for a v2 Form URL or Resource generation; an Offering's `revision` is a separate v2 field. See the [frozen v1 specification](/spec/host-api/v1).
+FormRef, Form Package, Snapshot, InterfaceRef, BindingRef, the digest-bound Interface and Binding Definitions, a Resource's `revision` (the counter behind its v1 ETag), and `schemaDigest` belong to the frozen v1 contract. They are not synonyms for a v2 Form URL, Interface, Binding, or Resource generation; an Offering's `revision` is a separate v2 field. See the [frozen v1 specification](/spec/host-api/v1).
