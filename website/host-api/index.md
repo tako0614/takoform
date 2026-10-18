@@ -76,9 +76,9 @@ Along the way it also checks the Discovery, Operation, and Resource shapes, `Loc
 
 ### Run the probe {#run-check}
 
-The probe is a JavaScript module without a CLI or dependencies; it has been run with Node.js 22 and 26. It never looks up credentials: you pass a `transport` function that performs each request and adds your Host's authentication. It accepts only an HTTPS origin, so put a local Host behind TLS before checking it.
+The probe is a JavaScript module without a CLI or dependencies; it has been run with Node.js 22 and 26. It never looks up credentials: you pass a `transport` function that performs each request and adds your Host's authentication. It accepts only an HTTPS origin, such as `https://localhost:8443`, so put a local Host behind TLS before checking it.
 
-Choose a Space you can safely write to, because the probe creates, updates, and deletes a real Resource. The fixture's `form` must support create, read, update, and delete on your Host; `unknownForm` must be a URL it does not implement.
+Choose a Space you can safely write to, because the probe creates, updates, and deletes a real Resource. The fixture's `form` must support create, read, update, and delete on your Host; `unknownForm` must be a URL it does not implement. The example below uses the fictional [KeyValueEntry Form](/spec/host-api/v2/forms#key-value-entry). Its specification is complete, so a Host in development can implement it as specified and run this check before it implements the Forms it will offer. No author publishes its URL, so claim support for it only on a Host used for testing.
 
 Clone the repository, save the following as `check-host.mjs` at its root, and replace the commented values:
 
@@ -125,6 +125,12 @@ console.log(result);
 
 ```console
 HOST_TOKEN=<credential> node check-host.mjs
+```
+
+If your Host's certificate is self-signed or issued by a local certificate authority, Node.js may reject it even when your operating system trusts it, because builds from nodejs.org use their own list of certificate authorities by default. The run then stops at `discovery`. Name the self-signed certificate, or the authority's certificate, as a PEM file when you start Node.js:
+
+```console
+NODE_EXTRA_CA_CERTS=<path to the PEM certificate> HOST_TOKEN=<credential> node check-host.mjs
 ```
 
 If your Form needs private inputs, add `privateInputs` (a map of strings) to the fixture; the probe sends them only when Discovery and `support` both declare the capability. `pollDelayMs`, `maxPolls` (10 by default, up to 100), and `timeoutMs` (per request, 10000 by default) bound the run. Raise them for a Host whose Operations take longer than a few seconds.
