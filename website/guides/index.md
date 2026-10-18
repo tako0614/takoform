@@ -32,7 +32,7 @@ You build a client, CLI, or integration that sends changes on someone's behalf.
 You define a kind of Resource for Hosts to implement.
 
 1. [The v2 model](/model/): what a Form defines and what the Host API already covers.
-2. [Create a Form](/authoring/): `spec`, `observed`, `output`, operation semantics, and recovery from partial failure.
+2. [Create a Form](/authoring/): `spec`, `observed`, `output`, operation semantics, and recovery from an unknown result.
 3. [Form requirements](/spec/host-api/v2/forms): the normative requirements and the [author checklist](/spec/host-api/v2/forms#author-checklist).
 4. [Publish the Form at its exact URL](/authoring/#publish) once it answers the checklist, and give that URL to the Host operators who will implement it and the clients who will request it.
 

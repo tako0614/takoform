@@ -60,7 +60,7 @@ Define what create, read, update, and delete mean for this Form. Use common API 
 If the Host loses the backend's response after a write may have happened, a timeout does not prove that nothing happened. This Form says what the Host does next:
 
 - Keep the same Resource and its Operation, with the Operation `reconciling`, and read back the same key.
-- A matching value proves success only when the backend identity it reads is safe for this exact Operation, so that nothing but this Operation could have written that value there. Absence alone does not prove that a delayed write cannot still land.
+- A matching value proves success only when the backend identity it reads is safe for this exact Operation, so that nothing but this Operation could have written that value there and no delayed write of this Operation can later change it. Absence alone does not prove that a delayed write cannot still land.
 - Resend the write to the same key, or fail the Operation, only once one of these holds: idempotency enforced by the backend makes it safe; fencing excludes a delayed writer; or the Host has proved the write was never sent and cannot act later. Until then the Operation stays `reconciling`.
 - Do not repeat the create under another key or silently overwrite a different entry.
 
