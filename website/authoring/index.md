@@ -67,16 +67,22 @@ For each external effect, your Form must state how a Host tells not sent, comple
 
 ## 4. Write and test the Form specification {#write}
 
-Turn the table above into a human-readable normative specification. A reader should be able to find all of these answers without guessing:
+Turn the table above into a human-readable normative specification. A reader should be able to find all of these answers without guessing; if one does not apply, say so:
 
-1. The Resource's purpose and what it does not own.
-2. Every `spec` field's type, requiredness, omission behavior, limits, unknown-field rule, and mutability.
-3. The meaning of `observed`, `output`, unobserved or stale values, and any readiness claim.
-4. Create/read/update/delete effects, failures, partial effects, same-UID recovery, and deletion scope.
-5. Exact identities, owners, and constraints for any Resource references, Interfaces, Bindings, or artifacts. Say “none” when not applicable.
-6. For private inputs: their names, values, and when they are required; whether they are optional or intrinsic to every valid use; and how they stay out of public Resources and logs.
+1. The Resource's purpose, what it owns, and what it does not own.
+2. Every `spec` field's type, meaning, units where they apply, requiredness, omission behavior, default, constraints and limits, and mutability.
+3. The complete shape and meaning of `observed`: how unobserved, unknown, and stale values appear and how they differ from a confirmed negative, and, for any readiness claim, its exact conditions and what a negative or missing value means.
+4. The complete shape and meaning of `output`: when it first appears, whether it can change, whether it survives a restart, and what it shows while an Operation is unfinished or after it fails.
+5. What create, read, update, and delete each do, and which of them the Form requires. For each: what success means, failures, partial effects, and same-UID recovery; for an operation the Form rejects, when rejection happens and whether it has effects.
+6. What an accepted update whose `spec` is unchanged means; it is still a new Operation and generation. If the Form rejects any change to `spec`, give the exact rule for when it counts as unchanged. For an update that changes an external resource: its ordering, rollback or compensation limits, and how partial state stays visible.
+7. What delete removes and what it leaves, which references block it, when it is complete, and, if an already-absent object counts as deleted, how its absence is confirmed.
+8. Exact identities, owners, and constraints for any Resource references, [Interfaces](/glossary#interface-binding), or [Bindings](/glossary#interface-binding); whether references can change; and whether they block deletion of what they point to.
+9. For any artifacts: their exact identities and owners, and how they are selected, transferred, bounded, verified, retained, and removed.
+10. For private inputs: their names, values, what each configures, and when it is required; whether they are optional or intrinsic to every valid use; what update and retry do with them; and how they stay out of public Resources and logs.
+11. At each object boundary, including nested objects, whether unknown fields are rejected, ignored, preserved, or handled by a named extension rule.
+12. Which behavior is portable, and which environment constraints, such as reliance on an external Interface or Binding, the Form names as part of its contract.
 
-This example has no references, Interfaces, Bindings, artifacts, or private inputs. If you add JSON Schema or another machine-readable aid, test that it agrees with the normative text. See [Form requirements](/spec/host-api/v2/forms#what-a-form-specification-must-define) and the [author checklist](/spec/host-api/v2/forms#author-checklist) for the full contract.
+This example requires all four operations and has no references, Interfaces, Bindings, artifacts, or private inputs. If you add JSON Schema or another machine-readable aid, test that it agrees with the normative text. See [Form requirements](/spec/host-api/v2/forms#what-a-form-specification-must-define) and the [author checklist](/spec/host-api/v2/forms#author-checklist) for the full contract.
 
 ## 5. Publish the Form at its exact URL {#publish}
 
