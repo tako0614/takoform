@@ -35,9 +35,18 @@ An Idempotency-Key is not reusable merely because a request body happens to matc
 | Lost response, still within replay window | If the same stable principal remains authorized, resend the stored method, path/query, body, and key unchanged. Do not alter the body or create a new key. The Host returns the original Operation's current state; it may be `202` while work is unfinished or `200` once settled. |
 | Operation is `reconciling` / `effect: unknown` | Retain the UID and Operation ID as unresolved and continue checking the Operation. Do not send another mutation to that UID until the Host resolves the original backend identity. GET is not a substitute for recovery work. |
 | `409 generation_conflict` | The request was not accepted and has no Operation. GET the current Resource and decide what change is still intended. If continuing, create a new intent with the current generation and a new key. |
-| Replay window near or past its deadline | Stop automatic replay before `initial send time + replayWindowSeconds`. Then gather evidence: GET any Operation ID you know, and GET the Resource by the UID in your intent or, for a create, [list](/spec/host-api/v2/http#list-resources) its Space and name (`GET /resources?space=…&name=…`). A Resource with that name may be another client's, and an empty list does not prove that nothing happened. If acceptance remains unknown, keep the intent unresolved, do not resend with either the old or a new key, and agree on reconciliation with the user or Host operator. |
+| Replay window near or past its deadline | Stop automatic replay before `initial send time + replayWindowSeconds`, then follow [When the outcome stays unknown](#unknown). |
 
 Keep Resource `generation`, `observedGeneration`, and `observedAt` distinct from Operation state. Operation success means the Form-defined management action completed; it is not a general application-health guarantee.
+
+### When the outcome stays unknown {#unknown}
+
+Once automatic replay has stopped without an answer, or an Operation can no longer be read, gather evidence before doing anything else:
+
+1. GET any Operation ID you know.
+2. GET the Resource by the UID in your intent. If it is a create with no UID yet, [list](/spec/host-api/v2/http#list-resources) its Space and name instead, with `GET /resources?space=…&name=…`.
+
+A Resource with that name may be another client's, and an empty list does not prove that nothing happened. If acceptance or the outcome remains unknown, keep the intent unresolved, do not resend with either the old or a new key, and agree on reconciliation with the user or Host operator.
 
 ## Follow one change in code {#loop}
 
@@ -47,7 +56,8 @@ These two functions apply the table above to one recorded intent. They are a ref
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
 const isProblem = (response) => response.headers
   .get("content-type")?.startsWith("application/problem+json");
-// Retry-After is seconds or an HTTP date; else use the default.
+// Retry-After is whole seconds, as on every 202, or an HTTP
+// date, which a 429 may send. Otherwise use the default.
 const delay = (response, seconds) => {
   const value = response?.headers.get("retry-after") ?? "";
   const ms = /^\d+$/u.test(value)
@@ -147,10 +157,10 @@ async function followOperation(http, id, operation, response,
 ```
 
 - `save` runs before the first send and again with the Operation ID, Resource UID, accepted generation, `retainUntil`, and `Location`: the records listed in [Record intent before sending](#intent).
-- A request that throws, a `5xx`, or an answer that is not the API's JSON leaves acceptance uncertain, so the same request is resent with the same key; a `429` is resent after its `Retry-After`, given in seconds or as a date. Every resend stops before `firstSentAt + replayWindowMs`; after that the result is `unknown`, so you [gather evidence](#decisions) instead of starting a new intent.
+- A request that throws, a `5xx`, or an answer that is not the API's JSON leaves acceptance uncertain, so the same request is resent with the same key; a `429` is resent after its `Retry-After`, given in seconds or as a date. Every resend stops before `firstSentAt + replayWindowMs`; after that the result is `unknown`, so you [gather evidence](#unknown) instead of starting a new intent.
 - `private_inputs_unverifiable` means an earlier send of this change was accepted: the loop saves and follows the Operation the Problem names, or returns `unknown` when it names none. `401`, `403`, `404`, or `410` after an uncertain send proves nothing either way and also returns `unknown`, as [When authentication changes](#auth-change) explains.
 - Any other `409` was not accepted, even when its Problem names another Operation, as `resource_busy` does. For `generation_conflict`, read the Resource and, if you still want the change, record a new intent with the current generation and a new key.
-- `followOperation` honors `Retry-After` without sleeping past its bound, repeats lost or unreadable reads, returns `waiting_input` so you can replenish private inputs on the same Operation, returns `unknown` when the Operation can no longer be read (see [When authentication changes](#auth-change) and the [outcome table](#decisions)), and returns `pending` with the ID after ten minutes so you can resume later. A `failed` result still returns the Resource, so you can see `phase: error`.
+- `followOperation` honors `Retry-After` without sleeping past its bound, repeats lost or unreadable reads, returns `waiting_input` so you can replenish private inputs on the same Operation, returns `unknown` when the Operation can no longer be read (see [When the outcome stays unknown](#unknown) and [When authentication changes](#auth-change)), and returns `pending` with the ID after ten minutes so you can resume later. A `failed` result still returns the Resource, so you can see `phase: error`.
 
 Read the Host's [Discovery](/spec/host-api/v2/http#discovery) first, without credentials, and stop if it is invalid instead of repairing it: requests built from a repaired `baseUrl` would carry your credentials to an address the Host never advertised. Then build `http` from its `baseUrl` and your authentication, and record each intent before calling `applyChange`. This example assumes a Host that declares Bearer authentication and no Offerings; add `offering` to the body when the Host advertises them.
 
