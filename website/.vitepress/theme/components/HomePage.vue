@@ -2,7 +2,7 @@
 import { codeLineSegments } from "../../code-wrap.mjs";
 
 const copy = {
-  introduction: "Takoform specifies how clients create, inspect, update and delete resources on a server. A Form defines a kind of resource. A Host is the server that implements it and provides the API. This site publishes the specification and guides; it runs no Host and keeps no Form catalog.",
+  introduction: "Takoform specifies how clients ask a server to create, update or delete a resource, follow each accepted change to its result, and read the state the server has observed. A Form defines a kind of resource. A Host is the server that implements it and provides the API. This site publishes the specification and guides; it runs no Host and keeps no Form catalog.",
   actions: [
     { path: "/start/", label: "Walk through the v2 API", primary: true },
     { path: "/guides/", label: "Guides by role", primary: false },
@@ -14,7 +14,7 @@ const copy = {
     { name: "Client", text: "Chooses a Host and Form, sends the requested configuration and follows the result. It can be an application, CLI or infrastructure provider." },
   ],
   portability: "A shared API gives clients a consistent management protocol. Before using a resource, check that the Host supports the particular Form and review its available capacity, access requirements and terms.",
-  // A [term, href] pair, here and in `steps`, renders as a link to the term's glossary entry, for a reader who meets it here first.
+  // A [term, href] pair, here and in `steps` and `readings`, renders as a link to where the term is explained, for a reader who meets it here first.
   exampleIntro: [
     "In this v2 example, a client asks a Host to store a key/value entry. The Form identifies the resource's behavior and spec supplies its configuration. The name must be unique within its ",
     ["Space", "/glossary#space"], ", a Resource scope on the Host. The Host accepts the request and answers with an ",
@@ -27,7 +27,7 @@ const copy = {
   steps: [
     { name: "Check support", path: "/start/#discover-support", text: "Read the Host's connection and authentication details, then check support for the exact Form URL." },
     { name: "Submit the change", path: "/start/#create-read", text: "POST the resource request. The Host returns an Operation so the client can follow the accepted change." },
-    { name: "Read the result", path: "/start/#create-read", text: "Follow the Operation to completion, then read the Resource. Neither acceptance nor a succeeded Operation alone means the resource is ready to use." },
+    { name: "Read the result", path: "/start/#create-read", text: "Follow the Operation to completion, then read the Resource. None of acceptance, a succeeded Operation or matching generations alone means the resource is ready to use; only its Form can define readiness, and not every Form does." },
     { name: "Update or delete", path: "/start/#update", text: [
       "Use the ", ["Resource UID", "/glossary#uid"], " and the ", ["generation", "/glossary#generation-observedgeneration"],
       " you last read, with a new ", ["Idempotency-Key", "/glossary#idempotency-key"],
@@ -36,12 +36,12 @@ const copy = {
     ] },
   ],
   exampleLink: "Read the full walkthrough",
-  readingIntro: "The guides below use v2. Choose v1 or v2 in the header when reading an existing implementation's API documentation.",
+  readingIntro: "The guides below use v2. If a Host or tool you use speaks v1, choose v1 in the header to read the v1 documentation.",
   readings: [
     { path: "/use/", label: "Use the API", text: "Check the Host and the exact Form, then call the HTTP API directly or use a tool that explicitly supports v2." },
     { path: "/client/", label: "Implement a client", text: "Send changes and handle their results reliably: record intent before sending, replay lost responses safely, follow Operations and handle generation conflicts." },
     { path: "/authoring/", label: "Create a Form", text: "Specify the resource's inputs, observable behavior and usage contract so others can implement it." },
-    { path: "/host-api/", label: "Implement a Host", text: "Connect the API to an execution backend, preserve accepted operations through failures and restarts, then check your Host against the baseline probe." },
+    { path: "/host-api/", label: "Implement a Host", text: ["Connect the API to an execution backend, preserve accepted operations through failures and restarts, then check your Host against the ", ["baseline probe", "/host-api/#check"], "."] },
   ],
   scope: "This site documents Takoform's common API and concepts. Individual Form specifications are published by their authors; Hosts and client tools document their own supported features.",
 };
@@ -163,7 +163,12 @@ const examples = [
         <ul class="home-reading-list">
           <li v-for="reading in copy.readings" :key="reading.path">
             <a class="home-reading-link" :href="reading.path">{{ reading.label }}</a>
-            <p>{{ reading.text }}</p>
+            <p>
+              <template v-for="(part, index) in Array.isArray(reading.text) ? reading.text : [reading.text]" :key="index">
+                <a v-if="Array.isArray(part)" class="home-term-link" :href="part[1]">{{ part[0] }}</a>
+                <template v-else>{{ part }}</template>
+              </template>
+            </p>
           </li>
         </ul>
         <p class="home-scope">{{ copy.scope }}</p>
