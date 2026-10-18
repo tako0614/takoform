@@ -22,7 +22,13 @@ const copy = {
     { name: "Check support", path: "/start/#discover-support", text: "Read the Host's connection and authentication details, then check support for the exact Form URL." },
     { name: "Submit the change", path: "/start/#create-read", text: "POST the resource request. The Host returns an Operation so the client can follow the accepted change." },
     { name: "Read the result", path: "/start/#create-read", text: "Follow the Operation to completion, then read the Resource. Neither acceptance nor a succeeded Operation alone means the resource is ready to use." },
-    { name: "Update or delete", path: "/start/#update", text: "Use the Resource UID and the generation you last read, with a new Idempotency-Key for each change. If a response is lost, resend that exact request with its original key within the Host's replay window." },
+    // A [term, href] pair renders as a link to the term's glossary entry, for a reader who meets it here first.
+    { name: "Update or delete", path: "/start/#update", text: [
+      "Use the ", ["Resource UID", "/glossary#uid"], " and the ", ["generation", "/glossary#generation-observedgeneration"],
+      " you last read, with a new ", ["Idempotency-Key", "/glossary#idempotency-key"],
+      " for each change. If a response is lost, resend that exact request with its original key within the Host's ",
+      ["replay window", "/glossary#replay-window"], ".",
+    ] },
   ],
   exampleLink: "Read the full walkthrough",
   readingIntro: "The guides below use v2. Choose v1 or v2 in the header when reading an existing implementation's API documentation.",
@@ -129,7 +135,12 @@ const examples = [
           <ol class="home-steps">
             <li v-for="step in copy.steps" :key="step.name">
               <h3><a class="home-step-link" :href="step.path">{{ step.name }}</a></h3>
-              <p>{{ step.text }}</p>
+              <p>
+                <template v-for="(part, index) in Array.isArray(step.text) ? step.text : [step.text]" :key="index">
+                  <a v-if="Array.isArray(part)" class="home-term-link" :href="part[1]">{{ part[0] }}</a>
+                  <template v-else>{{ part }}</template>
+                </template>
+              </p>
             </li>
           </ol>
         </div>

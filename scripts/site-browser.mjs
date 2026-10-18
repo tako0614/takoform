@@ -648,6 +648,13 @@ async function run() {
       assert.deepEqual(await page.locator(".home-steps h3 a").evaluateAll((links) => links.map((link) => link.getAttribute("href"))), [
         "/start/#discover-support", "/start/#create-read", "/start/#create-read", "/start/#update",
       ], "each lifecycle step opens its walkthrough section");
+      assert.deepEqual(await page.locator(".home-steps .home-term-link").evaluateAll((links) => links.map((link) => [link.textContent, link.getAttribute("href")])), [
+        ["Resource UID", "/glossary#uid"], ["generation", "/glossary#generation-observedgeneration"],
+        ["Idempotency-Key", "/glossary#idempotency-key"], ["replay window", "/glossary#replay-window"],
+      ], "the update step links its terms to the glossary");
+      assert.equal((await page.locator(".home-steps li").nth(3).locator("p").textContent()).replace(/\s+/gu, " ").trim(),
+        "Use the Resource UID and the generation you last read, with a new Idempotency-Key for each change. If a response is lost, resend that exact request with its original key within the Host's replay window.",
+        "the linked terms read as one sentence");
       assert.deepEqual(await page.locator(".home-example .line").evaluateAll((lines) => lines
         .filter((line) => line.getBoundingClientRect().height > parseFloat(getComputedStyle(line).lineHeight) * 1.5)
         .map((line) => line.textContent)), [], "on desktop no line of the create request, its response or the Resource wraps");
