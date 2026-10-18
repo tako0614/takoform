@@ -477,11 +477,16 @@ function rewriteMarkdownLinks(specPath, source, context) {
 
 export function renderMirroredDocument(specPath, source, context) {
   const body = rewriteMarkdownLinks(specPath, source, context);
+  const frozenV1 = FROZEN_HOST_API_SPEC_DOCUMENTS.includes(specPath);
+  // A tab, bookmark or search result shows only the title, so a v1 document
+  // whose heading does not already say so names its API there too.
+  const namesV1 = /\bHost API v1\b/u.test(source.match(/^# (.+)$/mu)?.[1] ?? "");
   return [
     "---",
     `# Generated from ${specPath} by scripts/site.mjs. Edit the specification, not this page.`,
-    `normative: ${FROZEN_HOST_API_SPEC_DOCUMENTS.includes(specPath)}`,
-    ...FROZEN_HOST_API_SPEC_DOCUMENTS.includes(specPath) ? ["hostApiVersion: v1"] : [],
+    `normative: ${frozenV1}`,
+    ...frozenV1 ? ["hostApiVersion: v1"] : [],
+    ...frozenV1 && !namesV1 ? ['titleTemplate: "Host API v1 — :title | Takoform"'] : [],
     `canonicalSource: ${specPath}`,
     `canonicalUrl: ${SOURCE_BROWSE}/${specPath}`,
     "---",
@@ -962,6 +967,9 @@ export function inspectRenderedSitePages(pages, servedPaths = new Set()) {
     const noticeBody = page.html.match(/<aside\b[^>]*class="[^"]*\bmirror-notice\b[^"]*"[^>]*>([\s\S]*?)<\/aside>/u)?.[1] ?? "";
     const noticeText = readableText(noticeBody);
     const carriesV1Line = /\bmirror-notice-version\b/u.test(noticeBody) || /\bPart of the Host API v1 documents\b/u.test(noticeText);
+    if (page.hostApiVersion === "v1" && !/\bHost API v1\b/u.test(attributeText(titles[0]?.[1] ?? ""))) {
+      problems.push(`${page.path} must name Host API v1 in its title`);
+    }
     if (page.hostApiVersion === "v1") {
       if (!carriesV1Line || !/href="\/v1\/"/u.test(noticeBody) || !/href="\/v2\/"/u.test(noticeBody) ||
           !/\bPart of the Host API v1 documents: a lane, profile, or identity they call .current. is the one in Host API v1\. Host API v2 is a separate specification and does not change v1 requirements\./u.test(noticeText)) {

@@ -975,15 +975,19 @@ describe("takoform.com site derivation", () => {
       expect(renderMirroredDocument(path, "# Title\n", context).includes("\nhostApiVersion: v1\n"), path)
         .toBe(FROZEN_HOST_API_SPEC_DOCUMENTS.includes(path));
     }
+    expect(renderMirroredDocument("spec/versioning.md", "# Versioning\n", context))
+      .toContain('\ntitleTemplate: "Host API v1 — :title | Takoform"\n');
+    expect(renderMirroredDocument("spec/host-api/v1.md", "# Host API v1\n", context)).not.toContain("titleTemplate");
+    expect(renderMirroredDocument("spec/schemas/README.md", "# Schemas\n", context)).not.toContain("titleTemplate");
     expect(FROZEN_HOST_API_SPEC_DOCUMENTS).toContain("spec/versioning.md");
     expect(FROZEN_HOST_API_SPEC_DOCUMENTS).not.toContain("spec/schemas/README.md");
     for (const document of V2_SPEC_DOCUMENTS) expect(documentVersion(siteRouteForV2SpecDocument(document.path)), document.path).toBe("v2");
 
     const html = `<!doctype html><html lang="en" data-document-authority="normative"><head>
-<title>V1 contract</title><meta property="og:title" content="V1 contract">
+<title>Host API v1 — V1 contract | Takoform</title><meta property="og:title" content="Host API v1 — V1 contract | Takoform">
 <meta property="og:url" content="https://takoform.com/">
 <meta name="description" content="V1 contract."><meta property="og:description" content="V1 contract.">
-<meta name="twitter:title" content="V1 contract">
+<meta name="twitter:title" content="Host API v1 — V1 contract | Takoform">
 <meta name="twitter:description" content="V1 contract.">
 </head><body><main><h1>V1 contract</h1>
 <aside class="mirror-notice" aria-label="About this page" data-document-authority="normative" data-release-state="published"><p>Normative source (English original)</p>
@@ -1003,6 +1007,12 @@ or identity they call “current” is the one in Host API v1.
     ]) {
       expect(inspectRenderedSitePages([{ ...page, html: wrong }])).toContain(unplaced);
     }
+    expect(inspectRenderedSitePages([page])).not.toContain("dist/index.html must name Host API v1 in its title");
+    expect(inspectRenderedSitePages([{ ...page, html: html.replaceAll("Host API v1 — V1 contract | Takoform", "V1 contract | Takoform") }]))
+      .toContain("dist/index.html must name Host API v1 in its title");
+    // A page outside the v1 documents needs no such title.
+    expect(inspectRenderedSitePages([{ ...page, hostApiVersion: undefined, html: html.replaceAll("Host API v1 — V1 contract | Takoform", "V1 contract | Takoform") }]))
+      .not.toContain("dist/index.html must name Host API v1 in its title");
     const misplaced = "dist/index.html source notice places a page outside the Host API v1 documents in them";
     expect(inspectRenderedSitePages([{ ...page, hostApiVersion: undefined }])).toContain(misplaced);
     expect(inspectRenderedSitePages([{ ...page, hostApiVersion: undefined, mirror: false }])).toContain(misplaced);
