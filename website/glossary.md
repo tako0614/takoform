@@ -7,7 +7,7 @@ description: Key Host API v2 terms, organized around the distinction between For
 
 ## Form {#form}
 
-A versioned specification URL published by its author. It defines Resource meaning and operation requirements; it is not itself a Host or execution environment.
+A specification published by its author at an exact HTTPS URL. Each Form URL names one version of the contract and keeps that meaning, so a changed contract gets a new URL; the URL need not contain a version number. It defines Resource meaning and operation requirements; it is not itself a Host or execution environment. See [Form identity](/spec/host-api/v2/forms#publication).
 
 ## Host {#host}
 
