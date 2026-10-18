@@ -491,6 +491,8 @@ test("the client guide's loop follows changes against an asynchronous Host", asy
   const stale = await send(http, update("guide-update-000003", "stale", 1));
   expect(stale.result).toBe("conflict");
   expect(stale.problem.code).toBe("generation_conflict");
+  // The refusal is recorded, so a restart does not resend it.
+  expect(saved.at(-1)).toMatchObject({ key: "guide-update-000003", refused: "generation_conflict" });
 
   // Past the replay window nothing is sent.
   const before = sent.length;
@@ -521,6 +523,7 @@ test("the client guide's loop follows changes against an asynchronous Host", asy
   expect(busyResult.result).toBe("conflict");
   expect(busyResult.problem.code).toBe("resource_busy");
   expect(saved.some((record) => record.operationId === "op-other")).toBe(false);
+  expect(saved.at(-1)).toMatchObject({ key: "guide-update-000018", refused: "resource_busy" });
 
   // waiting_input, a vanished Operation, and an unfinished one are returned to the caller.
   const waiting = async (method, path, ...rest) => (method === "PUT"
@@ -530,6 +533,11 @@ test("the client guide's loop follows changes against an asynchronous Host", asy
   const gone = async (method, path, ...rest) => (path.startsWith("/operations/")
     ? problem(410, "gone") : http(method, path, ...rest));
   expect(await followOperation(gone, "op-old")).toEqual({ result: "unknown", id: "op-old" });
+  // A redirected read is unreadable, not unfinished: polling would not clear it.
+  const moved = async (method, path, ...rest) => (path.startsWith("/operations/")
+    ? new Response(null, { status: 307, headers: { Location: "https://elsewhere.example.test/" } })
+    : http(method, path, ...rest));
+  expect(await followOperation(moved, "op-moved", { status: "running" })).toEqual({ result: "unknown", id: "op-moved" });
   expect(await followOperation(http, "op-later", { status: "running" }, undefined, Date.now() - 1))
     .toEqual({ result: "pending", id: "op-later" });
 
@@ -695,6 +703,21 @@ test("the client guide stops on invalid Discovery instead of repairing it", asyn
     return json(document, status);
   });
   expect((await readWith(valid)("https://host.example.test")).baseUrl).toBe(root);
+  // The typed origin is compared as it serializes, so a trailing slash, capitals, or the
+  // default port do not reject a valid Host.
+  for (const typed of ["https://host.example.test/", "https://HOST.example.test", "https://host.example.test:443"]) {
+    expect((await readWith(valid)(typed)).baseUrl, typed).toBe(root);
+  }
+  // Anything but an HTTPS origin is refused before any request.
+  for (const typed of ["http://host.example.test", "https://host.example.test/tenant",
+    "https://host.example.test?tenant=x", "https://user:secret@host.example.test", "https://:secret@host.example.test"]) {
+    let fetched = false;
+    const read = new Function("fetch", reader)(async () => { fetched = true; return json(valid); });
+    const failure = await read(typed).catch((error) => error);
+    expect(failure?.message, typed).toStartWith("Not an HTTPS origin: ");
+    expect(failure.message, typed).not.toContain("secret");
+    expect(fetched, typed).toBe(false);
+  }
   // The specification allows the origin root as baseUrl.
   expect((await readWith({ ...valid, baseUrl: "https://host.example.test" })("https://host.example.test")).baseUrl)
     .toBe("https://host.example.test");
@@ -729,7 +752,7 @@ test("the client guide's update and delete intents follow the Resource's generat
   const sent = [];
   const fetch = async (url, init) => {
     const method = init.method ?? "GET";
-    sent.push({ method, headers: init.headers, body: init.body });
+    sent.push({ method, headers: init.headers, body: init.body, redirect: init.redirect });
     return host({ method, url, headers: init.headers,
       body: init.body === undefined ? undefined : JSON.parse(init.body) });
   };
@@ -757,6 +780,11 @@ test("the client guide's update and delete intents follow the Resource's generat
   expect(new Set(keys).size, "every change uses its own key").toBe(3);
   expect(mutations[1].headers["Content-Type"], "delete sends no Content-Type").toBeUndefined();
   expect(mutations[1].body, "delete sends no body").toBeUndefined();
+  expect(sent.every(({ redirect }) => redirect === "manual"), "no request follows a redirect").toBe(true);
+  // Each change's result is recorded, so a restart does not follow it again.
+  expect(saved.filter((record) => record.status).map((record) => record.status)).toEqual(["succeeded", "succeeded", "succeeded"]);
+  // A change is built only from a Resource with no unfinished change.
+  expect(() => change({ ...result.resource, phase: "pending" }, "DELETE")).toThrow("Wait for its unfinished change first.");
   expect(saved.filter((record) => record.method !== "POST").every((record) => record.replayWindowMs === 3_600_000),
     "changes carry the replay window in milliseconds").toBe(true);
   expect(() => change(null, "DELETE"), "a change needs a Resource that was read").toThrow("Read the Resource first.");

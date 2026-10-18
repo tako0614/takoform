@@ -11,7 +11,7 @@ next:
 
 # Implementing a v2 client {#client}
 
-This guide is for building a v2 client; the Takoform Go client, [`hostclient`](https://pkg.go.dev/github.com/tako0614/takoform/hostclient), speaks v1. Read a v2 Host's [Discovery](/glossary#discovery) response for `baseUrl`, authentication guidance, and `replayWindowSeconds` (the [replay window](/glossary#replay-window)); build each request from the Form specification at its exact URL. Check `support`, Space authorization, and operation outcome as separate facts.
+This guide is for building a v2 client; the Takoform Go client, [`hostclient`](https://pkg.go.dev/github.com/tako0614/takoform/hostclient), speaks v1. Read a v2 Host's [Discovery](/glossary#discovery) response for `baseUrl`, authentication guidance, and `replayWindowSeconds` (the [replay window](/glossary#replay-window)); build each request from the Form specification at its exact URL. Check `support`, whether a request is admissible, and each operation's outcome as separate facts. Whether you may change a Space is settled per change, by the Host's answer to that change, acceptance or a `401` or `403`: a [preview](/spec/host-api/v2/http#previews), where advertised, is only advice, and Resource and Offering lists show only what you may see, so an empty one proves nothing.
 
 ## Record intent before sending {#intent}
 
@@ -21,7 +21,7 @@ To identify the same operation across a client restart or a lost acknowledgement
 - Method, API-root-relative path and query, and the complete request (including the generation condition and complete `spec` for Update).
 - An Idempotency-Key created for this intent and its initial send time.
 - The replay window read from Discovery. Do not reset the initial time on each retry.
-- After a response, the Operation ID, Resource UID, accepted generation, `Location`, and `retainUntil`.
+- After a response, the Operation ID, Resource UID, accepted generation, `Location`, and `retainUntil`, or the refusal's code; after following the Operation, its result.
 
 Do not copy authentication credentials into the intent log; use the client's authentication manager. If a Form uses private inputs, do not write those values to ordinary logs or public state; follow the HTTP contract's secret handling.
 
@@ -50,7 +50,7 @@ A Resource with that name may be another client's, and an empty list does not pr
 
 ## Follow one change in code {#loop}
 
-These two functions apply the table above to one recorded intent. They are a reference for your own client, not a library: `applyChange` sends the request and replays it only inside the replay window, and `followOperation` follows the accepted Operation to its end and reads the Resource. After a restart, call `followOperation` with the saved Operation ID instead of sending the change again.
+These two functions apply the table above to one recorded intent. They are a reference for your own client, not a library: `applyChange` sends the request and replays it only inside the replay window, and `followOperation` follows the accepted Operation to its end and reads the Resource. `applyChange` records each answer and the Operation's result, so after a restart you [resume an intent](#resume) instead of building it again.
 
 ```js
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
@@ -84,8 +84,8 @@ async function applyChange(http, save, intent) {
       response = await http(intent.method, intent.path,
         { ...intent.headers, "Idempotency-Key": intent.key },
         intent.body);
-      const api = response.ok
-        || (response.status < 500 && isProblem(response));
+      const api = response.ok || (response.status >= 400
+        && response.status < 500 && isProblem(response));
       if (api) value = await response.json();
     } catch {
       // Lost or unreadable: the Host may have accepted the change.
@@ -105,8 +105,12 @@ async function applyChange(http, save, intent) {
       // An earlier send of this change was accepted; follow it
       // when the Host names it, otherwise reconcile.
       if (!value.operationId) return { result: "unknown", intent };
-      await save({ ...intent, operationId: value.operationId });
-      return followOperation(http, value.operationId);
+      const named = { ...intent, operationId: value.operationId };
+      await save(named);
+      const outcome = await followOperation(http,
+        named.operationId);
+      await save({ ...named, status: outcome.result });
+      return outcome;
     }
     const denied = [401, 403, 404, 410].includes(response.status);
     if (uncertain && denied) {
@@ -115,19 +119,26 @@ async function applyChange(http, save, intent) {
     }
     // Not accepted. A 409 code such as generation_conflict says
     // what to read before you decide on a new intent.
+    const refused = value.code ?? response.status;
+    await save({ ...intent, refused });
     const conflict = response.status === 409;
     const result = conflict ? "conflict" : "rejected";
     return { result, problem: value };
   }
-  await save({ ...intent, operationId: value.id,
+  const accepted = { ...intent, operationId: value.id,
     resourceUid: value.resourceUid,
     generation: value.generation,
     retainUntil: value.retainUntil,
-    location: response.headers.get("location") });
-  return followOperation(http, value.id, value, response);
+    location: response.headers.get("location") };
+  await save(accepted);
+  const outcome = await followOperation(http, value.id, value,
+    response);
+  await save({ ...accepted, status: outcome.result });
+  return outcome;
 }
 
-// Follow a saved Operation to its end; also use it after a restart.
+// Follow a saved Operation to its end; after a restart, use it for
+// a saved Operation and record the result it returns.
 async function followOperation(http, id, operation, response,
   until = Date.now() + 10 * 60_000) {
   while (!["succeeded", "failed"].includes(operation?.status)) {
@@ -140,9 +151,11 @@ async function followOperation(http, id, operation, response,
     await sleep(Math.min(delay(response, 1), left));
     try {
       response = await http("GET", `/operations/${id}`);
-      if ([401, 403, 404, 410].includes(response.status)) {
-        return { result: "unknown", id }; // Reconcile instead.
-      }
+      // Refused, gone, or redirected: reconcile instead.
+      const status = response.status;
+      const unreadable = [401, 403, 404, 410].includes(status)
+        || (!response.ok && status < 400);
+      if (unreadable) return { result: "unknown", id };
       if (response.ok) operation = await response.json();
     } catch {
       // A lost or unreadable read is safe to repeat.
@@ -156,16 +169,26 @@ async function followOperation(http, id, operation, response,
 }
 ```
 
-- `save` runs before the first send and again with the Operation ID, Resource UID, accepted generation, `retainUntil`, and `Location`: the records listed in [Record intent before sending](#intent).
-- A request that throws, a `5xx`, or an answer that is not the API's JSON leaves acceptance uncertain, so the same request is resent with the same key; a `429` is resent after its `Retry-After`, given in seconds or as a date. Every resend stops before `firstSentAt + replayWindowMs`; after that the result is `unknown`, so you [gather evidence](#unknown) instead of starting a new intent.
+- `save` runs before the first send, again with the Operation ID, Resource UID, accepted generation, `retainUntil`, and `Location`, and once more with the refusal's code or the Operation's result: the records listed in [Record intent before sending](#intent).
+- A request that throws, a `5xx`, a redirect, or an answer that is not the API's JSON leaves acceptance uncertain, so the same request is resent with the same key; a `429` is resent after its `Retry-After`, given in seconds or as a date. Every resend stops before `firstSentAt + replayWindowMs`; after that the result is `unknown`, so you [gather evidence](#unknown) instead of starting a new intent.
 - `private_inputs_unverifiable`, which a Host answers when it has lost the material to compare a replay's [private inputs](/spec/host-api/v2/http#private-inputs) (a Host retention failure), means an earlier send of this change was accepted: the loop saves and follows the Operation the Problem names, or returns `unknown` when it names none. `401`, `403`, `404`, or `410` after an uncertain send proves nothing either way and also returns `unknown`, as [When authentication changes](#auth-change) explains.
-- Any other `409` was not accepted, even when its Problem names another Operation, as a `resource_busy` Problem may. For `generation_conflict`, read the Resource and, if you still want the change, record a new intent with the current generation and a new key.
+- Any other `409` was not accepted, even when its Problem names another Operation, as a `resource_busy` Problem may. For `generation_conflict`, read the Resource and, if you still want the change, record a new intent with the current generation and a new key. For `resource_busy`, another change was unfinished when the Host answered, so yours was not accepted. Wait for that change to end: poll the Operation the Problem names, or reread the Resource until its `phase` is `idle` or `error`. That Operation is not this intent; if it is one of your saved intents, resume that one. Otherwise you cannot replenish its private inputs, and a `403`, `404`, `410`, or redirect while reading it does not make this change unknown: reread the Resource instead. Then decide as for `generation_conflict`.
 - `followOperation` honors `Retry-After` without sleeping past its bound, repeats lost or unreadable reads, returns `waiting_input` so you can replenish private inputs on the same Operation, returns `unknown` when the Operation can no longer be read (see [When the outcome stays unknown](#unknown) and [When authentication changes](#auth-change)), and returns `pending` with the ID after ten minutes so you can resume later. A `failed` result still returns the Resource, so you can see `phase: error`.
 
 Read the Host's [Discovery](/spec/host-api/v2/http#discovery) first, without credentials, and stop if it is invalid instead of repairing it: requests built from a repaired `baseUrl` would carry your credentials to an address the Host never advertised. Then build `http` from its `baseUrl` and your authentication, and record each intent before calling `applyChange`. This example assumes a Host that declares Bearer authentication and no Offerings; add `offering` to the body when the Host advertises them.
 
 ```js
-async function readDiscovery(origin) {
+async function readDiscovery(input) {
+  // Accept only an HTTPS origin, however it is typed:
+  // "https://Host.example/" means "https://host.example".
+  const typed = new URL(input);
+  const origin = typed.origin;
+  if (typed.protocol !== "https:" || typed.href !== `${origin}/`) {
+    // Name no typed credentials in the error.
+    const shown = typed.username || typed.password
+      ? "a URL with credentials" : typed.href;
+    throw new Error(`Not an HTTPS origin: ${shown}; stop.`);
+  }
   // Discovery needs no credentials and answers 200, not a redirect.
   const url = `${origin}/.well-known/takoform/v2`;
   const response = await fetch(url, {
@@ -206,11 +229,14 @@ async function readDiscovery(origin) {
 
 const discovery = await readDiscovery("https://host.example");
 
+// Never follow a redirect: it would resend credentials on the same
+// origin, and a change's body and key even to another one.
 const http = (method, path, headers = {}, body) =>
   fetch(`${discovery.baseUrl}${path}`, {
     method,
     headers: { ...headers, Authorization: `Bearer ${token}` },
     body: body === undefined ? undefined : JSON.stringify(body),
+    redirect: "manual",
     signal: AbortSignal.timeout(30_000),
   });
 
@@ -230,11 +256,18 @@ const result = await applyChange(http, save, {
 });
 ```
 
-Update and delete name the Resource by UID and carry the generation you read. Build each one from a Resource you have just read: the `resource` of a `succeeded` or `failed` result, or a fresh `GET /resources/{uid}`; after any other result, follow the outcome table first. Each is a new change with its own key, and update sends the complete `spec`, because it replaces the whole document rather than patching it. After a restart, resend the intent you saved instead of building it again, which would create a new key.
+Update and delete name the Resource by UID and carry the generation you read. Build each one from a Resource you have just read whose `phase` is `idle` or `error`, whether it is the `resource` of a `succeeded` or `failed` result or a fresh `GET /resources/{uid}`. While it is `pending` or `deleting`, another change is unfinished: a new one would be refused with `409 resource_busy` while that lasts, or would act on a state you have not seen if it ended first, so wait for it and read again. A read is a snapshot, so a change can still meet `resource_busy` or `generation_conflict`; handle them as above. Each is a new change with its own key, and update sends the complete `spec`, because it replaces the whole document rather than patching it.
+
+<a id="resume"></a>
+
+After a restart, resume only intents without a final answer instead of building them again, which would create a new key. Follow a saved Operation that has no recorded `succeeded` or `failed` result with `followOperation`, and record the result it returns; resend an intent that has neither an Operation nor a recorded refusal with `applyChange`, which still stops at the replay window and then returns `unknown`. Never resend an intent the Host refused. An intent is finished once the Host has refused it or you have recorded its Operation as `succeeded` or `failed`. An unfinished Operation stays readable until it ends; a finished one stays readable at least until its current `retainUntil`, which the Host extends when it ends.
 
 ```js
 const change = (resource, method, body) => {
   if (!resource) throw new Error("Read the Resource first.");
+  if (!["idle", "error"].includes(resource.phase)) {
+    throw new Error("Wait for its unfinished change first.");
+  }
   return {
     method,
     path: `/resources/${resource.uid}`,
