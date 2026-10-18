@@ -10,6 +10,20 @@ The [Go libraries](#go) in the [Takoform repository](https://github.com/tako0614
 implement v1. References to the "current" lane in the v1 documents mean this
 v1 contract; the separate v2 specification does not change v1 requirements.
 
+## If you run a v1 Host or client {#v1-operators}
+
+Host API v2 is a separate specification; it does not revise v1. Published v1
+prose, schemas, reference URLs, tags and releases keep their original meaning
+and bytes, and third parties may continue to implement or use v1. Each Host
+decides and communicates its own v1 support period, and each library its
+maintenance period; that the v1 specification is published does not mean a
+particular service still serves it. Where a v1 document says a change requires
+a future Host API v2 proposal, that sentence keeps its v1 publication context;
+it does not make the [v2 specification](/v2/) a revision of v1. To plan a move
+to v2, read [Migration from v1](/spec/host-api/v2/migration), which explains
+what changes and that the v2 API provides no operation that converts existing
+Resources.
+
 ## API specification {#api}
 
 - [HTTP API specification](/spec/host-api/v1) — Endpoints, requests, responses and operation rules.
@@ -37,7 +51,7 @@ Add a package at the latest release:
 go get github.com/tako0614/takoform/hostclient@latest
 ```
 
-The command-line tools `form-package`, `generic-conformance`, and `takoform-trust` install the same way, for example `go install github.com/tako0614/takoform/cmd/form-package@latest`; [verification tools](/conformance/) shows them in use.
+The command-line tools `form-package`, `generic-conformance`, and `takoform-trust` install the same way, for example `go install github.com/tako0614/takoform/cmd/form-package@latest`. [Verification tools](/conformance/) runs `form-package` and `generic-conformance` with `go run` from a repository clone, against the v1 generic corpus and fixtures in that clone.
 
 The example below, from [`hostclient/example_test.go`](https://github.com/tako0614/takoform/blob/main/hostclient/example_test.go), creates one Resource against a loopback fixture defined in that file, not a real Host. It is a Go example test, so `go test ./hostclient -run Example` runs it and checks its output.
 
