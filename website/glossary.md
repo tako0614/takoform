@@ -51,7 +51,7 @@ Values defined by the Form for using the Resource, such as a connection address.
 
 ## generation / observedGeneration {#generation-observedgeneration}
 
-`generation` identifies an accepted desired-state version. `observedGeneration` identifies the version reflected by `observed`. An update or delete sends the `generation` it last read in `Takoform-Expected-Generation`. If the Resource has since moved on, a new request gets `409 generation_conflict` and is not accepted; resending an accepted request unchanged with its original Idempotency-Key still returns its original Operation. See [Update](/spec/host-api/v2/http#update).
+`generation` identifies an accepted desired-state version. `observedGeneration` is the latest generation the Host has confirmed as realized, or 0 before any. It can stay behind `generation`, for example while a newer change is unfinished or after it fails; the Host advances it to a newer generation only after confirming that generation. An update or delete sends the `generation` it last read in `Takoform-Expected-Generation`. If the Resource has since moved on, a new request gets `409 generation_conflict` and is not accepted; resending an accepted request unchanged with its original Idempotency-Key still returns its original Operation. See [Update](/spec/host-api/v2/http#update).
 
 ## phase {#phase}
 
@@ -63,7 +63,7 @@ A record of progress and outcome for Create, Update, or Delete. A client reads i
 
 ## status / effect {#status-effect}
 
-An Operation's `status` is `queued`, `running`, `waiting_input`, or `reconciling` while it is unfinished; `succeeded` and `failed` are terminal. Its `effect` says what is established about the Form-managed resource: `none`, `partial`, `complete`, or `unknown` when effects cannot yet be determined. `unknown` is never terminal: the Operation stays `reconciling` until the outcome is established, which can need an operator. A timeout alone never means `none`. See [Operations](/spec/host-api/v2/http#operations).
+An Operation's `status` is `queued`, `running`, `waiting_input`, or `reconciling` while it is unfinished; `succeeded` and `failed` are terminal. Its `effect` says what is established about the Form-managed resource: `none`, `partial`, `complete`, or `unknown` when effects cannot yet be determined. `succeeded` always has `complete`, and `failed` has `none` or `partial`. `unknown` is never terminal: the Operation stays `reconciling` until the outcome is established, which can need an operator. A timeout alone never means `none`. See [Operations](/spec/host-api/v2/http#operations).
 
 ## Idempotency-Key {#idempotency-key}
 

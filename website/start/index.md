@@ -125,7 +125,7 @@ Cache-Control: no-store
 }
 ```
 
-`spec` is the accepted desired value; `observed` is what the Host last checked. Matching [`generation` and `observedGeneration`](/glossary#generation-observedgeneration) means this generation is observed in the example. Operation success or `phase: idle` alone does not establish application health.
+`spec` is the accepted desired value; `observed` is what the Host last checked. Matching [`generation` and `observedGeneration`](/glossary#generation-observedgeneration) means the Host has confirmed this generation as realized. Operation success or `phase: idle` alone does not establish application health.
 
 ## 3. Update the full spec with a generation condition {#update}
 

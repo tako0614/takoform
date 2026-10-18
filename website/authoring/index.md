@@ -50,12 +50,20 @@ Lengths count Unicode scalar values, not UTF-8 bytes. Before the first confirmed
 
 Define what create, read, update, and delete mean for this Form. Use common API rules for HTTP statuses, generations, `Idempotency-Key`, and Operation shape rather than redefining them in each Form.
 
-- **Create:** Create one entry scoped by `(Host, Space, Form URL, key)`. If the key is already in use, fail with `key_conflict` and leave its existing value unchanged.
+- **Create:** Create one entry scoped by `(Host, Space, Form URL, key)`. If another Resource already owns the key, the request is still accepted, and its Operation fails with `key_conflict` and `effect: none`, leaving the existing entry unchanged. Report success only after the value is durably stored and confirmed.
 - **Read:** Return the Resource and its last confirmed state. This Form does not require a new backend lookup for every GET.
-- **Update:** Replace only `value`. Reject a changed `key` before external effects. Updating a missing entry does not recreate it.
+- **Update:** Replace only `value`. A changed `key` is rejected as `invalid_spec` before external effects. If the entry is confirmed missing, the Operation fails with `entry_not_found` and `effect: none`; update does not recreate it. Report success only after the replacement is durably stored and confirmed.
 - **Delete:** Remove only the entry this Resource represents. If it is confirmed absent, deletion is complete. Do not delete the collection or another entry.
 
-If the response is lost after a write may have happened, a timeout does not prove that nothing happened. Keep the same Resource and Operation, read back the same key, and compare its value. If the result cannot be proved, retain the Operation as unresolved. Before adding more examples, decide and test how the Form handles partial success, failure, and unknown outcomes.
+`key_conflict` and `entry_not_found` are this Form's stable, payload-free error codes. A Form error code goes in the `code` of an Operation's `error`, which also carries a `message`; a failed Operation always has an `error`. A request refused before acceptance uses a [common error code](/spec/host-api/v2/http#errors), such as `422 invalid_spec`, and can give the Form's reason in `detail`. List each Form error code with its condition, and keep every code, message, and `detail` free of credentials, private input values, raw provider responses, and other Resources' private data.
+
+If the Host loses the backend's response after a write may have happened, a timeout does not prove that nothing happened. This Form says what the Host does next:
+
+- Keep the same Resource and its Operation, with the Operation `reconciling`, and read back the same key.
+- A matching value proves success only when the backend identity it reads is safe for this exact Operation, so that nothing but this Operation could have written that value there. Absence alone does not prove that a delayed write cannot still land.
+- Resend the write to the same key, or fail the Operation, only once one of these holds: idempotency enforced by the backend makes it safe; fencing excludes a delayed writer; or the Host has proved the write was never sent and cannot act later. Until then the Operation stays `reconciling`. Do not repeat the create under another key or silently overwrite a different entry.
+
+For each external effect, your Form must state how a Host tells not sent, complete, partial, and unknown apart, and how the same Resource and Operation are reconciled after a lost response, process restart, timeout, or duplicate delivery.
 
 ## 4. Write and test the Form specification {#write}
 
