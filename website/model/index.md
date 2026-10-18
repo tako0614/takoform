@@ -15,7 +15,7 @@ v2 distinguishes a Form that defines meaning, a Host that implements it, a Resou
 
 ## Form and Host {#form-host}
 
-A Form is a versioned, immutable HTTPS URL for a specification published by its author. It defines the meaning of a Resource's `spec`, `observed`, and `output`, as well as operation requirements. A Form is not itself an API server or execution environment.
+A Form is a specification published by its author at an exact HTTPS URL. Each Form URL names one version of the contract, and its author keeps that meaning, so a changed contract gets a new URL; the URL need not contain a version number. It defines the meaning of a Resource's `spec`, `observed`, and `output`, as well as operation requirements. A Form is not itself an API server or execution environment.
 
 A Host implements Forms and exposes Resource operations to authenticated clients. Discovery describes the Host's endpoint and capabilities; `support` reports support for an exact Form URL. Form publication, Host support, and a caller's authorization are separate facts.
 

@@ -17,7 +17,7 @@ Any HTTP client can send these requests. To build a client or use an Infrastruct
 
 ## 1. Discover the Host and check Form support {#discover-support}
 
-A Form is a versioned specification URL published by its author; a Host is the service that implements it. The presence of a Form URL does not mean that a Host can execute it. First read the Host's [Discovery](/glossary#discovery) document for its endpoint and authentication scheme, then ask that Host about the exact Form URL.
+A Form is a specification published by its author at an exact HTTPS URL that names one version of the contract; a Host is the service that implements it. The presence of a Form URL does not mean that a Host can execute it. First read the Host's [Discovery](/glossary#discovery) document for its endpoint and authentication scheme, then ask that Host about the exact Form URL.
 
 ```http
 GET /.well-known/takoform/v2 HTTP/1.1
