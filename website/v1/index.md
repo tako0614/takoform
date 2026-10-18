@@ -6,9 +6,9 @@ description: Entry point to the Host API v1 specification, common model, schemas
 # Host API v1 {#v1}
 
 API specifications, the common model and verification resources for existing v1 Hosts and clients.
-The [Go libraries](#go) in this repository implement v1. References to the
-"current" lane in the v1 documents mean this v1 contract; the separate v2
-specification does not change v1 requirements.
+The [Go libraries](#go) in the [Takoform repository](https://github.com/tako0614/takoform)
+implement v1. References to the "current" lane in the v1 documents mean this
+v1 contract; the separate v2 specification does not change v1 requirements.
 
 ## API specification {#api}
 

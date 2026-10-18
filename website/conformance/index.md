@@ -12,7 +12,7 @@ A report describes whether the named data or implementation satisfies the
 requirements under test. A valid package, for example, does not establish that
 its Form is usable on a particular Host.
 
-The [v1 conformance specification](/spec/conformance) defines the retained requirements. The repository also provides a [caller-driven v2 HTTP probe](/host-api/#check) for a supplied disposable Form.
+The [v1 conformance specification](/spec/conformance) defines the retained requirements. The [Takoform repository](https://github.com/tako0614/takoform) also provides a [caller-driven v2 HTTP probe](/host-api/#check) for a supplied disposable Form.
 
 ## <span id="claim-を分けて読む"></span>What each result covers {#result-coverage}
 
@@ -27,7 +27,7 @@ Conformance claims belong to their stated subjects. One result does not transfer
 
 ## <span id="repository-から実行できる-harness"></span>Run local verification {#run-local-verification}
 
-First fetch dependencies at the repository root. This step may access the network.
+First fetch dependencies at the root of a Takoform repository clone. This step may access the network.
 
 ```console
 go mod download

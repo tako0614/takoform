@@ -17,10 +17,10 @@ Choose the API version in the header. All documentation is in English. Each spec
 
 Check individual Form details with its publisher and Host or client support with the product or environment you intend to use.
 
-The guides use v2. The Go libraries and local package/Snapshot tools in this
-repository implement v1. Specification publication, a passing local check and
-support on a running Host are separate facts. This site hosts no resource API
-or central Form catalog.
+The guides use v2. The Go libraries and local package/Snapshot tools in the
+[Takoform repository](https://github.com/tako0614/takoform) implement v1.
+Specification publication, a passing local check and support on a running Host
+are separate facts. This site hosts no resource API or central Form catalog.
 
 ## Source and updates
 

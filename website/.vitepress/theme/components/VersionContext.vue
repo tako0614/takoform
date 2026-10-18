@@ -36,6 +36,7 @@ async function changeVersion(event: Event) {
   <label v-if="variant === 'control'" class="version-context">
     <span class="visually-hidden">API version</span>
     <select
+      name="api-version"
       :value="currentVersion ?? 'shared'"
       :disabled="changingVersion"
       aria-label="API version"

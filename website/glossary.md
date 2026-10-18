@@ -15,7 +15,7 @@ A service that implements Forms and exposes a Resource API to authenticated clie
 
 ## Discovery {#discovery}
 
-The unauthenticated document at `/.well-known/takoform/v2` that a client reads first. It gives the API root (`baseUrl`), how to authenticate, optional capabilities, and limits such as the replay window. It lists no Resources, users, or secrets. See [Discovery and authorization](/spec/host-api/v2/http#discovery).
+The unauthenticated document at `/.well-known/takoform/v2` that a client reads first. It gives the API root (`baseUrl`), how to authenticate, optional capabilities, and limits such as the replay window. It lists no Forms, Resources, users, or secrets. See [Discovery and authorization](/spec/host-api/v2/http#discovery).
 
 ## Form support {#support}
 
