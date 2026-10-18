@@ -30,7 +30,7 @@ A Resource has a Host-unique UID, Form URL, Space, name, generation, and state. 
 - `observedGeneration`: the latest generation the Host has confirmed as realized, or 0 before any. It can stay behind `generation`, for example while a newer change is unfinished or after it fails; the Host advances it to a newer generation only after confirming that generation.
 - `observedAt`: when the Host last verified `observed` and `output`, or `null` before any verification; not necessarily when a GET request arrived.
 
-An Operation succeeding, a Host observing a generation, and an application being available are not equivalent. Availability requires other evidence explicitly defined by the Form and Host.
+An Operation succeeding, a Host observing a generation, and an application being available are not equivalent. Availability requires other evidence that the Form explicitly defines and the Host actually measures.
 
 ## Operations and retries {#operations-retry}
 

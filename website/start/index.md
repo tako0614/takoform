@@ -194,7 +194,7 @@ Persist an intent record before sending, so after a lost response the identical 
 
 ### Creating a Form {#form-authors}
 
-[Create a Form](/authoring/) designs the same fictional KeyValueEntry Form from the author's side: its `spec`, `observed` state, `output`, and recovery from partial failure. The [Form requirements](/spec/host-api/v2/forms) are normative; finish with their [author checklist](/spec/host-api/v2/forms#author-checklist).
+[Create a Form](/authoring/) designs the same fictional KeyValueEntry Form from the author's side: its `spec`, `observed` state, `output`, and recovery from an unknown result. The [Form requirements](/spec/host-api/v2/forms) are normative; finish with their [author checklist](/spec/host-api/v2/forms#author-checklist).
 
 ### Implementing a Host {#host-implementers}
 

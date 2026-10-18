@@ -11,7 +11,7 @@ next:
 
 # Implementing a v2 client {#client}
 
-This guide is for building a v2 client; the Takoform Go client, [`hostclient`](https://pkg.go.dev/github.com/tako0614/takoform/hostclient), speaks v1. Read a v2 Host's [Discovery](/glossary#discovery) response for `baseUrl`, authentication guidance, and `replayWindowSeconds` (the [replay window](/glossary#replay-window)); build each request from the Form specification at its exact URL. Check `support`, whether a request is admissible, and each operation's outcome as separate facts. Whether you may change a Space is settled per change, by the Host's answer to that change, acceptance or a `401` or `403`: a [preview](/spec/host-api/v2/http#previews), where advertised, is only advice, and Resource and Offering lists show only what you may see, so an empty one proves nothing.
+This guide is for building a v2 client; the Takoform Go client, [`hostclient`](https://pkg.go.dev/github.com/tako0614/takoform/hostclient), speaks v1. Read a v2 Host's [Discovery](/glossary#discovery) response for `baseUrl`, authentication guidance, and `replayWindowSeconds` (the [replay window](/glossary#replay-window)); build each request from the Form specification at its exact URL. Check `support`, whether a request is admissible, and each operation's outcome as separate facts. Whether you may change a Space is settled per change, by the Host's answer to that change, acceptance or a `401`, `403`, or `404`: a [preview](/spec/host-api/v2/http#previews), where advertised, is only advice, and Resource and Offering lists show only what you may see, so an empty one proves nothing.
 
 ## Record intent before sending {#intent}
 
