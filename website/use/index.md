@@ -15,7 +15,7 @@ To manage a Resource through Host API v2 you need three things: a Host operator 
 
 ## 1. Check what the Host offers {#host}
 
-Read the Host's Discovery document at `/.well-known/takoform/v2` for its API root, authentication, and `replayWindowSeconds`, then ask its `support` endpoint about the exact Form URL. [Getting started](/start/#discover-support) shows both requests and responses. `supported: true` means the Host implements that Form; with `privateInputs: false` it does not cover uses of the Form that need private inputs. Support does not grant you access or capacity, which the Host operator's own documentation and terms decide.
+Read the Host's Discovery document at `/.well-known/takoform/v2` for its API root, authentication, and `replayWindowSeconds`, then ask its `support` endpoint about the exact Form URL. [Getting started](/start/#discover-support) shows both requests and responses. `supported: true` means the Host implements that Form; with `privateInputs: false` it does not cover uses of the Form that need [private inputs](/glossary#private-inputs), the Form-defined secret values. Support does not grant you access or capacity, which the Host operator's own documentation and terms decide.
 
 ## 2. Choose how to call it {#infrastructure-as-code}
 

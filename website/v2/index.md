@@ -17,9 +17,21 @@ Host API v2 is a shared HTTP contract for creating, reading, updating, and delet
 
 The overview, HTTP API, and Form requirements are normative. Examples and migration guidance explain the specification.
 
-The Go libraries in the [Takoform repository](https://github.com/tako0614/takoform)
-implement v1. For v2, the repository provides the contract, design guides and a
-limited caller-driven [HTTP baseline probe](/host-api/#check).
+## What is available today {#available}
+
+- **From the Takoform repository.** The specification above, the guides on this
+  site and a limited [HTTP baseline probe](/host-api/#check) that you run
+  against your own Host. There is no v2 client library, reference Host or JSON
+  Schema; the repository's [Go libraries and command-line tools](/v1/#go)
+  implement v1.
+- **Hosts and Forms.** takoform.com runs no Host and keeps no Form catalog, and
+  the Hosts and Forms in the v2 pages use reserved example domains such as
+  `host.example` and `forms.publisher.example`; they are fictional. A Host
+  operator gives you its origin and the exact Form URLs it implements; a Form's
+  author publishes its URL.
+- **Terraform and OpenTofu.** The [Takoform Provider's version table](https://github.com/tako0614/terraform-provider-takoform/blob/main/README.md#choose-a-provider-version)
+  states which Host API each Provider version speaks.
+
 Check the API version and exact Form support of the Host and client you use.
 
 ## Suggested reading order {#reading}
