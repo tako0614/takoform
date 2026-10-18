@@ -1,45 +1,18 @@
-import { readFileSync } from "node:fs";
 import path from "node:path";
 import { defineConfig, type DefaultTheme } from "vitepress";
 import { fileURLToPath } from "node:url";
 import { codeLineLayout, HEX_RUN } from "./code-wrap.mjs";
 import { nestHeadings } from "./heading-levels.mjs";
+import { recordOpeningParagraphs, summarize } from "./page-summary.mjs";
 
 const configDirectory = path.dirname(fileURLToPath(import.meta.url));
 
-// Pages rarely carry a frontmatter description. Fall back to the first prose
-// paragraph of the Markdown source so a shared link describes the actual page
-// rather than repeating the site blurb.
-function firstParagraph(srcDir, relativePath) {
-  try {
-    const raw = readFileSync(path.join(srcDir, relativePath), "utf8");
-    const body = raw.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "");
-    for (const line of body.split("\n")) {
-      const text = line.trim();
-      if (
-        text === "" ||
-        text.startsWith("#") ||
-        text.startsWith("<") ||
-        text.startsWith("```") ||
-        text.startsWith("---") ||
-        text.startsWith(":::") ||
-        text.startsWith("|")
-      )
-        continue;
-      const plain = text
-        .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
-        .replace(/<[^>]+>/g, "")
-        .replace(/\{#[^}]+\}/g, "")
-        .replace(/[*_`~]/g, "")
-        .replace(/\s+/g, " ")
-        .trim();
-      if (plain !== "") return plain.slice(0, 200);
-    }
-  } catch {
-    // Fall back to the site-level description below.
-  }
-  return undefined;
-}
+// Pages rarely carry a frontmatter description. Describe the page from the
+// first prose paragraph of its Markdown (page-summary.mjs), so search results
+// and shared links describe the actual page rather than repeating the site
+// blurb. VitePress renders each page just before transformPageData runs; the
+// markdown rule below records the paragraph during that render.
+const openingParagraphs = new Map<string, string>();
 
 // takoform.com — the API and common-model-only site this repository owns.
 //
@@ -357,6 +330,7 @@ export default defineConfig({
     },
     codeTransformers: [wrappedCodeLines],
     config(md) {
+      recordOpeningParagraphs(md, openingParagraphs);
       nestHeadings(md);
       nameHeadingPermalinks(md);
       breakTableCode(md);
@@ -406,24 +380,29 @@ export default defineConfig({
     ["meta", { name: "twitter:card", content: "summary" }],
     ["meta", { name: "color-scheme", content: "light dark" }],
   ],
-  transformHead({ pageData, siteConfig, title, description }) {
+  // VitePress takes <meta name="description"> from pageData.description, so the
+  // derived description reaches search results as well as shared links. The
+  // head below writes that tag itself, escaped like the og and twitter tags;
+  // VitePress then leaves out its own unescaped copy.
+  transformPageData(pageData, { siteConfig }) {
+    if (pageData.frontmatter?.description !== undefined || pageData.description) return;
+    const text = openingParagraphs.get(path.join(siteConfig.srcDir, pageData.filePath));
+    if (text !== undefined) return { description: summarize(text) };
+  },
+  transformHead({ pageData, title, description }) {
     const route = pageData.relativePath
       .replace(/(^|\/)index\.md$/u, "$1")
       .replace(/\.md$/u, "");
-    const ogDescription = pageData.frontmatter?.description
-      ? description
-      : (siteConfig?.srcDir
-          ? firstParagraph(siteConfig.srcDir, pageData.relativePath)
-          : undefined) ?? description;
     const pageUrl = new URL(route, "https://takoform.com/").href;
     return [
       ["meta", { property: "og:title", content: title }],
-      ["meta", { property: "og:description", content: ogDescription }],
+      ["meta", { name: "description", content: description }],
+      ["meta", { property: "og:description", content: description }],
       ["meta", { property: "og:locale", content: "en_US" }],
       ["meta", { property: "og:url", content: pageUrl }],
       ["link", { rel: "canonical", href: pageUrl }],
       ["meta", { name: "twitter:title", content: title }],
-      ["meta", { name: "twitter:description", content: ogDescription }],
+      ["meta", { name: "twitter:description", content: description }],
     ];
   },
   themeConfig: {

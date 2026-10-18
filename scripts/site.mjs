@@ -893,6 +893,7 @@ export function inspectRenderedSitePages(pages, servedPaths = new Set()) {
       ["og:title", titles[0]?.[1]],
       ["og:url", new URL(page.route, "https://takoform.com").href],
       ["twitter:title", titles[0]?.[1]],
+      ["description", undefined],
       ["og:description", undefined],
       ["twitter:description", undefined],
     ]) {
@@ -903,6 +904,21 @@ export function inspectRenderedSitePages(pages, servedPaths = new Set()) {
           (expected !== undefined && values[0] !== expected)) {
         problems.push(`${page.path} must render matching non-empty ${key}`);
       }
+    }
+    // Search results and shared links show the same description, cut at a
+    // sentence or a word (with an ellipsis), never mid-sentence.
+    const descriptions = ["description", "og:description", "twitter:description"].map((key) =>
+      metadata.find((tag) => attribute(tag, "property") === key || attribute(tag, "name") === key));
+    const description = descriptions[0] === undefined ? undefined : attributeText(attribute(descriptions[0], "content") ?? "");
+    if (description !== undefined &&
+        descriptions.some((tag) => tag === undefined || attributeText(attribute(tag, "content") ?? "") !== description)) {
+      problems.push(`${page.path} must render one description for search results and shared links`);
+    }
+    // The not-found page answers 404, so it is neither indexed nor shared; it
+    // keeps VitePress's "Not Found".
+    if (description !== undefined && description !== "" && !page.path.endsWith("/404.html") &&
+        !/[.!?…][)"'”’]*$/u.test(description)) {
+      problems.push(`${page.path} must render a description that ends a sentence: ${description}`);
     }
 
     const htmlTag = page.html.match(/<html\b[^>]*>/u)?.[0];
@@ -1011,6 +1027,21 @@ export function inspectRenderedSitePages(pages, servedPaths = new Set()) {
   }
   for (const route of byRoute.keys()) {
     if (route !== "/404" && !reachable.has(route)) problems.push(`${route} is not reachable from the home page`);
+  }
+
+  // Each page describes itself. A page that shares its description, such as
+  // one left with the site-level description, says nothing about itself in a
+  // search result.
+  const pagesByDescription = new Map();
+  for (const page of pages) {
+    if (page.path.endsWith("/404.html")) continue;
+    const tag = page.html.match(/<meta\b[^>]*\sname="description"[^>]*>/u)?.[0];
+    const description = tag === undefined ? undefined : attributeText(attribute(tag, "content") ?? "");
+    if (!description) continue;
+    pagesByDescription.set(description, [...(pagesByDescription.get(description) ?? []), page.path]);
+  }
+  for (const [description, paths] of pagesByDescription) {
+    if (paths.length > 1) problems.push(`${paths.join(", ")} share the description: ${description}`);
   }
 
   const home = byRoute.get("/");

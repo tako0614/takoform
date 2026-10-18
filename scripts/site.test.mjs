@@ -209,6 +209,36 @@ describe("takoform.com site derivation", () => {
     expect(nestedHeadingLevels([])).toEqual([]);
   });
 
+  test("describes a page by whole sentences of its first prose paragraph", async () => {
+    const { createMarkdownRenderer } = await import("vitepress");
+    const { recordOpeningParagraphs, summarize } = await import("../website/.vitepress/page-summary.mjs");
+    const md = await createMarkdownRenderer(".", {}, "/");
+    const paragraphs = new Map();
+    recordOpeningParagraphs(md, paragraphs);
+    const page = [
+      "---", "title: T", "", "head:", "  - - meta", "    - name: robots", "---", "",
+      '<div lang="en" class="specification-source">', "", "# Title {#t}", "",
+      "::: tip", "Inside a container.", ":::", "", "- a list item", "", "> a quote", "", "```js", "const code = 1;", "```", "",
+      '<span id="old"></span>The `replay_window_seconds` field, R&#38;D \\| `&amp;` and `<Form URL>` in',
+      "a [link](/x)<br>about forms.takoform.com/v2. Second sentence.", "", "Next paragraph.",
+    ].join("\n");
+    // VitePress renders a page with env.realPath (or env.path) naming its source.
+    md.render(page, { realPath: "/site/page.md" });
+    expect(paragraphs.get("/site/page.md"))
+      .toBe("The replay_window_seconds field, R&D | &amp; and <Form URL> in a link about forms.takoform.com/v2. Second sentence.");
+    md.renderInline("A title", { realPath: "/site/page.md" });
+    expect(paragraphs.get("/site/page.md")).toStartWith("The replay_window_seconds field");
+    md.render("# Only a heading\n", { path: "/site/page.md" });
+    expect(paragraphs.has("/site/page.md")).toBe(false);
+    expect(summarize("One. Two three. Four.", 15)).toBe("One. Two three.");
+    expect(summarize("A very long first sentence without an end", 20)).toBe("A very long first…");
+    expect(summarize("He said “stop.” Then left.", 16)).toBe("He said “stop.”");
+    // A clause that introduces a list ends the description at the sentence before it.
+    expect(summarize("This document defines what may enter. The governing rule, decided in decision 0008:"))
+      .toBe("This document defines what may enter.");
+    expect(summarize("To manage it you need:")).toBe("To manage it you need…");
+  });
+
   test("renders heading tokens at their nested level and leaves code alone", async () => {
     const { nestHeadings } = await import("../website/.vitepress/heading-levels.mjs");
     let rule;
@@ -753,7 +783,7 @@ describe("takoform.com site derivation", () => {
 <html lang="en" data-document-authority="non-normative">
 <head><title>Takoform</title>
 <meta property="og:title" content="Takoform"><meta property="og:url" content="https://takoform.com/">
-<meta property="og:description" content="Contract"><meta name="twitter:title" content="Takoform"><meta name="twitter:description" content="Contract">
+<meta name="description" content="Contract."><meta property="og:description" content="Contract."><meta name="twitter:title" content="Takoform"><meta name="twitter:description" content="Contract.">
 </head><body>
 <a href="/guide">Guide</a>
 <main>
@@ -763,7 +793,7 @@ describe("takoform.com site derivation", () => {
 <html lang="en" data-document-authority="non-normative">
 <head><title>Guide</title>
 <meta property="og:title" content="Guide"><meta property="og:url" content="https://takoform.com/guide">
-<meta property="og:description" content="Guide"><meta name="twitter:title" content="Guide"><meta name="twitter:description" content="Guide">
+<meta name="description" content="Guide."><meta property="og:description" content="Guide."><meta name="twitter:title" content="Guide"><meta name="twitter:description" content="Guide.">
 </head><body><a href="/">Home</a><h1 id="guide">Guide</h1></body></html>`;
     const pages = [
       {
@@ -810,6 +840,21 @@ describe("takoform.com site derivation", () => {
     expect(inspectRenderedSitePages(pages)).toContain("dist/guide.html must render matching non-empty og:url");
     pages[1] = { ...pages[1], html: guide.replace('property="og:title" content="Guide"', 'property="og:title" content="Takoform"') };
     expect(inspectRenderedSitePages(pages)).toContain("dist/guide.html must render matching non-empty og:title");
+    pages[1] = { ...pages[1], html: guide.replace('name="description" content="Guide."', 'name="description" content="A guide."') };
+    expect(inspectRenderedSitePages(pages)).toContain("dist/guide.html must render one description for search results and shared links");
+    pages[1] = { ...pages[1], html: guide.replaceAll('content="Guide."', 'content="A guide that stops in the"') };
+    expect(inspectRenderedSitePages(pages)).toContain("dist/guide.html must render a description that ends a sentence: A guide that stops in the");
+    expect(inspectRenderedSitePages([pages[0], { ...pages[1], path: "dist/404.html" }]).some((problem) =>
+      problem.startsWith("dist/404.html must render a description that ends a sentence"))).toBe(false);
+    for (const ending of ["A guide that stops…", "A guide that says “stop.”"]) {
+      pages[1] = { ...pages[1], html: guide.replaceAll('content="Guide."', `content="${ending}"`) };
+      expect(inspectRenderedSitePages(pages).filter((problem) => problem.includes("description"))).toEqual([]);
+    }
+    expect(inspectRenderedSitePages([pages[0], { ...pages[1], html: guide.replaceAll('content="Guide."', 'content="Contract."') }]))
+      .toContain("dist/index.html, dist/guide.html share the description: Contract.");
+    // VitePress escapes og and twitter content; the same text escaped differently is still one description.
+    pages[1] = { ...pages[1], html: guide.replaceAll('content="Guide."', 'content="R&amp;D guide."').replace('name="description" content="R&amp;D guide."', 'name="description" content="R&#38;D guide."') };
+    expect(inspectRenderedSitePages(pages).filter((problem) => problem.includes("description"))).toEqual([]);
     pages[0] = { ...pages[0], html: home.replace('<a href="/guide">Guide</a>', '') };
     pages[1] = { ...pages[1], html: guide.replace('<a href="/">Home</a>', '<a href="/guide#guide">Self</a>') };
     expect(inspectRenderedSitePages(pages)).toContain("/guide is not reachable from the home page");
@@ -906,9 +951,9 @@ describe("takoform.com site derivation", () => {
     const html = `<!doctype html><html lang="en" data-document-authority="normative"><head>
 <title>V2 contract</title><meta property="og:title" content="V2 contract">
 <meta property="og:url" content="https://takoform.com/">
-<meta property="og:description" content="V2 contract">
+<meta name="description" content="V2 contract."><meta property="og:description" content="V2 contract.">
 <meta name="twitter:title" content="V2 contract">
-<meta name="twitter:description" content="V2 contract">
+<meta name="twitter:description" content="V2 contract.">
 </head><body><main><h1>V2 contract</h1>
 <aside class="mirror-notice" data-document-authority="normative" data-release-state="published">Normative source (English original)</aside>
 <div lang="en" class="specification-source">Source</div></main></body></html>`;
@@ -937,9 +982,9 @@ describe("takoform.com site derivation", () => {
     const html = `<!doctype html><html lang="en" data-document-authority="normative"><head>
 <title>V1 contract</title><meta property="og:title" content="V1 contract">
 <meta property="og:url" content="https://takoform.com/">
-<meta property="og:description" content="V1 contract">
+<meta name="description" content="V1 contract."><meta property="og:description" content="V1 contract.">
 <meta name="twitter:title" content="V1 contract">
-<meta name="twitter:description" content="V1 contract">
+<meta name="twitter:description" content="V1 contract.">
 </head><body><main><h1>V1 contract</h1>
 <aside class="mirror-notice" aria-label="About this page" data-document-authority="normative" data-release-state="published"><p>Normative source (English original)</p>
 <p class="mirror-notice-version">Part of the <a href="/v1/">Host API v1</a> documents: a lane, profile,

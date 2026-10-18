@@ -49,9 +49,13 @@ it includes the site checks and build alongside the Go and record checks.
 `check:site` compares derived pages and schema bytes. `build:site` checks the
 rendered pages for metadata, language, document authority, duplicate IDs,
 ARIA references, English accessible names without `{#id}` or backtick syntax,
-headings in the main content that deepen one level at a time, internal routes
-and fragments, and reachability from the overview. A successful build does
-not establish publication or Host support.
+headings in the main content that deepen one level at a time, one description
+per page, identical for search results and shared links, that ends a sentence
+or with an ellipsis and that no other page shares, internal routes and
+fragments, and reachability from the overview. A page without a frontmatter description is described by its first
+top-level paragraph: up to 200 characters of whole sentences, or the first
+sentence's words and an ellipsis when that sentence is longer. A successful
+build does not establish publication or Host support.
 
 The v2 walkthrough uses fictional HTTP exchanges. Its examples are not run
 against a real Host. The Go documentation tests validate the retained v1
