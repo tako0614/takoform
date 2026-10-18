@@ -2,7 +2,7 @@
 import { codeLineSegments } from "../../code-wrap.mjs";
 
 const copy = {
-  introduction: "Takoform describes how clients create, inspect, update and delete resources on a server. A Form defines a kind of resource. A Host is the server that implements it and provides the API.",
+  introduction: "Takoform specifies how clients create, inspect, update and delete resources on a server. A Form defines a kind of resource. A Host is the server that implements it and provides the API. This site publishes the specification and guides; it runs no Host and keeps no Form catalog.",
   actions: [
     { path: "/start/", label: "Walk through the v2 API", primary: true },
     { path: "/guides/", label: "Guides by role", primary: false },
@@ -19,7 +19,7 @@ const copy = {
     "In this v2 example, a client asks a Host to store a key/value entry. The Form identifies the resource's behavior and spec supplies its configuration. The name must be unique within its ",
     ["Space", "/glossary#space"], ", a Resource scope on the Host. The Host accepts the request and answers with an ",
     ["Operation", "/glossary#operation"], " whose ", ["status and effect", "/glossary#status-effect"],
-    " report its progress and what is known to have changed so far.",
+    " report its progress and what is known to have changed so far. The Host and Form are fictional. The request goes to host.example; the forms.takoform.com in its path is part of the API's name, not an address.",
   ],
   requestLabel: "Request",
   responseLabel: "Response (abridged): the accepted Operation, which the client polls until it finishes",
@@ -139,7 +139,7 @@ const examples = [
             <figcaption>
               <code>spec</code> is the accepted desired value and <code>observed</code> is what the Host last checked;
               <code>observedGeneration</code> equals <code>generation</code>, so the Host has confirmed the current generation as realized.
-              Illustrative Host API v2 exchanges with other headers, fields and timestamps omitted; the Host and Form use example domains, not live services.
+              Illustrative Host API v2 exchanges with other headers, fields and timestamps omitted.
             </figcaption>
           </figure>
           <ol class="home-steps">

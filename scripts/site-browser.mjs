@@ -662,7 +662,7 @@ async function run() {
         ["Space", "/glossary#space"], ["Operation", "/glossary#operation"], ["status and effect", "/glossary#status-effect"],
       ], "the example's introduction links the request and response terms to the glossary");
       assert.equal((await page.locator("#home-example-title + p").textContent()).replace(/\s+/gu, " ").trim(),
-        "In this v2 example, a client asks a Host to store a key/value entry. The Form identifies the resource's behavior and spec supplies its configuration. The name must be unique within its Space, a Resource scope on the Host. The Host accepts the request and answers with an Operation whose status and effect report its progress and what is known to have changed so far.",
+        "In this v2 example, a client asks a Host to store a key/value entry. The Form identifies the resource's behavior and spec supplies its configuration. The name must be unique within its Space, a Resource scope on the Host. The Host accepts the request and answers with an Operation whose status and effect report its progress and what is known to have changed so far. The Host and Form are fictional. The request goes to host.example; the forms.takoform.com in its path is part of the API's name, not an address.",
         "the example's introduction reads as continuous sentences");
       assert.equal((await page.locator(".home-steps li").nth(3).locator("p").textContent()).replace(/\s+/gu, " ").trim(),
         "Use the Resource UID and the generation you last read, with a new Idempotency-Key for each change. If a response is lost, resend that exact request with its original key within the Host's replay window.",
