@@ -100,6 +100,15 @@ body {
   }
 }
 
+/* VitePress renders the doc footer outside <main>, so it is a contentinfo
+   landmark even when a page has no previous/next links or edit link and the
+   footer holds nothing. On a page without a sidebar the site footer is a
+   second one, so hide the empty doc footer. :empty ignores the comment and
+   empty text nodes Vue leaves inside it. */
+.VPDocFooter:empty {
+  display: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

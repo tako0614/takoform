@@ -446,6 +446,12 @@ async function run() {
       await page.setViewportSize({ width, height: 900 });
       for (const route of [...new Set([...routes, ...sidebarRoutes])]) {
         await visit(route);
+        // Playwright's role engine applies the ARIA in HTML scoping of footer
+        // (sectioning elements and landmark-role ancestors) and skips hidden
+        // elements, so this counts the contentinfo landmarks a screen reader
+        // would list.
+        const contentinfo = await page.getByRole("contentinfo").count();
+        assert.ok(contentinfo <= 1, `${width}px ${route}: at most one contentinfo landmark, found ${contentinfo}`);
         assert.deepEqual(await page.evaluate(midWordCode, ".vp-doc :is(td, th) code"), [], `${width}px ${route}: table identifiers stay whole`);
         assert.deepEqual(await page.evaluate(unreachableTableControls), [], `${width}px ${route}: scrolling tables are keyboard-reachable`);
         assert.deepEqual(await page.evaluate(codeWrapProblems), [], `${width}px ${route}: long code lines wrap under their own line`);
