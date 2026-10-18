@@ -24,7 +24,7 @@ You call a Host's API, directly or through a tool that explicitly supports v2.
 You build a client, CLI, or integration that sends changes on someone's behalf.
 
 1. [Getting started](/start/): the requests your client will send.
-2. [Implementing a client](/client/): Discovery and support, intent records, replay deadlines, Operations, and generation conflicts. Reconcile a lost response or conflict against Operations and Resources rather than blindly retrying.
+2. [Implementing a client](/client/): Discovery and support, intent records, replay deadlines, Operations, and generation conflicts. After a lost response, resend the identical request with its original key, only inside the replay window; once it has passed, reconcile against Operations and Resources instead of resending with any key. A request refused with a conflict such as `generation_conflict` was not accepted: read the Resource, then decide whether a new intent with a new key is still wanted.
 3. [HTTP API](/spec/host-api/v2/http): the normative requests and responses, including the [retry contract](/spec/host-api/v2/http#retry).
 
 ## Form authors {#form-authors}

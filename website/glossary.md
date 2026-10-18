@@ -31,7 +31,7 @@ Form-defined secret string values, sent in `privateInputs` only when both Discov
 
 ## Resource {#resource}
 
-An object managed by a Host. It has a UID, Form URL, Space, name, generation, `spec`, `observed`, `output`, and other fields defined by the contract.
+The Host's durable management record of one managed resource, not proof that a backend object currently exists. It has a UID, Form URL, Space, name, generation, `spec`, `observed`, `output`, and other fields defined by the contract.
 
 ## UID {#uid}
 
@@ -47,7 +47,7 @@ The latest state checked by the Host. It can lag behind the desired generation.
 
 ## output {#output}
 
-Operation results or connection information whose meaning is defined by the Form. It may be empty.
+Values defined by the Form for using the Resource, such as a connection address. It may be empty, and it is not a second channel for desired state; an Operation's outcome is in its `status`, `effect`, and any `error`.
 
 ## generation / observedGeneration {#generation-observedgeneration}
 

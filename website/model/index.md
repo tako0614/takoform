@@ -25,7 +25,7 @@ A Resource has a Host-unique UID, Form URL, Space, name, generation, and state. 
 
 - `spec`: the desired value accepted from the client. Updates replace the complete document.
 - `observed`: the latest state the Host has checked; it may lag behind desired state.
-- `output`: operation results or connection information defined by the Form; it may be empty.
+- `output`: values defined by the Form for using the Resource, such as a connection address; it may be empty. It is not a second channel for desired state.
 - `generation`: the accepted desired-state generation. It begins at creation and advances as updates or deletion are accepted.
 - `observedGeneration`: the generation represented by the current observation.
 - `observedAt`: when the Host recorded that observation, not necessarily when a GET request arrived.
@@ -34,9 +34,9 @@ An Operation succeeding, a Host observing a generation, and an application being
 
 ## Operations and retries {#operations-retry}
 
-Create, update, and delete each produce an Operation. The Host reports its ID, Resource, action, generation, status, and result. A client reads the Operation and may then fetch the Resource again. GET is a read and does not start processing.
+Each accepted create, update, or delete produces an Operation; a request rejected before acceptance returns a Problem and has none, though a `5xx` or proxy error alone does not prove rejection. The Host reports its ID, Resource, action, generation, status, effect, and any error. A client reads the Operation and may then fetch the Resource again. GET is a read and does not start processing.
 
-To retry the same operation, a client reuses the same Idempotency-Key with the identical request. A new operation uses a new key. Check the Host's Discovery response for replay scope and retention; a key may no longer prevent a duplicate after that period.
+To retry the same operation, a client reuses the same Idempotency-Key with the identical request. A new operation uses a new key. Discovery gives the replay window (`replayWindowSeconds`). A key is scoped to the Host, the API version, and your stable [principal](/glossary#principal), not to the credential bytes; the Host's authentication documentation explains how the principal survives credential rotation. Stop resending before your first send time plus that window: after it, a key may no longer prevent a duplicate, so reconcile from the Operation and Resource instead.
 
 ## Generation conditions and conflicts {#generation-conflicts}
 

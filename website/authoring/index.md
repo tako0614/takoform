@@ -118,7 +118,7 @@ curl --fail-with-body -i -X POST "$BASE_URL/resources" \
 JSON
 ```
 
-If the response is lost, run only this `curl` command again, within the Host's replay window (Discovery's `replayWindowSeconds`). The same key and body return the original Operation. A new key would be a second create, which the Host rejects with `409 name_conflict` because the name is taken.
+If the response is lost, run only this `curl` command again, within the Host's replay window (Discovery's `replayWindowSeconds`). The same key and body return the original Operation. A new key would be a new create, not a replay: if the first create was accepted, the Host rejects it with `409 name_conflict` because the name is taken; otherwise it may be accepted as a separate change. Neither answer is the original request's Operation.
 
 The response body is the Operation, and its `Location` header is the Operation's URL. `202` means the Operation has not finished yet, and its `Retry-After` header says how many seconds to wait before reading it again; `200` means it has already settled. Read the Operation until its `status` is `succeeded` or `failed`, then read the Resource by the Operation's `resourceUid`:
 
