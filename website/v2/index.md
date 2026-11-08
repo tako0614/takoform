@@ -29,8 +29,9 @@ The overview, HTTP API, and Form requirements are normative. Examples and migrat
   `host.example` and `forms.publisher.example`; they are fictional. A Host
   operator gives you its origin and the exact Form URLs it implements; a Form's
   author publishes its URL.
-- **Terraform and OpenTofu.** The [Takoform Provider's version table](https://github.com/tako0614/terraform-provider-takoform/blob/main/README.md#choose-a-provider-version)
-  states which Host API each Provider version speaks.
+- **Terraform and OpenTofu.** Check each Provider's version-specific documentation
+  for Host API v2 support and exact Form mappings. Its software version is
+  separate from the API version and each Form's identity.
 
 Check the API version and exact Form support of the Host and client you use.
 
