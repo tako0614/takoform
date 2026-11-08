@@ -92,7 +92,10 @@ describe("takoform.com site derivation", () => {
     for (const id of ["host", "client-responsibilities", "infrastructure-as-code", "examples-status"]) {
       expect(use, `Using v2 keeps #${id}`).toMatch(new RegExp(`\\{#${id}\\}|id="${id}"`, "u"));
     }
-    expect(use).toContain("README.md#choose-a-provider-version");
+    expect(use).toContain("exact Form URL you need");
+    expect(use).toContain("version-specific documentation");
+    expect(use).not.toContain("terraform-provider-takoform");
+    expect(readFileSync("website/v2/index.md", "utf8")).not.toContain("terraform-provider-takoform");
     expect(use).not.toContain("Do not treat it as a v2 Provider");
     for (const page of ["website/v1/index.md", "website/site.md"]) {
       expect(readFileSync(page, "utf8"), `${page} links the Provider's version table`).toContain("README.md#choose-a-provider-version");

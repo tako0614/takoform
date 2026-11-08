@@ -23,7 +23,7 @@ Read the Host's Discovery document at `/.well-known/takoform/v2` for its API roo
 | --- | --- |
 | Trying the API or scripting a few calls | Any HTTP client. Every request in [Getting started](/start/) is a complete HTTP exchange you can adapt. |
 | Building a client, CLI, or integration | [Implementing a client](/client/), for intent records, replay deadlines, and conflicts. |
-| Terraform or OpenTofu | A Provider that explicitly supports Host API v2 and your Form. The [Takoform Provider's version table](https://github.com/tako0614/terraform-provider-takoform/blob/main/README.md#choose-a-provider-version) states which Host API each of its versions speaks. |
+| Terraform or OpenTofu | A Provider compatible with Host API v2 and the exact Form URL you need. Consult its version-specific documentation for supported Forms, state, import, and recovery behavior; check the Host separately for support and access. |
 | A Host that speaks v1 | The [v1 documentation](/v1/); the Takoform Go client, [`hostclient`](https://pkg.go.dev/github.com/tako0614/takoform/hostclient), speaks v1. |
 
 ## 3. Track every change to its result {#client-responsibilities}

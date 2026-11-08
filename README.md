@@ -50,9 +50,9 @@ See the [specification index](spec/README.md) for the contract map and the
 [publication guide](spec/publication-freeze.md) for change boundaries.
 
 Form publishers own their definitions and distribution. Hosts document their
-support, authentication, targets and service terms. Client adapters, including
-[OpenTofu / Terraform tools](https://github.com/tako0614/terraform-provider-takoform),
-document their own installation and compatibility.
+support, authentication, targets and service terms. Installation and exact API
+and Form compatibility are documented by each client adapter, including
+OpenTofu and Terraform Providers.
 
 ## Run the v1 tools locally
 
