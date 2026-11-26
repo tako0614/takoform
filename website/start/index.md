@@ -13,7 +13,7 @@ next:
 
 Host API v2 separates the Form that defines a Resource's meaning, the Host that implements supported Forms, and the client that manages Resources. The HTTP walkthrough below uses the fictional Host `host.example` and Form URL `https://forms.publisher.example/key-value-entry/1.0.0`. It does not identify a reachable service or published Form. See the [full request/response transcript](/spec/host-api/v2/examples) for all fields and failure branches, and the [glossary](/glossary) for key terms used below.
 
-Any HTTP client can send these requests. To build a client or use an Infrastructure as Code tool instead, see [Using v2](/use/).
+Any HTTP client can send these requests, and no running Host is needed to read this four-step walkthrough. When you are ready to check a real Host, run `curl` calls, or choose an Infrastructure as Code tool, see [Using v2](/use/); to build a client library or CLI, see [Implementing a client](/client/).
 
 ## 1. Discover the Host and check Form support {#discover-support}
 
@@ -186,7 +186,11 @@ Read `op_delete_1` and confirm success. A later Resource GET may return `410 Gon
 
 ## Where to go next {#next}
 
-The walkthrough followed the successful path. Each role has its own guide for what keeps that path reliable when responses are lost, generations conflict, or processes restart.
+The walkthrough followed the successful path. Each role has its own guide for calling a real Host or keeping that path reliable when responses are lost, generations conflict, or processes restart.
+
+### Using the API {#users}
+
+When you have a Host origin, credentials, a Space, and an exact Form URL, [Using v2](/use/) gives copyable `curl` commands for Discovery, `support`, create, and polling, and helps you choose between direct HTTP calls and a v2-compatible Infrastructure as Code tool. See the [request/response examples](/spec/host-api/v2/examples) for lost responses, conflicts, and partial failure.
 
 ### Implementing a client {#client-implementers}
 

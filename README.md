@@ -70,8 +70,15 @@ do not need network access or change resources. The first reports the package
 digest, FormRef and payload inventory. The second reports artifact checks and
 Snapshot compilation, including input-order independence and rejection of
 partial results. These checks do not exercise a Host's resource lifecycle.
-See [verification coverage](website/conformance/index.md) for interpreting the
-results.
+The repository also includes [`cmd/takoform-trust`](cmd/takoform-trust/) for
+offline Sigstore bundle and revocation-checkpoint verification; see
+[verification coverage](website/conformance/index.md) for usage and interpreting
+the results.
+
+To run the v2 HTTP baseline probe against a Host you operate, see
+[conformance/v2/README.md](conformance/v2/README.md) and the
+[Host guide](website/host-api/index.md#check); `bun run check:v2-host-api` runs
+the probe's own fake-transport self-tests.
 
 ## Develop the documentation
 

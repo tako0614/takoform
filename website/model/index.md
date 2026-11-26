@@ -44,4 +44,4 @@ Update and delete requests carry the generation that was read in `Takoform-Expec
 
 ## How this differs from v1 {#v1-terms}
 
-FormRef, Form Package, Snapshot, and `schemaDigest` are v1 contract terms. They are not alternate names for a v2 Form URL or Resource state. Consult the [frozen v1 specification](/spec/host-api/v1) for v1. The v2 normative contract is in the [overview](/spec/host-api/v2/), [HTTP API](/spec/host-api/v2/http), and [Form requirements](/spec/host-api/v2/forms).
+FormRef, Form Package, Snapshot, and `schemaDigest` are v1 contract terms. They are not alternate names for a v2 Form URL or Resource state. Consult [Migration from v1](/spec/host-api/v2/migration) for a side-by-side comparison and the [frozen v1 specification](/spec/host-api/v1) for v1. The v2 normative contract is in the [overview](/spec/host-api/v2/), [HTTP API](/spec/host-api/v2/http), and [Form requirements](/spec/host-api/v2/forms).
