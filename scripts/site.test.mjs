@@ -97,6 +97,16 @@ describe("takoform.com site derivation", () => {
     expect(use).not.toContain("terraform-provider-takoform");
     expect(readFileSync("website/v2/index.md", "utf8")).not.toContain("terraform-provider-takoform");
     expect(use).not.toContain("Do not treat it as a v2 Provider");
+    const useShellBlocks = [...use.matchAll(/^```(?:sh|bash|shell)\n([\s\S]*?)^```$/gmu)].map((block) => block[1]);
+    expect(useShellBlocks.length, "Using v2 includes runnable curl blocks").toBe(5);
+    const useShell = useShellBlocks.join("\n");
+    const useAssigned = new Set([...useShell.matchAll(/^(?:export )?([A-Z_][A-Z0-9_]*)=/gmu)].map((match) => match[1]));
+    const useRead = new Set([...useShell.matchAll(/\$\{?([A-Z_][A-Z0-9_]*)/gu)].map((match) => match[1]));
+    expect([...useRead].sort(), "Using v2 shell variables are set before use").toEqual([...useAssigned].sort());
+    expect(useShell).toContain("/.well-known/takoform/v2");
+    expect(useShell).toContain("$BASE_URL/support");
+    expect(useShellBlocks.some((block) => block.includes("-X POST") && block.includes("CREATE_KEY=")),
+      "rerunning the Using v2 create command keeps its key").toBe(false);
     for (const page of ["website/v1/index.md", "website/site.md"]) {
       expect(readFileSync(page, "utf8"), `${page} links the Provider's version table`).toContain("README.md#choose-a-provider-version");
     }
@@ -130,7 +140,7 @@ describe("takoform.com site derivation", () => {
     expect(nextHeading, "the walkthrough ends with next steps").toBeGreaterThan(-1);
     const next = start.slice(nextHeading);
     for (const target of [
-      "(/client/)", "(/authoring/)", "(/host-api/)",
+      "(/use/)", "{#users}", "(/client/)", "(/authoring/)", "(/host-api/)",
       "(/spec/host-api/v2/forms#author-checklist)", "{#host-implementers}",
     ]) expect(next).toContain(target);
   });
